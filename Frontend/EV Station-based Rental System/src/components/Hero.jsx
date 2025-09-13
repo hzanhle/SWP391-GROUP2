@@ -15,7 +15,7 @@ export default function Hero() {
           </div>
         </div>
         <div className="hero-media" role="img" aria-label="App preview mockup" data-figma-layer="HeroMedia" data-tailwind='class: "rounded-lg border border-slate-200 p-4 shadow-md bg-white"'>
-          <img src={illustration} alt="EV app mockup illustration" style={{width: '100%'}} />
+          <img src={illustration} alt="EV app mockup illustration" className="media-img" />
         </div>
       </div>
     </section>
