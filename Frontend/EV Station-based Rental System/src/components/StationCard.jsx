@@ -5,10 +5,10 @@ export default function StationCard({ name, address, vehicles, distance }) {
   return (
     <div className="card" data-figma-layer="StationCard" data-tailwind='class: "border border-slate-200 rounded-lg bg-white"'>
       <div className="card-body">
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <div className="row-between">
           <div>
-            <h3 style={{margin:0}}>{name}</h3>
-            <p style={{margin:0, color:'#64748b', fontSize:'0.9rem'}}>{address}</p>
+            <h3 className="card-title">{name}</h3>
+            <p className="card-subtext">{address}</p>
           </div>
           <span className="badge gray" aria-label={`${distance} km away`}>{distance} km</span>
         </div>
