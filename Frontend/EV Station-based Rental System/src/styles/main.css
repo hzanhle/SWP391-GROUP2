@@ -182,3 +182,10 @@ body {
 
 /* Utility */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.mt-2 { margin-top: var(--space-2); }
+.row-between { display:flex; justify-content:space-between; align-items:center; gap: var(--space-3); }
+.row { display:flex; align-items:center; gap: var(--space-3); }
+.media-img { width: 100%; height: auto; display: block; }
+.card-title { margin: 0; font-weight: 600; }
+.card-subtext { margin: 0; color: var(--color-muted); font-size: 0.9rem; }
+.media-fallback { background: #e2e8f0; }
