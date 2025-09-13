@@ -8,10 +8,10 @@ export default function VehicleCard({ image, model, battery, status, rate }) {
       {image ? (
         <img src={image} alt="Vehicle" className="vehicle-media" />
       ) : (
-        <div className="vehicle-media" role="img" aria-label="Vehicle image placeholder" style={{background:'#e2e8f0'}} />
+        <div className="vehicle-media media-fallback" role="img" aria-label="Vehicle image placeholder" />
       )}
       <div className="card-body">
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <div className="row-between">
           <h3 className="vehicle-title">{model}</h3>
           <span className={available ? 'badge green' : 'badge gray'}>{status}</span>
         </div>
