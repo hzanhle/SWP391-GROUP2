@@ -24,7 +24,7 @@ export default function Footer() {
         </div>
         <div>
           <h4 className="footer-title">Social</h4>
-          <div style={{display:'flex', gap:'12px'}} aria-label="Social links">
+          <div className="row" aria-label="Social links">
             <a className="footer-link" href="#" aria-label="Twitter">Twitter</a>
             <a className="footer-link" href="#" aria-label="Instagram">Instagram</a>
             <a className="footer-link" href="#" aria-label="LinkedIn">LinkedIn</a>
