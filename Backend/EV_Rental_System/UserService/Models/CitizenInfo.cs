@@ -10,7 +10,6 @@ namespace UserService.Models
         public int UserId { get; set; }
         [Required]
         public string CitizenId { get; set; }
-
         [Required]
         public string Sex { get; set; }
         [Required]
@@ -20,17 +19,15 @@ namespace UserService.Models
         [Required]
         public string FullName { get; set; }
         [Required]
-        public string LastName { get; set; }
-        [Required]
         public string Address { get; set; }
         [Required]
-        public DateOnly BirthDate { get; set; }
+        public DateOnly DayOfBirth { get; set; }
 
         public CitizenInfo()
         {
         }
 
-        public CitizenInfo(int id, int userId, string sex ,string citizenId, DateOnly citiRegisDate, string citiRegisOffice, string fullName, string lastName, string address, DateOnly birthDate)
+        public CitizenInfo(int id, int userId, string sex ,string citizenId, DateOnly citiRegisDate, string citiRegisOffice, string fullName, string address, DateOnly dayOfBirth)
         {
             Id = id;
             Sex = sex;
@@ -39,9 +36,8 @@ namespace UserService.Models
             CitiRegisDate = citiRegisDate;
             CitiRegisOffice = citiRegisOffice;
             FullName = fullName;
-            LastName = lastName;
             Address = address;
-            BirthDate = birthDate;
+            DayOfBirth = dayOfBirth;
         }
     }
 }
