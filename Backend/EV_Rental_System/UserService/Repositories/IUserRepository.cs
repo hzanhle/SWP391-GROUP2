@@ -4,18 +4,13 @@ namespace UserService.Repositories
 {
     public interface IUserRepository
     {
-        Task<User> GetUserAsync(string userName, string password);
-        Task<List<User>> SearchUserAsync(string searchValue);
+        Task<User> GetUserAsync(string userName); // Lấy user theo userName
+        Task<List<User>> SearchUserAsync(string searchValue); // Tìm kiếm user theo userName, email, phoneNumber
         Task AddUserAsync(User user);
         Task UpdateUserAsync(User user);
-        Task<User> GetUserByIdAsync(int userId);
-        Task<User?> GetUserDetailByIdAsync(int userId);
-        Task<List<User>> GetAllUsersAsync();
-        Task<CitizenInfo> GetCitizenInfoByUserId(int id);
-        Task<DriverLicense> GetDriverLicenseByUserId(int id);
-        Task AddDriverLicense(DriverLicense driverLicense);
-        Task UpdateDriverLicense(DriverLicense driverLicense);
-        Task AddCitizenInfo(CitizenInfo citizenInfo);
-        Task UpdateCitizenInfo(CitizenInfo citizenInfo);
+        Task<User> GetUserByIdAsync(int userId); // Lấy user theo Id
+        Task<User?> GetUserDetailByIdAsync(int userId); // Lấy user theo Id, bao gồm cả CitizenInfo và DriverLicense
+        Task<List<User>> GetAllUsersAsync(); // Lấy tất cả user (cho admin)
+
     }
 }

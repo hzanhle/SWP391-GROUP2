@@ -1,21 +1,19 @@
-﻿using UserService.Models;
+﻿using UserService.DTOs;
+using UserService.Models;
 
 namespace UserService.Services
 {
     public interface IUserService
     {
-        Task<User> GetUserAsync(string userName, string password);
+        Task<User> GetUserAsync(string userName);
+        Task<LoginResponse> Login(LoginRequest loginRequest);
         Task<List<User>> SearchUserAsync(string searchValue);
-        Task AddUserAsync(User user);
-        Task UpdateUserAsync(User user);
-        Task DeleteUserAsync(int userId);
-        Task<User?> GetUserByIdAsync(int userId);
+        Task AddUserAsync(User user);  // Create
+        Task UpdateUserAsync(User user); // Edit, Update
+        Task DeleteUserAsync(int userId); // Delete (soft delete)
+        Task<User?> GetUserByIdAsync(int userId); // Read
+        Task<User?> GetUserDetailByIdAsync(int userId);
         Task<List<User>> GetAllUsersAsync();
-        Task AddDriverLicense(DriverLicense driverLicense);
-        Task<DriverLicense> GetDriverLicenseByUserId(int userId);
-        Task<CitizenInfo> GetCitizenInfoByUserId(int userId);
-        Task UpdateDriverLicense(DriverLicense driverLicense);
-        Task AddCitizenInfo(CitizenInfo citizenInfo);
-        Task UpdateCitizenInfo(CitizenInfo citizenInfo);
+        
     }
 }
