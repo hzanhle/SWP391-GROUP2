@@ -12,6 +12,7 @@ namespace UserService.Services
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IRoleRepository _roleRepository;
         private readonly ICitizenInfoRepository _citizenInfoRepository;
         private readonly ILogger<UserService> _logger;
         private readonly IJwtService _jwtService;
@@ -19,6 +20,7 @@ namespace UserService.Services
 
         // Fixed constructor - inject all dependencies
         public UserService(
+            IRoleRepository roleRepository,
             IUserRepository userRepository,
             ICitizenInfoRepository citizenInfoRepository,
             ILogger<UserService> logger,
@@ -30,6 +32,7 @@ namespace UserService.Services
             _logger = logger;
             _jwtService = jwtService;
             _configuration = configuration;
+            _roleRepository = roleRepository;
         }
 
         public async Task<LoginResponse> Login(LoginRequest loginRequest)
@@ -49,6 +52,7 @@ namespace UserService.Services
 
                 // Get user by username only (fixed - only pass username)
                 var user = await _userRepository.GetUserAsync(loginRequest.UserName);
+                var role = await _roleRepository.GetRoleByIdAsync(user.RoleId);
 
                 if (user == null)
                 {
@@ -105,7 +109,7 @@ namespace UserService.Services
                         PhoneNumber = user.PhoneNumber,
                         FullName = citizenInfo?.FullName, // Handle null case
                         RoleId = user.RoleId,
-                        RoleName = user.Role?.RoleName,
+                        RoleName = role?.RoleName,
                         IsActive = user.IsActive,
                     }
                 };
@@ -127,14 +131,22 @@ namespace UserService.Services
         {
             try
             {
+                var existingUser = await _userRepository.GetUserAsync(user.UserName);
+                if (existingUser != null)
+                {
+                    _logger.LogWarning("Attempted to add user with existing username: {UserName}", user.UserName);
+                    throw new ArgumentException("Tên đăng nhập đã tồn tại");
+                }
                 // Hash password before saving
                 if (!string.IsNullOrEmpty(user.Password))
                 {
                     user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
                 }
-
+                var role = await _roleRepository.GetRoleByNameAsync("Member"); // Default role to "Member"
                 user.CreatedAt = DateTime.UtcNow;
                 user.IsActive = true; // Set default active status
+                user.RoleId = role.RoleId; 
+                user.Role = role;
 
                 await _userRepository.AddUserAsync(user);
                 _logger.LogInformation("User added successfully: {UserId}", user.Id);
@@ -183,7 +195,7 @@ namespace UserService.Services
         }
 
         
-        public async Task<User?> GetUserByUsernameAsync(string userName)
+        public async Task<User?> GetUserAsync(string userName)
         {
             try
             {
@@ -253,12 +265,10 @@ namespace UserService.Services
                     throw new ArgumentException("User not found");
                 }
 
-                UpdateUserRequest userRequest = new UpdateUserRequest
-                {
-                    UserName = user.UserName,
-                    Email = user.Email,
-                    PhoneNumber = user.PhoneNumber,                   
-                };
+                existingUser.UserName = user.UserName;
+                existingUser.Email = user.Email;
+                existingUser.PhoneNumber = user.PhoneNumber;
+
 
                 // Only update password if provided and different
                 if (!string.IsNullOrEmpty(user.Password) && user.Password != existingUser.Password)
@@ -276,49 +286,6 @@ namespace UserService.Services
             }
         }
 
-        // Additional helper methods
-        public async Task<bool> IsUserExistAsync(string userName, string email)
-        {
-            try
-            {
-                var userByUsername = await _userRepository.GetUserByUsernameAsync(userName);
-                var userByEmail = await _userRepository.GetUserByEmailAsync(email);
-
-                return userByUsername != null || userByEmail != null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking if user exists");
-                throw;
-            }
-        }
-
-        public async Task<bool> ChangePasswordAsync(int userId, string currentPassword, string newPassword)
-        {
-            try
-            {
-                var user = await _userRepository.GetUserByIdAsync(userId);
-                if (user == null)
-                    return false;
-
-                // Verify current password
-                if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.Password))
-                    return false;
-
-                // Update with new password
-                user.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
-                user.UpdatedAt = DateTime.UtcNow;
-
-                await _userRepository.UpdateUserAsync(user);
-                _logger.LogInformation("Password changed successfully for user: {UserId}", userId);
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error changing password for user: {UserId}", userId);
-                throw;
-            }
-        }
+       
     }
 }

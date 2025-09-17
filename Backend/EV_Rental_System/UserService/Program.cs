@@ -30,6 +30,7 @@ builder.Services.AddCors(options =>
 
 // Dependency Injection
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IUserService, UserService.Services.UserService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ICitizenInfoRepository, CitizenInfoRepository>();
@@ -95,11 +96,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwagger(); // Kh?i t?o Swagger JSON API
+    app.UseSwagger(); 
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1"); // ???ng d?n Swagger
-        c.RoutePrefix = string.Empty; // C?u hình Swagger UI ? ???ng d?n g?c
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1"); 
+        c.RoutePrefix = string.Empty; 
     });
 }
 
