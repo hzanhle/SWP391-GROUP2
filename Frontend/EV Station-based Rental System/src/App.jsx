@@ -6,6 +6,13 @@ import ForgotPassword from './pages/ForgotPassword'
 import VerifyEmail from './pages/VerifyEmail'
 import Profile from './pages/Profile'
 import ProfileDocs from './pages/ProfileDocs'
+import Stations from './pages/Stations'
+import Vehicles from './pages/Vehicles'
+import BookingNew from './pages/BookingNew'
+import BookingDetail from './pages/BookingDetail'
+import CheckIn from './pages/CheckIn'
+import Return from './pages/Return'
+import History from './pages/History'
 
 function resolveRoute() {
   const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
@@ -16,6 +23,13 @@ function resolveRoute() {
     case 'verify-email': return 'verify-email'
     case 'profile': return 'profile'
     case 'profile-docs': return 'profile-docs'
+    case 'stations': return 'stations'
+    case 'vehicles': return 'vehicles'
+    case 'booking-new': return 'booking-new'
+    case 'booking': return 'booking'
+    case 'check-in': return 'check-in'
+    case 'return': return 'return'
+    case 'history': return 'history'
     default: return 'home'
   }
 }
@@ -35,5 +49,12 @@ export default function App() {
   if (route === 'verify-email') return <VerifyEmail />
   if (route === 'profile') return <Profile />
   if (route === 'profile-docs') return <ProfileDocs />
+  if (route === 'stations') return <Stations />
+  if (route === 'vehicles') return <Vehicles />
+  if (route === 'booking-new') return <BookingNew />
+  if (route === 'booking') return <BookingDetail />
+  if (route === 'check-in') return <CheckIn />
+  if (route === 'return') return <Return />
+  if (route === 'history') return <History />
   return <Home />
 }
