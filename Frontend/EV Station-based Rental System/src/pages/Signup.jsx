@@ -2,29 +2,34 @@ import React, { useState } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import CTA from '../components/CTA'
+import api from '../api/client'
 
 export default function Signup() {
   const [submitting, setSubmitting] = useState(false)
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     if (submitting) return
     setSubmitting(true)
 
     const form = e.currentTarget
-    const data = {
-      username: form.username.value.trim(),
+    const payload = {
+      userName: form.username.value.trim(),
       email: form.email.value.trim(),
-      phone: form.phone.value.trim(),
+      phoneNumber: form.phone.value.trim(),
       password: form.password.value,
     }
 
-    // Simulate submit flow; replace with API integration when available
-    setTimeout(() => {
-      alert(`Signed up as ${data.username}`)
-      setSubmitting(false)
+    try {
+      await api.registerUser(payload)
+      alert(`Signed up as ${payload.userName}`)
       window.location.hash = ''
-    }, 500)
+    } catch (err) {
+      const msg = err?.message || 'Registration failed'
+      alert(msg)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
