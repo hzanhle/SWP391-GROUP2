@@ -16,10 +16,11 @@ export default function Navbar() {
           <a className="nav-link" href="#how" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>How it works</a>
           <a className="nav-link" href="#pricing" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Pricing</a>
           <a className="nav-link" href="#support" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Support</a>
+          <a className="nav-link" href="#login" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Login</a>
         </nav>
 
         <div className="nav-cta" data-figma-layer="NavCTA" data-tailwind='class: "hidden md:inline-flex"'>
-          <CTA as="a" href="#signup" aria-label="Sign up" data-figma-layer="CTA" data-tailwind='class: "bg-sky-500 text-white px-5 py-3 rounded-lg shadow-md"'>Sign up</CTA>
+          <CTA as="a" href="#signup" aria-label="Sign up or Book" data-figma-layer="CTA" data-tailwind='class: "bg-sky-500 text-white px-5 py-3 rounded-lg shadow-md"'>Sign up / Book</CTA>
         </div>
 
         <button aria-label="Toggle menu" className="menu-toggle btn btn-ghost" onClick={() => setOpen(v=>!v)} data-tailwind='class: "inline-flex md:hidden items-center gap-2 border border-slate-200 px-3 py-2 rounded-md"'>
@@ -35,7 +36,8 @@ export default function Navbar() {
             <a className="nav-link" role="menuitem" href="#how">How it works</a>
             <a className="nav-link" role="menuitem" href="#pricing">Pricing</a>
             <a className="nav-link" role="menuitem" href="#support">Support</a>
-            <CTA as="a" href="#signup" className="mt-2" data-tailwind='class: "mt-2"'>Sign up</CTA>
+            <a className="nav-link" role="menuitem" href="#login">Login</a>
+            <CTA as="a" href="#signup" className="mt-2" data-tailwind='class: "mt-2"'>Sign up / Book</CTA>
           </div>
         </div>
       )}
