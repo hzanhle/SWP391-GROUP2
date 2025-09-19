@@ -153,6 +153,23 @@ body {
 @media (min-width: 768px) { .carousel-track { grid-auto-columns: 40%; } }
 @media (min-width: 1024px) { .carousel-track { grid-auto-columns: 25%; } }
 
+/* Stepper */
+.stepper { display:flex; gap: var(--space-4); list-style:none; padding:0; margin:0 0 var(--space-4); }
+.stepper-item { display:flex; align-items:center; gap: var(--space-2); color: var(--color-muted); }
+.stepper-item .stepper-index { width: 28px; height: 28px; border-radius: var(--radius-full); border: 1px solid var(--color-border); display:flex; align-items:center; justify-content:center; background: var(--color-surface); }
+.stepper-item.active { color: var(--color-text); }
+.stepper-item.active .stepper-index { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+.stepper-item.done .stepper-index { background: #e2e8f0; color: #0f172a; }
+
+/* Booking */
+.booking-grid { display:grid; gap: var(--space-4); }
+@media (min-width: 768px) { .booking-grid { grid-template-columns: 1fr 1fr; } }
+.summary { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); background: var(--color-surface); }
+
+/* History */
+.history-list { display:grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.history-item { padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+
 /* How it works */
 .steps { display: grid; gap: var(--space-6); }
 @media (min-width: 768px) { .steps { grid-template-columns: repeat(3, 1fr); } }
