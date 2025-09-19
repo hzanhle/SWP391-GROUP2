@@ -16,6 +16,7 @@ export default function Navbar() {
           <a className="nav-link" href="#how" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>How it works</a>
           <a className="nav-link" href="#pricing" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Pricing</a>
           <a className="nav-link" href="#support" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Support</a>
+          <a className="nav-link" href="#profile" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Profile</a>
           <a className="nav-link" href="#login" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Login</a>
         </nav>
 
@@ -36,6 +37,7 @@ export default function Navbar() {
             <a className="nav-link" role="menuitem" href="#how">How it works</a>
             <a className="nav-link" role="menuitem" href="#pricing">Pricing</a>
             <a className="nav-link" role="menuitem" href="#support">Support</a>
+            <a className="nav-link" role="menuitem" href="#profile">Profile</a>
             <a className="nav-link" role="menuitem" href="#login">Login</a>
             <CTA as="a" href="#signup" className="mt-2" data-tailwind='class: "mt-2"'>Sign up / Book</CTA>
           </div>
