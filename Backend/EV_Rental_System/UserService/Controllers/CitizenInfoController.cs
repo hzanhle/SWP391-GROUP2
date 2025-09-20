@@ -7,5 +7,6 @@ namespace UserService.Controllers
     [ApiController]
     public class CitizenInfoController : ControllerBase
     {
+
     }
 }
