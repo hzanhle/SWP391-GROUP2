@@ -1,11 +1,12 @@
-﻿using UserService.Models;
+﻿using UserService.DTOs;
+using UserService.Models;
 
 namespace UserService.Services
 {
     public interface IDriverLicenseService
     {
-        Task UpdateDriverLicense(DriverLicense driverLicense);
-        Task AddDriverLicense(DriverLicense driverLicense);
+        Task UpdateDriverLicense(DriverLicenseRequest driverLicense);
+        Task AddDriverLicense(DriverLicenseRequest driverLicense);
         Task<DriverLicense> GetDriverLicenseByUserId(int userId);
     }
 }

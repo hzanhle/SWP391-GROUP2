@@ -1,11 +1,12 @@
-﻿using UserService.Models;
+﻿using UserService.DTOs;
+using UserService.Models;
 
 namespace UserService.Services
 {
     public interface ICitizenInfoService
     {
-        Task UpdateCitizenInfo(CitizenInfo citizenInfo);
-        Task AddCitizenInfo(CitizenInfo citizenInfo);
+        Task UpdateCitizenInfo(CitizenInfoRequest citizenInfo);
+        Task AddCitizenInfo(CitizenInfoRequest citizenInfo);
         Task<CitizenInfo> GetCitizenInfoByUserId(int userId);
     }
 }

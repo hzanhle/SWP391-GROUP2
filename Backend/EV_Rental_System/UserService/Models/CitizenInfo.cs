@@ -21,7 +21,7 @@ namespace UserService.Models
         public string FullName { get; set; }
         public string Address { get; set; }
         public DateOnly DayOfBirth { get; set; }
-        public string[]? ImageUrls { get; set; }
+        public string[] ImageUrls { get; set; }
 
         public CitizenInfo()
         {

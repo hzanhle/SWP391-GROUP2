@@ -1,4 +1,5 @@
-﻿using UserService.Models;
+﻿using UserService.DTOs;
+using UserService.Models;
 using UserService.Repositories;
 
 namespace UserService.Services
@@ -12,9 +13,19 @@ namespace UserService.Services
            _citizenInfoRepository = citizenInfoRepository;
         }
 
-        public async Task AddCitizenInfo(CitizenInfo citizenInfo)
+        public async Task AddCitizenInfo(CitizenInfoRequest citizenInfo)
         {
-            await _citizenInfoRepository.AddCitizenInfo(citizenInfo);
+            CitizenInfo info = new CitizenInfo
+            {
+                Address = citizenInfo.Address,
+                DayOfBirth = citizenInfo.DayOfBirth,
+                FullName = citizenInfo.FullName,
+                ImageUrls = citizenInfo.ImageUrls,
+                UserId = citizenInfo.UserId,
+                CitizenId = citizenInfo.CitizenId
+
+            };
+            await _citizenInfoRepository.AddCitizenInfo(info);
         }
 
         public async Task<CitizenInfo> GetCitizenInfoByUserId(int userId)
@@ -22,9 +33,16 @@ namespace UserService.Services
             return await _citizenInfoRepository.GetCitizenInfoByUserId(userId);
         }
 
-        public async Task UpdateCitizenInfo(CitizenInfo citizenInfo)
+        public async Task UpdateCitizenInfo(CitizenInfoRequest citizenInfo)
         {
-            await _citizenInfoRepository.UpdateCitizenInfo(citizenInfo);
+            var existingInfo = await _citizenInfoRepository.GetCitizenInfoByUserId(citizenInfo.UserId);
+            existingInfo.Address = citizenInfo.Address;
+            existingInfo.DayOfBirth = citizenInfo.DayOfBirth;
+            existingInfo.FullName = citizenInfo.FullName;
+            existingInfo.ImageUrls = citizenInfo.ImageUrls;
+            existingInfo.CitizenId = citizenInfo.CitizenId;
+
+            await _citizenInfoRepository.UpdateCitizenInfo(existingInfo);
         }
     }
 }
