@@ -1,12 +1,11 @@
 ﻿using UserService.Models;
 
-namespace UserService.Repositories
+namespace UserService.Services
 {
-    public interface IRoleRepository
+    public interface IRoleService
     {
+        Task<Role> GetRoleNameByIdAsync(int roleId);
         Task<Role> GetRoleByNameAsync(string roleName);
-        Task<Role> GetRoleByIdAsync(int roleId);
-
         Task<List<Role>> GetAllRole();
     }
 }

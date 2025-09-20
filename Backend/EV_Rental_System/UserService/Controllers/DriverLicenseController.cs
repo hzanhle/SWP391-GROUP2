@@ -16,28 +16,30 @@ namespace UserService.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateDriverLicense([FromBody] DriverLicenseRequest request)
+        public async Task<IActionResult> CreateCitizenInfo([FromBody] CitizenInfoRequest request)
         {
-            if (request == null || string.IsNullOrEmpty(request.CitizenId) || string.IsNullOrEmpty(request.LicenseNumber))
-            {
-                return BadRequest("Invalid request data");
-            }
             try
             {
-                var result = await _citizenInfoService.AddCitizenInfo(request);
-                if (result)
-                {
-                    return Ok("Driver license created successfully");
-                }
-                else
-                {
-                    return StatusCode(StatusCodes.Status500InternalServerError, "Failed to create driver license");
-                }
+                await _citizenInfoService.AddCitizenInfo(request);
+                return Ok("Citizen info created successfully.");
             }
             catch (Exception ex)
             {
-                // Log the exception (not shown here for brevity)
-                return StatusCode(StatusCodes.Status500InternalServerError, $"An error occurred: {ex.Message}");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> UpdateCitizenInfo([FromBody] CitizenInfoRequest request)
+        {
+            try
+            {
+                await _citizenInfoService.UpdateCitizenInfo(request);
+                return Ok("Citizen info updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
     }

@@ -21,5 +21,10 @@ namespace UserService.Repositories
             return await _context.Roles
                 .FirstOrDefaultAsync(r => r.RoleId == roleId);
         }
+
+        public async Task<List<Role>> GetAllRole()
+        {
+            return await _context.Roles.ToListAsync();
+        }
     }
 }
