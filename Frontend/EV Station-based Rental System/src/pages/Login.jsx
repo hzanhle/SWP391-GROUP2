@@ -68,8 +68,8 @@ export default function Login() {
                   </CTA>
                 </div>
 
-                <div className="row" style={{justifyContent:'center'}}>
-                  <span className="section-subtitle" style={{margin:0}}>Chưa có tài khoản?</span>
+                <div className="row-center">
+                  <span className="section-subtitle">Chưa có tài khoản?</span>
                   <a className="nav-link" href="#signup">Đăng ký</a>
                 </div>
               </form>
