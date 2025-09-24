@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using UserService;
 using UserService.Repositories;
 using UserService.Services;
 
@@ -38,6 +39,8 @@ builder.Services.AddScoped<ICitizenInfoRepository, CitizenInfoRepository>();
 builder.Services.AddScoped<ICitizenInfoService, CitizenInfoService>();
 builder.Services.AddScoped<IDriverLicenseRepository, DriverLicenseRepository>();
 builder.Services.AddScoped<IDriverLicenseService, DriverLicenseService>();
+builder.Services.AddScoped<IImageService, ImageService>();
+builder.Services.AddScoped<IImageRepository, ImageRepository>();
 
 // ====================== JWT Configuration (Basic) ======================
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

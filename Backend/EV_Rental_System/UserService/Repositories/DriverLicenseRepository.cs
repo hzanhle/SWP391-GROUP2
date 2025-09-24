@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using UserService.Models;
+using UserService.Models.UserService.Models;
 
 namespace UserService.Repositories
 {
@@ -18,23 +19,30 @@ namespace UserService.Repositories
             await _context.SaveChangesAsync();
         }
 
-
         public async Task UpdateDriverLicense(DriverLicense driverLicense)
         {
             _context.DriverLicenses.Update(driverLicense);
             await _context.SaveChangesAsync();
         }
 
-
-
         public async Task<DriverLicense> GetDriverLicenseByUserId(int userId)
         {
-            return await _context.DriverLicenses.FirstOrDefaultAsync(dl => dl.UserId == userId);
+            return await _context.DriverLicenses
+                .Include(dl => dl.Images) // Include navigation property
+                .FirstOrDefaultAsync(dl => dl.UserId == userId);
         }
 
-        public Task DeleteDriverLicense(int userId)
+        public async Task DeleteDriverLicense(int userId)
         {
-            throw new NotImplementedException();
+            var driverLicense = await _context.DriverLicenses
+                .Include(dl => dl.Images)
+                .FirstOrDefaultAsync(dl => dl.UserId == userId);
+
+            if (driverLicense != null)
+            {
+                _context.DriverLicenses.Remove(driverLicense);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

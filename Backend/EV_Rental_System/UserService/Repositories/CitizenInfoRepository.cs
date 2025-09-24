@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using UserService.Models;
+using UserService.Models.UserService.Models;
 
 namespace UserService.Repositories
 {
@@ -10,11 +11,6 @@ namespace UserService.Repositories
         public CitizenInfoRepository(MyDbContext context)
         {
             _context = context;
-        }
-
-        public async Task<CitizenInfo> GetCitizenInfoByUserId(int userId)
-        {
-            return await _context.CitizenInfos.FirstOrDefaultAsync(co => co.UserId == userId);
         }
 
         public async Task AddCitizenInfo(CitizenInfo citizenInfo)
@@ -29,9 +25,24 @@ namespace UserService.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public Task DeleteCitizenInfo(int id)
+        public async Task<CitizenInfo> GetCitizenInfoByUserId(int userId)
         {
-            throw new NotImplementedException();
+            return await _context.CitizenInfos
+                .Include(ci => ci.Images)
+                .FirstOrDefaultAsync(ci => ci.UserId == userId);
+        }
+
+        public async Task DeleteCitizenInfo(int userId)
+        {
+            var citizenInfo = await _context.CitizenInfos
+                .Include(ci => ci.Images)
+                .FirstOrDefaultAsync(ci => ci.UserId == userId);
+
+            if (citizenInfo != null)
+            {
+                _context.CitizenInfos.Remove(citizenInfo);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

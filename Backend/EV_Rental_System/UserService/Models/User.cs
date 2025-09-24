@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using UserService.Models.UserService.Models;
 
 namespace UserService.Models
 {
@@ -26,8 +27,6 @@ namespace UserService.Models
         public Role? Role { get; set; }
 
         public bool IsActive { get; set; } = true;
-
-        public int TrustScore { get; set; }
 
         public User() { }
 
