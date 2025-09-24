@@ -9,5 +9,6 @@ namespace UserService.Services
         Task AddCitizenInfo(CitizenInfoRequest request);
         Task<CitizenInfo> GetCitizenInfoByUserId(int userId);
         Task UpdateCitizenInfo(CitizenInfoRequest request);
+        Task SetStatus(int userId);
     }
 }

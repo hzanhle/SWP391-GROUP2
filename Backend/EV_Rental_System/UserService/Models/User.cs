@@ -20,7 +20,7 @@ namespace UserService.Models
         public CitizenInfo? CitizenInfo { get; set; }
         public DriverLicense? DriverLicense { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
 
         public int RoleId { get; set; }
 

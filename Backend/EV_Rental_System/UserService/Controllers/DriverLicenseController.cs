@@ -9,15 +9,15 @@ namespace UserService.Controllers
     [ApiController]
     public class DriverLicenseController : ControllerBase
     {
-        private readonly IDriverLicenseService _driverLicenseService; // Fixed: Correct service
+        private readonly IDriverLicenseService _driverLicenseService; 
 
-        public DriverLicenseController(IDriverLicenseService driverLicenseService) // Fixed: Correct interface and parameter name
+        public DriverLicenseController(IDriverLicenseService driverLicenseService) 
         {
             _driverLicenseService = driverLicenseService;
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateDriverLicense([FromForm] DriverLicenseRequest request) // Fixed: Correct DTO and [FromForm]
+        public async Task<IActionResult> CreateDriverLicense([FromForm] DriverLicenseRequest request) 
         {
             try
             {
@@ -66,6 +66,20 @@ namespace UserService.Controllers
                 }
 
                 return Ok(driverLicense);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("SetStatus/{userId}")]
+        public async Task<IActionResult> SetStatus(int userId) 
+        {
+            try
+            {
+                await _driverLicenseService.SetStatus(userId); 
+                return Ok(new { message = "Driver license status updated successfully." });
             }
             catch (Exception ex)
             {

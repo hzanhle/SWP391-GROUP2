@@ -46,6 +46,15 @@ namespace UserService.Services
         public async Task<DriverLicense> GetDriverLicenseByUserId(int userId)
             => await _driverLicenseRepository.GetDriverLicenseByUserId(userId);
 
+        public async Task SetStatus(int userId)
+        {
+            var entity =  await _driverLicenseRepository.GetDriverLicenseByUserId(userId);
+            if (entity == null)
+                throw new Exception("DriverLicense not found");
+            entity.Status = "Đã xác nhận";
+            await _driverLicenseRepository.UpdateDriverLicense(entity);
+        }
+
         public async Task UpdateDriverLicense(DriverLicenseRequest request)
         {
             var entity = await _driverLicenseRepository.GetDriverLicenseByUserId(request.UserId);

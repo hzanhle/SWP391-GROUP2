@@ -9,5 +9,6 @@ namespace UserService.Repositories
         Task UpdateCitizenInfo(CitizenInfo citizenInfo);
         Task<CitizenInfo> GetCitizenInfoByUserId(int userId);
         Task DeleteCitizenInfo(int userId);
+        
     }
 }

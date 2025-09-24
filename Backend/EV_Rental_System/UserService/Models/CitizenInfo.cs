@@ -28,12 +28,14 @@ namespace UserService.Models
 
             public DateOnly DayOfBirth { get; set; }
 
+            public string Status { get; set; }
+
             // Navigation property → liên kết với bảng Image
             public ICollection<Image> Images { get; set; } = new List<Image>();
 
             public CitizenInfo() { }
 
-            public CitizenInfo(int userId, string sex, string citizenId, DateOnly citiRegisDate, string citiRegisOffice, string fullName, string address, DateOnly dayOfBirth)
+            public CitizenInfo(int userId, string sex, string status, string citizenId, DateOnly citiRegisDate, string citiRegisOffice, string fullName, string address, DateOnly dayOfBirth)
             {
                 UserId = userId;
                 Sex = sex;
@@ -41,6 +43,7 @@ namespace UserService.Models
                 CitiRegisDate = citiRegisDate;
                 CitiRegisOffice = citiRegisOffice;
                 FullName = fullName;
+                Status = status;
                 Address = address;
                 DayOfBirth = dayOfBirth;
             }
