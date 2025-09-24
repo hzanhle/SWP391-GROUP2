@@ -50,6 +50,15 @@ namespace UserService.Services
             return await _citizenInfoRepository.GetCitizenInfoByUserId(userId);
         }
 
+        public async Task SetStatus(int userId)
+        {
+            var entity = await _citizenInfoRepository.GetCitizenInfoByUserId(userId);
+            if (entity == null)
+                throw new Exception("CitizenInfo not found");
+            entity.Status = "Đã xác nhận";
+            await _citizenInfoRepository.UpdateCitizenInfo(entity);
+        }
+
         public async Task UpdateCitizenInfo(CitizenInfoRequest request)
         {
             var entity = await _citizenInfoRepository.GetCitizenInfoByUserId(request.UserId);

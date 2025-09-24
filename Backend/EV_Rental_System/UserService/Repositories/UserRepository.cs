@@ -55,5 +55,9 @@ namespace UserService.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public Task SetStatus(string status)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

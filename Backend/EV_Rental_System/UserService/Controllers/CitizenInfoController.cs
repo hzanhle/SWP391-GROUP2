@@ -72,5 +72,19 @@ namespace UserService.Controllers
                 return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
             }
         }
+
+        [HttpPost("set-status/{userId}")]
+        public async Task<IActionResult> SetStatus(int userId)
+        {
+            try
+            {
+                await _citizenInfoService.SetStatus(userId);
+                return Ok(new { message = "Status updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+            }
+        }
     }
 }
