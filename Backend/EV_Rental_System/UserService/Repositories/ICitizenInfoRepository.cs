@@ -1,4 +1,5 @@
 ﻿using UserService.Models;
+using UserService.Models.UserService.Models;
 
 namespace UserService.Repositories
 {
@@ -6,7 +7,7 @@ namespace UserService.Repositories
     {
         Task AddCitizenInfo(CitizenInfo citizenInfo);
         Task UpdateCitizenInfo(CitizenInfo citizenInfo);
-        Task<CitizenInfo> GetCitizenInfoByUserId(int id);
-        Task DeleteCitizenInfo(int id);
+        Task<CitizenInfo> GetCitizenInfoByUserId(int userId);
+        Task DeleteCitizenInfo(int userId);
     }
 }
