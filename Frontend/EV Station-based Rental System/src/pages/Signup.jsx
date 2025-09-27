@@ -48,6 +48,7 @@ export default function Signup() {
 
             <div className="card">
               <form className="card-body" onSubmit={handleSubmit} noValidate>
+                {error ? <div role="alert" className="badge gray" aria-live="assertive">{error}</div> : null}
                 <div className="field">
                   <label htmlFor="username" className="label">Username</label>
                   <input id="username" name="username" className="input" type="text" placeholder="yourname" autoComplete="username" required />
