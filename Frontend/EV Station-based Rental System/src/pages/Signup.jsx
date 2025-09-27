@@ -24,9 +24,9 @@ export default function Signup() {
 
     try {
       await api.registerUser(payload)
-      // show success and redirect
-      window.alert(`Signed up as ${payload.userName}`)
-      window.location.hash = ''
+      // show success and redirect to login
+      window.alert('Đăng ký thành công! Vui lòng đăng nhập.')
+      window.location.hash = 'login'
     } catch (err) {
       const msg = err?.message || 'Registration failed'
       setError(msg)

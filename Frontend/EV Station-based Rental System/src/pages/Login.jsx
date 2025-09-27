@@ -29,10 +29,9 @@ export default function Login() {
         localStorage.setItem('auth.token', token)
         localStorage.setItem('auth.user', JSON.stringify(user || {}))
       }
-      alert('Đăng nhập thành công')
       window.location.hash = ''
     } catch (err) {
-      const msg = err?.data?.message || err?.message || 'Đăng nhập thất bại'
+      const msg = err?.data?.message || err?.message || 'Fail to login'
       setError(msg)
     } finally {
       setSubmitting(false)
@@ -46,7 +45,7 @@ export default function Login() {
         <section id="login" className="section" aria-labelledby="login-title">
           <div className="container">
             <div className="section-header">
-              <h1 id="login-title" className="section-title">Đăng nhập</h1>
+              <h1 id="login-title" className="section-title">Login</h1>
               <p className="section-subtitle">Truy cập để đặt xe và quản lý chuyến đi của bạn.</p>
             </div>
 
@@ -54,25 +53,25 @@ export default function Login() {
               <form className="card-body" onSubmit={handleSubmit} noValidate>
                 {error ? <div role="alert" className="badge gray" aria-live="assertive">{error}</div> : null}
                 <div className="field">
-                  <label htmlFor="username" className="label">Tên đăng nhập</label>
+                  <label htmlFor="username" className="label">Username</label>
                   <input id="username" name="username" className="input" type="text" placeholder="nhap_ten" autoComplete="username" required />
                 </div>
 
                 <div className="field">
-                  <label htmlFor="password" className="label">Mật khẩu</label>
+                  <label htmlFor="password" className="label">Password</label>
                   <input id="password" name="password" className="input" type="password" placeholder="••••••••" autoComplete="current-password" minLength={6} required />
                 </div>
 
                 <div className="row-between">
-                  <a className="nav-link" href="#forgot-password">Quên mật khẩu?</a>
+                  <a className="nav-link" href="#forgot-password">Forgot password?</a>
                   <CTA as="button" type="submit" disabled={submitting} aria-busy={submitting}>
-                    {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
+                    {submitting ? 'Process' : 'Login'}
                   </CTA>
                 </div>
 
                 <div className="row-center">
-                  <span className="section-subtitle">Chưa có tài khoản?</span>
-                  <a className="nav-link" href="#signup">Đăng ký</a>
+                  <span className="section-subtitle">Don't have account?</span>
+                  <a className="nav-link" href="#signup">Sign up</a>
                 </div>
               </form>
             </div>

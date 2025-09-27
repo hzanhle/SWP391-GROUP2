@@ -3,6 +3,25 @@ import CTA from './CTA'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
+  const [ver, setVer] = useState(0)
+  const isAuthed = typeof window !== 'undefined' && !!localStorage.getItem('auth.token')
+  const rawUser = (typeof window !== 'undefined' && localStorage.getItem('auth.user')) || '{}'
+  let displayName = 'Bạn'
+  try {
+    const u = JSON.parse(rawUser)
+    displayName = (u.fullName || u.userName || u.username || 'Bạn')
+  } catch {}
+
+  function handleLogout(e) {
+    e.preventDefault()
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth.token')
+      localStorage.removeItem('auth.user')
+      setOpen(false)
+      setVer(v => v + 1)
+      window.location.hash = ''
+    }
+  }
   return (
     <header className="navbar" data-figma-layer="Navbar" data-tailwind='class: "sticky top-0 z-50 bg-white border-b border-slate-200"'>
       <div className="container navbar-inner" role="navigation" aria-label="Primary" data-tailwind='class: "flex items-center justify-between px-6 py-4"'>
@@ -16,12 +35,23 @@ export default function Navbar() {
           <a className="nav-link" href="#how" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>How it works</a>
           <a className="nav-link" href="#pricing" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Pricing</a>
           <a className="nav-link" href="#support" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Support</a>
-          <a className="nav-link" href="#login" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Login</a>
+          {isAuthed ? (
+            <>
+              <span className="nav-link" aria-label="User greeting" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>
+                Hello, {displayName}
+              </span>
+              <a className="nav-link" href="#" onClick={handleLogout} data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Logout</a>
+            </>
+          ) : (
+            <a className="nav-link" href="#login" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Login</a>
+          )}
         </nav>
 
-        <div className="nav-cta" data-figma-layer="NavCTA" data-tailwind='class: "hidden md:inline-flex"'>
-          <CTA as="a" href="#signup" aria-label="Sign up or Book" data-figma-layer="CTA" data-tailwind='class: "bg-sky-500 text-white px-5 py-3 rounded-lg shadow-md"'>Sign up / Book</CTA>
-        </div>
+        {!isAuthed && (
+          <div className="nav-cta" data-figma-layer="NavCTA" data-tailwind='class: "hidden md:inline-flex"'>
+            <CTA as="a" href="#signup" aria-label="Sign up or Book" data-figma-layer="CTA" data-tailwind='class: "bg-sky-500 text-white px-5 py-3 rounded-lg shadow-md"'>Sign up</CTA>
+          </div>
+        )}
 
         <button aria-label="Toggle menu" className="menu-toggle btn btn-ghost" onClick={() => setOpen(v=>!v)} data-tailwind='class: "inline-flex md:hidden items-center gap-2 border border-slate-200 px-3 py-2 rounded-md"'>
           <span>Menu</span>
@@ -36,8 +66,15 @@ export default function Navbar() {
             <a className="nav-link" role="menuitem" href="#how">How it works</a>
             <a className="nav-link" role="menuitem" href="#pricing">Pricing</a>
             <a className="nav-link" role="menuitem" href="#support">Support</a>
-            <a className="nav-link" role="menuitem" href="#login">Login</a>
-            <CTA as="a" href="#signup" className="mt-2" data-tailwind='class: "mt-2"'>Sign up / Book</CTA>
+            {isAuthed ? (
+              <>
+                <span className="nav-link" role="menuitem">Xin chào, {displayName}</span>
+                <a className="nav-link" role="menuitem" href="#" onClick={handleLogout}>Đăng xuất</a>
+              </>
+            ) : (
+              <a className="nav-link" role="menuitem" href="#login">Login</a>
+            )}
+            {!isAuthed && (<CTA as="a" href="#signup" className="mt-2" data-tailwind='class: "mt-2"'>Sign up / Book</CTA>)}
           </div>
         </div>
       )}
