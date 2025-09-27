@@ -23,9 +23,11 @@ export default function Login() {
     try {
       const res = await api.login(payload)
       const data = res.data
-      if (data?.token) {
-        localStorage.setItem('auth.token', data.token)
-        localStorage.setItem('auth.user', JSON.stringify(data.user || {}))
+      const token = data?.token ?? data?.Token
+      const user = data?.user ?? data?.User
+      if (token) {
+        localStorage.setItem('auth.token', token)
+        localStorage.setItem('auth.user', JSON.stringify(user || {}))
       }
       alert('Đăng nhập thành công')
       window.location.hash = ''

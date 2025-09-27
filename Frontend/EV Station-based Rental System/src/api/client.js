@@ -16,7 +16,19 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
     body: body ? JSON.stringify(body) : undefined,
   }
 
-  const res = await fetch(url, init)
+  let res
+  try {
+    res = await fetch(url, init)
+  } catch (fetchErr) {
+    // Likely network error (DNS, CORS, unreachable host)
+    const message = `Network error: failed to reach API at ${BASE_URL}. If you are running the API locally, the hosted preview cannot access localhost. Use a public URL or run the frontend locally.`
+    const error = new Error(message)
+    error.cause = fetchErr
+    error.data = null
+    error.status = 0
+    throw error
+  }
+
   const isJson = res.headers.get('content-type')?.includes('application/json')
   const data = isJson ? await res.json().catch(() => null) : null
 

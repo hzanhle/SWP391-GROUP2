@@ -6,11 +6,13 @@ import api from '../api/client'
 
 export default function Signup() {
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (submitting) return
     setSubmitting(true)
+    setError('')
 
     const form = e.currentTarget
     const payload = {
@@ -22,11 +24,12 @@ export default function Signup() {
 
     try {
       await api.registerUser(payload)
-      alert(`Signed up as ${payload.userName}`)
+      // show success and redirect
+      window.alert(`Signed up as ${payload.userName}`)
       window.location.hash = ''
     } catch (err) {
       const msg = err?.message || 'Registration failed'
-      alert(msg)
+      setError(msg)
     } finally {
       setSubmitting(false)
     }
@@ -45,6 +48,7 @@ export default function Signup() {
 
             <div className="card">
               <form className="card-body" onSubmit={handleSubmit} noValidate>
+                {error ? <div role="alert" className="badge gray" aria-live="assertive">{error}</div> : null}
                 <div className="field">
                   <label htmlFor="username" className="label">Username</label>
                   <input id="username" name="username" className="input" type="text" placeholder="yourname" autoComplete="username" required />

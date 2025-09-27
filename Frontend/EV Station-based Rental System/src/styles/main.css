@@ -109,7 +109,9 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  color: var(--color-text);
 }
+.input::placeholder, .select::placeholder { color: var(--color-muted); }
 .label { font-weight: 600; font-size: var(--font-sm); color: var(--color-secondary); }
 .field { display: grid; gap: var(--space-2); }
 
