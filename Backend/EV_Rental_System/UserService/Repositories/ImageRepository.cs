@@ -18,13 +18,26 @@ namespace UserService.Repositories
             await _context.SaveChangesAsync();
         }
 
-        
         public async Task DeleteImage(int imageId)
         {
             var image = await _context.Images.FindAsync(imageId);
             if (image != null)
             {
                 _context.Images.Remove(image);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        // FIXED: Thêm method DeleteImages để xóa multiple images
+        public async Task DeleteImages(List<int> imageIds)
+        {
+            var images = await _context.Images
+                .Where(img => imageIds.Contains(img.ImageId))
+                .ToListAsync();
+
+            if (images.Any())
+            {
+                _context.Images.RemoveRange(images);
                 await _context.SaveChangesAsync();
             }
         }

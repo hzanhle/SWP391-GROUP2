@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using BCrypt.Net;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
@@ -52,16 +53,17 @@ namespace UserService
 
             // ==================== Seed Admin User ====================
             modelBuilder.Entity<User>().HasData(
-                new User
-                {
-                    Id = 1,
-                    UserName = "admin",
-                    Email = "admin@example.com",
-                    PhoneNumber = "0123456789",
-                    Password = "Admin@123",
-                    RoleId = 3
-                }
-            );
+            new User
+            {
+                Id = 1,
+                UserName = "admin",
+                Email = "admin@example.com",
+                PhoneNumber = "0123456789",
+                Password = "$2a$11$CwTycUXWue0Thq9StjUM0uJ8H6aJG0EQaDb4KfoipXEx.YZ4t5Dba", // ✅ hash cố định cho "Admin@123"
+                RoleId = 3
+            }
+        );
+
 
             // ==================== Configure Image ====================
             modelBuilder.Entity<Image>(entity =>
