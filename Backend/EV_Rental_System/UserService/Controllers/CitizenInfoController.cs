@@ -26,12 +26,23 @@ namespace UserService.Controllers
                     return BadRequest(ModelState);
                 }
 
-                await _citizenInfoService.AddCitizenInfo(request);
-                return Ok(new { message = "Citizen info created successfully." });
+                // FIXED: Await the async method
+                var citizenInfo = await _citizenInfoService.AddCitizenInfo(request);
+
+                return Ok(new
+                {
+                    message = "Citizen info created successfully.",
+                    data = citizenInfo
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+                // Log the exception here
+                return StatusCode(500, new { error = "Internal server error occurred.", details = ex.Message });
             }
         }
 

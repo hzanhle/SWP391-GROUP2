@@ -7,6 +7,6 @@ namespace UserService.Services
         Task<List<Image>> UploadImagesAsync(List<IFormFile> files, string type, int typeId);
         Task<List<string>> GetImagePathsAsync(string type, int typeId);
         Task DeleteImagesAsync(string type, int typeId);
-        Task AddImage(Image image); // Added missing method
+        Task AddImage(Image image);
     }
 }

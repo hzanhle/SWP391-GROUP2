@@ -6,9 +6,9 @@ namespace UserService.Services
 {
     public interface ICitizenInfoService
     {
-        Task AddCitizenInfo(CitizenInfoRequest request);
-        Task<CitizenInfo> GetCitizenInfoByUserId(int userId);
-        Task UpdateCitizenInfo(CitizenInfoRequest request);
+        Task<CitizenInfo> AddCitizenInfo(CitizenInfoRequest request);
+        Task<CitizenInfoDTO> GetCitizenInfoByUserId(int userId);
         Task SetStatus(int userId);
+        Task UpdateCitizenInfo(CitizenInfoRequest request);
     }
 }

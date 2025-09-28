@@ -25,6 +25,19 @@ namespace TwoWheelVehicleService.Repositories
                 .ToListAsync();
         }
 
+        public async Task DeleteImages(List<int> imageIds)
+        {
+            foreach (var item in imageIds)
+            {
+                var image = await _context.Images.FindAsync(item);
+                if (image != null)
+                {
+                    _context.Images.Remove(image);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
+
         public async Task DeleteImage(int imageId)
         {
             var image = await _context.Images.FindAsync(imageId);

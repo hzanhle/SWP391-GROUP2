@@ -8,19 +8,19 @@ namespace TwoWheelVehicleService.Services
     {
         private readonly IImageRepository _imageRepository;
         private readonly IWebHostEnvironment _env;
-        private readonly string _rootFolder; // Fixed syntax
+        private readonly string _rootFolder; // Fixed: removed * 
 
         public ImageService(IImageRepository imageRepository, IWebHostEnvironment env)
         {
             _imageRepository = imageRepository;
             _env = env;
-            _rootFolder = Path.Combine(_env.ContentRootPath, "Data", "Vehicles"); // Fixed syntax
+            _rootFolder = Path.Combine(_env.ContentRootPath, "Data", "Vehicles"); // Fixed: removed *
         }
 
-        public async Task<List<Image>> UploadImagesAsync(List<IFormFile> files, int modelId) // Fixed signature to match interface
+        public async Task<List<Image>> UploadImagesAsync(List<IFormFile> files, int modelId)
         {
             var uploadedImages = new List<Image>();
-            var folderPath = Path.Combine(_rootFolder, "Models"); // Create a subfolder for models
+            var folderPath = Path.Combine(_rootFolder, "Models");
 
             if (!Directory.Exists(folderPath))
                 Directory.CreateDirectory(folderPath);
@@ -36,25 +36,26 @@ namespace TwoWheelVehicleService.Services
                     await file.CopyToAsync(stream);
                 }
 
-                // Tạo Image entity với ModelId thay vì Type/TypeId
+                // Tạo Image entity với ModelId
                 var img = new Image
                 {
                     Url = Path.Combine("Data", "Vehicles", "Models", fileName).Replace("\\", "/"),
-                    ModelId = modelId // Use ModelId directly
+                    ModelId = modelId
                 };
+
                 uploadedImages.Add(img);
             }
 
             return uploadedImages;
         }
 
-        public async Task<List<string>> GetImagePathsAsync(int modelId) // Fixed signature
+        public async Task<List<string>> GetImagePathsAsync(int modelId)
         {
             var images = await _imageRepository.GetImagesByModelId(modelId);
             return images.Select(i => i.Url).ToList();
         }
 
-        public async Task DeleteImagesAsync(int modelId) // Fixed signature
+        public async Task DeleteImagesAsync(int modelId)
         {
             var images = await _imageRepository.GetImagesByModelId(modelId);
             foreach (var img in images)
