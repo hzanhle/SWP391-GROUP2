@@ -37,6 +37,7 @@ export default function Navbar() {
           <a className="nav-link" href="#support" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Support</a>
           {isAuthed ? (
             <>
+              <a className="nav-link" href="#profile" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Profile</a>
               <span className="nav-link" aria-label="User greeting" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>
                 Hello, {displayName}
               </span>
@@ -68,6 +69,7 @@ export default function Navbar() {
             <a className="nav-link" role="menuitem" href="#support">Support</a>
             {isAuthed ? (
               <>
+                <a className="nav-link" role="menuitem" href="#profile">Profile</a>
                 <span className="nav-link" role="menuitem">Xin chào, {displayName}</span>
                 <a className="nav-link" role="menuitem" href="#" onClick={handleLogout}>Đăng xuất</a>
               </>
