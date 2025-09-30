@@ -11,10 +11,12 @@ namespace TwoWheelVehicleService.Controllers
     public class VehicleController : ControllerBase
     {
         private readonly IVehicleService _vehicleService;
+        private readonly IModelService _modelService;
 
-        public VehicleController(IVehicleService vehicleService)
+        public VehicleController(IVehicleService vehicleService, IModelService modelService)
         {
             _vehicleService = vehicleService;
+            _modelService = modelService;
         }
 
         [HttpGet]
@@ -36,8 +38,12 @@ namespace TwoWheelVehicleService.Controllers
         {
             var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
             if (vehicle == null) return NotFound();
+            var model = await _modelService.GetModelByIdAsync(vehicle.VehicleId);
+            vehicle.Model = model;
+
             return Ok(vehicle);
         }
+
 
         [HttpPost]
         public async Task<IActionResult> CreateVehicle([FromBody] Vehicle vehicle)

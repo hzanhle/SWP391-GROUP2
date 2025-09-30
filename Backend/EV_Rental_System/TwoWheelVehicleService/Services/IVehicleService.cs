@@ -1,4 +1,5 @@
-﻿using TwoWheelVehicleService.Models;
+﻿using TwoWheelVehicleService.DTOs;
+using TwoWheelVehicleService.Models;
 
 namespace TwoWheelVehicleService.Services
 {
@@ -9,7 +10,7 @@ namespace TwoWheelVehicleService.Services
         Task AddVehicleAsync(Vehicle vehicle);
         Task UpdateVehicleAsync(Vehicle vehicle);
         Task DeleteVehicleAsync(int vehicleId); // Soft delete
-        Task<Vehicle> GetVehicleByIdAsync(int vehicleId);
+        Task<VehicleDTO> GetVehicleByIdAsync(int vehicleId);
         Task SetVehicleStatus(int vehicleId, string status); // New method to set vehicle status
     }
 }

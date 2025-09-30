@@ -26,7 +26,7 @@ namespace UserService.Controllers
                     return BadRequest(ModelState);
                 }
 
-                await _driverLicenseService.AddDriverLicense(request); // Fixed: Correct method
+                await _driverLicenseService.AddDriverLicense(request); 
                 return Ok(new { message = "Driver license created successfully." });
             }
             catch (Exception ex)
@@ -36,7 +36,7 @@ namespace UserService.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateDriverLicense([FromForm] DriverLicenseRequest request) // Fixed: Correct DTO and [FromForm]
+        public async Task<IActionResult> UpdateDriverLicense([FromForm] DriverLicenseRequest request) 
         {
             try
             {
@@ -45,7 +45,7 @@ namespace UserService.Controllers
                     return BadRequest(ModelState);
                 }
 
-                await _driverLicenseService.UpdateDriverLicense(request); // Fixed: Correct method
+                await _driverLicenseService.UpdateDriverLicense(request);
                 return Ok(new { message = "Driver license updated successfully." });
             }
             catch (Exception ex)

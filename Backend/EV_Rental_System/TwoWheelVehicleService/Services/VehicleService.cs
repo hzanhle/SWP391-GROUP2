@@ -1,4 +1,5 @@
-﻿using TwoWheelVehicleService.Models;
+﻿using TwoWheelVehicleService.DTOs;
+using TwoWheelVehicleService.Models;
 using TwoWheelVehicleService.Repositories;
 
 namespace TwoWheelVehicleService.Services
@@ -6,7 +7,7 @@ namespace TwoWheelVehicleService.Services
     public class VehicleService : IVehicleService
     {
         private readonly IVehicleRepository _vehicleRepository;
-
+        
         public VehicleService(IVehicleRepository vehicleRepository)
         {
             _vehicleRepository = vehicleRepository;
@@ -32,10 +33,19 @@ namespace TwoWheelVehicleService.Services
             return await _vehicleRepository.GetAllVehicles();
         }
 
-        public async Task<Vehicle> GetVehicleByIdAsync(int vehicleId)
+        public async Task<VehicleDTO> GetVehicleByIdAsync(int vehicleId)
         {
-            return await _vehicleRepository.GetVehicleById(vehicleId);
+            var vehicle = await _vehicleRepository.GetVehicleById(vehicleId);
+            var vehicleDTO = new VehicleDTO
+            {
+                VehicleId = vehicle.VehicleId,
+                Color = vehicle.Color,
+                Status = vehicle.Status,
+                IsActive = vehicle.IsActive
+            };
+            return vehicleDTO;
         }
+
 
         public async Task SetVehicleStatus(int vehicleId, string status)
         {
