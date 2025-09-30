@@ -13,9 +13,19 @@ import BookingDetail from './pages/BookingDetail'
 import CheckIn from './pages/CheckIn'
 import Return from './pages/Return'
 import History from './pages/History'
+import VehicleDetail from './pages/ModelDetail'
+// ✨ THÊM MỚI ✨
+import ModelDetail from './pages/ModelDetail'
 
 function resolveRoute() {
   const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
+  
+  // ✨ THÊM MỚI - Handle dynamic route với ID ✨
+  if (hash.startsWith('models/')) {
+    const id = hash.split('/')[1]
+    return { route: 'model-detail', id }
+  }
+  
   switch (hash) {
     case 'signup': return 'signup'
     case 'login': return 'login'
@@ -30,18 +40,23 @@ function resolveRoute() {
     case 'check-in': return 'check-in'
     case 'return': return 'return'
     case 'history': return 'history'
+    // ✨ THÊM MỚI ✨
+    case 'models': return 'models'
     default: return 'home'
   }
 }
 
 export default function App() {
-  const [route, setRoute] = useState(resolveRoute())
+  const [routeData, setRouteData] = useState(resolveRoute())
 
   useEffect(() => {
-    const onHashChange = () => setRoute(resolveRoute())
+    const onHashChange = () => setRouteData(resolveRoute())
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+
+  // ✨ THÊM MỚI - Handle object route data ✨
+  const route = typeof routeData === 'string' ? routeData : routeData.route
 
   if (route === 'signup') return <Signup />
   if (route === 'login') return <Login />
@@ -56,5 +71,7 @@ export default function App() {
   if (route === 'check-in') return <CheckIn />
   if (route === 'return') return <Return />
   if (route === 'history') return <History />
+  // ✨ THÊM MỚI ✨
+  if (route === 'model-detail') return <ModelDetail id={routeData.id} />
   return <Home />
 }

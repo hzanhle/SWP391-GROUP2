@@ -15,6 +15,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<MyDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+
 // ====================== CORS ======================
 // Cho phép FE gọi API (cần chỉnh sửa domain khi deploy)
 builder.Services.AddCors(options =>
@@ -37,6 +38,17 @@ builder.Services.AddScoped<IModelRepository, ModelRepository>();
 builder.Services.AddScoped<IModelService, ModelService>();
 
 var app = builder.Build();
+
+// ====================== Static Files ======================
+app.UseStaticFiles(); // Serve wwwroot mặc định
+
+// Serve thư mục Data/Vehicles
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "Data", "Vehicles")),
+    RequestPath = "/Data/Vehicles"
+});
 
 // ====================== Middleware ======================
 if (app.Environment.IsDevelopment())
