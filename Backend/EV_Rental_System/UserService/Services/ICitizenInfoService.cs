@@ -8,7 +8,9 @@ namespace UserService.Services
     {
         Task<CitizenInfo> AddCitizenInfo(CitizenInfoRequest request);
         Task<CitizenInfoDTO> GetCitizenInfoByUserId(int userId);
-        Task SetStatus(int userId);
+        Task<Notification> SetStatus(int userId, bool isApproved); // Đổi từ Task<string>
         Task UpdateCitizenInfo(CitizenInfoRequest request);
+
+        Task DeleteCitizenInfo(int userId);
     }
 }

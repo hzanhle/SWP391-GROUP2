@@ -145,7 +145,7 @@ namespace UserService.Services
                 var role = await _roleRepository.GetRoleByNameAsync("Member"); // Default role to "Member"
                 user.CreatedAt = DateTime.UtcNow;
                 user.IsActive = true; // Set default active status
-                user.RoleId = role.RoleId; 
+                user.RoleId = role.RoleId;
                 user.Role = role;
 
                 await _userRepository.AddUserAsync(user);
@@ -194,7 +194,7 @@ namespace UserService.Services
             }
         }
 
-        
+
         public async Task<User?> GetUserAsync(string userName)
         {
             try
@@ -286,6 +286,21 @@ namespace UserService.Services
             }
         }
 
-       
+        public async Task SetRole(int userId)
+        {
+            var user = _userRepository.GetUserByIdAsync(userId).Result;
+            if (user != null)
+            {
+                if (user.RoleId == 1)
+                {
+                    user.RoleId = 2; // Change from Admin to Member
+                }
+                else if (user.RoleId == 2)
+                {
+                    user.RoleId = 1; // Change from Member to Admin
+                }
+                _userRepository.UpdateUserAsync(user);
+            }
+        }
     }
 }

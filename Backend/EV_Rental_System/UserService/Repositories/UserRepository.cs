@@ -25,8 +25,8 @@ namespace UserService.Repositories
         public async Task<User?> GetUserDetailByIdAsync(int userId)
         {
             return await _context.Users
-                    .Include(u => u.CitizenInfo)
-                    .Include(u => u.DriverLicense)
+                    .Include(u => u.CitizenInfos)
+                    .Include(u => u.DriverLicenses)
                     .Include(u => u.Role)
                     .FirstOrDefaultAsync(u => u.Id == userId);
         }

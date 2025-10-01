@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using UserService.Models;
 using UserService.Repositories;
 
@@ -103,24 +104,32 @@ namespace UserService.Services
 
         public async Task DeleteImagesAsync(string type, int typeId)
         {
+            // Lấy tất cả ảnh từ DB
             var images = await _imageRepository.GetImagesByTypeId(type, typeId);
+
+            if (!images.Any()) return; // Không có gì để xóa
 
             foreach (var img in images)
             {
-                // Delete physical file
-                var fullPath = Path.Combine(_env.ContentRootPath, img.Url.Replace("/", Path.DirectorySeparatorChar.ToString()));
-                if (File.Exists(fullPath))
+                try
                 {
-                    File.Delete(fullPath);
+                    var fullPath = Path.Combine(_env.ContentRootPath, img.Url.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    if (File.Exists(fullPath))
+                    {
+                        File.Delete(fullPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log lỗi nếu xóa file thất bại, nhưng không dừng toàn bộ
+                    Console.WriteLine($"Failed to delete file {img.Url}: {ex.Message}");
                 }
             }
 
-            // Delete records from database
-            if (images.Any())
-            {
-                await _imageRepository.DeleteImages(images.Select(i => i.ImageId).ToList());
-            }
+            // Xóa record khỏi DB qua repo
+            await _imageRepository.DeleteImages(type, typeId);
         }
+
 
         public async Task AddImage(Image image)
         {

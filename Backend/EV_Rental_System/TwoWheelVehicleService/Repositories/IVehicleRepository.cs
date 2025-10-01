@@ -10,7 +10,7 @@ namespace TwoWheelVehicleService.Repositories
         Task AddVehicle(Vehicle vehicle);
         Task<Vehicle> GetVehicleById(int Id);
         Task UpdateVehicle(Vehicle vehicle);
-        Task DeleteVehicle(int vehicleId); // Soft delete by setting IsActive to false
+        Task DeleteVehicle(int vehicleId); // Delete 
         Task ChangeStatus(int vehicleId, string status); // Change vehicle status (e.g., "Active", "Inactive", "Under Maintenance")
     }
 }

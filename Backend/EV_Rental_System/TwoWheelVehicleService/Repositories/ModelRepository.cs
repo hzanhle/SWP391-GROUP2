@@ -22,7 +22,21 @@ namespace TwoWheelVehicleService.Repositories
             var model = await _context.Models.FindAsync(modelId);
             if (model != null)
             {
+                _context.Models.Remove(model);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task ChangeStatus(int modelId)
+        {
+            var model = await _context.Models.FindAsync(modelId);
+            if (model != null && model.IsActive == true)
+            {
                 model.IsActive = false; // Soft delete by setting IsActive to false
+                await _context.SaveChangesAsync();
+            } else
+            {
+                model.IsActive = true;
                 await _context.SaveChangesAsync();
             }
         }

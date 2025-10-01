@@ -6,9 +6,10 @@ namespace UserService.Services
 {
     public interface IDriverLicenseService
     {
-        Task UpdateDriverLicense(DriverLicenseRequest driverLicense);
-        Task AddDriverLicense(DriverLicenseRequest driverLicense);
+        Task<DriverLicense> AddDriverLicense(DriverLicenseRequest request);
         Task<DriverLicenseDTO> GetDriverLicenseByUserId(int userId);
-        Task SetStatus(int userId);
+        Task<Notification> SetStatus(int userId, bool isApproved);
+        Task UpdateDriverLicense(DriverLicenseRequest request);
+        Task DeleteDriverLicense(int Id);
     }
 }

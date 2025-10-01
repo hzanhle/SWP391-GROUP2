@@ -10,5 +10,6 @@ namespace TwoWheelVehicleService.Repositories
         Task<List<Model>> GetActiveModels();
         Task UpdateModel(Model model);
         Task DeleteModel(int modelId);
+        Task ChangeStatus(int modelId);
     }
 }

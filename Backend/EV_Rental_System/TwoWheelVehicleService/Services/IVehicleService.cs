@@ -9,7 +9,7 @@ namespace TwoWheelVehicleService.Services
         Task<List<Vehicle>> GetActiveVehiclesAsync();
         Task AddVehicleAsync(Vehicle vehicle);
         Task UpdateVehicleAsync(Vehicle vehicle);
-        Task DeleteVehicleAsync(int vehicleId); // Soft delete
+        Task DeleteVehicleAsync(int vehicleId);
         Task<VehicleDTO> GetVehicleByIdAsync(int vehicleId);
         Task SetVehicleStatus(int vehicleId, string status); // New method to set vehicle status
     }

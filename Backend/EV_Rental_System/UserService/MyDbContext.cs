@@ -1,8 +1,6 @@
 ﻿using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.Security.Cryptography;
-using System.Text;
 using UserService.Models;
 using UserService.Models.UserService.Models;
 
@@ -18,6 +16,7 @@ namespace UserService
         public DbSet<CitizenInfo> CitizenInfos { get; set; }
         public DbSet<DriverLicense> DriverLicenses { get; set; }
         public DbSet<Image> Images { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -31,17 +30,25 @@ namespace UserService
         {
             base.OnModelCreating(modelBuilder);
 
-            // ==================== 1-1 relations ====================
+            // ==================== 1-N User-CitizenInfo ====================
             modelBuilder.Entity<User>()
-                .HasOne(u => u.CitizenInfo)
-                .WithOne()
-                .HasForeignKey<CitizenInfo>(c => c.UserId)
+                .HasMany(u => u.CitizenInfos)
+                .WithOne(c => c.User)
+                .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // ==================== 1-N User-DriverLicense ====================
             modelBuilder.Entity<User>()
-                .HasOne(u => u.DriverLicense)
-                .WithOne()
-                .HasForeignKey<DriverLicense>(d => d.UserId)
+                .HasMany(u => u.DriverLicenses)
+                .WithOne(d => d.User)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ==================== 1-N User-Notification ====================
+            modelBuilder.Entity<User>()
+                .HasMany(u => u.Notifications)
+                .WithOne(n => n.User)
+                .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // ==================== Seed Roles ====================
@@ -53,36 +60,32 @@ namespace UserService
 
             // ==================== Seed Admin User ====================
             modelBuilder.Entity<User>().HasData(
-            new User
-            {
-                Id = 1,
-                UserName = "admin",
-                Email = "admin@example.com",
-                PhoneNumber = "0123456789",
-                Password = "$2a$11$CwTycUXWue0Thq9StjUM0uJ8H6aJG0EQaDb4KfoipXEx.YZ4t5Dba", // ✅ hash cố định cho "Admin@123"
-                RoleId = 3
-            }
-        );
-
+                new User
+                {
+                    Id = 1,
+                    UserName = "admin",
+                    Email = "admin@example.com",
+                    PhoneNumber = "0123456789",
+                    Password = "$2a$11$eW8Gm1/ZVGw7Xu0R6q8OiOxXkdyI6g1A0Fh0Z0R0HJ0a5rXaIu3zq",
+                    RoleId = 3,
+                    CreatedAt = new DateTime(2025, 1, 1),
+                    IsActive = true
+                }
+            );
 
             // ==================== Configure Image ====================
             modelBuilder.Entity<Image>(entity =>
             {
                 entity.HasKey(i => i.ImageId);
-
                 entity.Property(i => i.Url)
                       .IsRequired()
                       .HasMaxLength(500);
-
                 entity.Property(i => i.Type)
                       .IsRequired()
                       .HasMaxLength(50);
-
                 entity.Property(i => i.TypeId)
                       .IsRequired();
             });
         }
-
-
     }
 }

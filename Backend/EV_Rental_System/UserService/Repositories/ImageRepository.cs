@@ -29,10 +29,10 @@ namespace UserService.Repositories
         }
 
         // FIXED: Thêm method DeleteImages để xóa multiple images
-        public async Task DeleteImages(List<int> imageIds)
+        public async Task DeleteImages(string type, int typeId)
         {
             var images = await _context.Images
-                .Where(img => imageIds.Contains(img.ImageId))
+                .Where(img => img.Type.Equals(type) && img.TypeId == typeId)
                 .ToListAsync();
 
             if (images.Any())

@@ -163,13 +163,17 @@ namespace TwoWheelVehicleService.Services
 
         public async Task DeleteModelAsync(int modelId)
         {
-            // 1. Xóa tất cả hình ảnh liên quan
-            //await _imageService.DeleteImagesAsync(modelId);
+            //  Xóa tất cả hình ảnh liên quan
+            await _imageService.DeleteImagesAsync(modelId);
 
-            // 2. Soft delete model
+            // Xóa model
             await _modelRepository.DeleteModel(modelId);
         }
 
-        
+        public async Task ChangeStatusAsync(int modelId)
+        {
+            await _modelRepository.ChangeStatus(modelId);
+        }
+
     }
 }

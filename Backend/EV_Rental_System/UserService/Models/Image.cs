@@ -13,7 +13,7 @@ namespace UserService.Models
         [Required]
         public string Type { get; set; }
         [Required]
-        public int TypeId { get; set; }
+        public int TypeId { get; set; } // CitizenId hoặc DriverLicenseId
 
         public Image() { }
 

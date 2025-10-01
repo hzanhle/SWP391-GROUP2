@@ -3,6 +3,7 @@
     public class VehicleDTO
     {
         public int VehicleId { get; set; }
+        public int? StationId { get; set; }
         public ModelDTO? Model { get; set; }
         public string Color { get; set; }
         public bool IsActive { get; set; }

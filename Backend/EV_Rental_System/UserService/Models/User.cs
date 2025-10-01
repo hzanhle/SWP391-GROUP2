@@ -17,8 +17,10 @@ namespace UserService.Models
         public string? Password { get; set; }
 
         // Quan hệ 1-1 (optional)
-        public CitizenInfo? CitizenInfo { get; set; }
-        public DriverLicense? DriverLicense { get; set; }
+        public ICollection<CitizenInfo>? CitizenInfos { get; set; }
+        public ICollection<DriverLicense>? DriverLicenses { get; set; }
+
+        public ICollection<Notification>? Notifications { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
@@ -30,7 +32,8 @@ namespace UserService.Models
 
         public User() { }
 
-        public User(int id, string? userName, string? email, string? phoneNumber, string? password, DateTime createdAt)
+        public User(int id, string? userName, string? email, string? phoneNumber,
+                    string? password, DateTime createdAt)
         {
             Id = id;
             UserName = userName;
@@ -40,17 +43,5 @@ namespace UserService.Models
             CreatedAt = createdAt;
         }
 
-        public User(int id, string? userName, string? email, string? phoneNumber, string? password,
-                    CitizenInfo? citizenInfo, DriverLicense? driverLicense, DateTime createdAt)
-        {
-            Id = id;
-            UserName = userName;
-            Email = email;
-            PhoneNumber = phoneNumber;
-            Password = password;
-            CitizenInfo = citizenInfo;
-            DriverLicense = driverLicense;
-            CreatedAt = createdAt;
-        }
     }
 }

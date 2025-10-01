@@ -72,5 +72,14 @@ namespace TwoWheelVehicleService.Controllers
             await _modelService.DeleteModelAsync(id);
             return Ok(new { message = "Model deleted successfully" });
         }
+
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> ChangeStatus(int id)
+        {
+            var existingModel = await _modelService.GetModelByIdAsync(id);
+            if (existingModel == null) return NotFound();
+            await _modelService.ChangeStatusAsync(id);
+            return Ok(new { message = "Model status changed successfully" });
+        }
     }
 }

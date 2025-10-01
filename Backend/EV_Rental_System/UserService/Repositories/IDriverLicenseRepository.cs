@@ -9,5 +9,8 @@ namespace UserService.Repositories
         Task AddDriverLicense(DriverLicense driverLicense);
         Task UpdateDriverLicense(DriverLicense driverLicense);
         Task DeleteDriverLicense(int userId);
+        Task<DriverLicense> GetPendingDriverLicense(int userId);
+        Task DeleteOldApprovedRecords(int userId, int keepId);
+        Task ProcessDuplicateDriverLicense(int userId);
     }
 }

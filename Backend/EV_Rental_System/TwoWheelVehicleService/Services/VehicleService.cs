@@ -39,6 +39,7 @@ namespace TwoWheelVehicleService.Services
             var vehicleDTO = new VehicleDTO
             {
                 VehicleId = vehicle.VehicleId,
+                StationId = vehicle.StationId,
                 Color = vehicle.Color,
                 Status = vehicle.Status,
                 IsActive = vehicle.IsActive
@@ -58,10 +59,11 @@ namespace TwoWheelVehicleService.Services
             if (existingVehicle != null)
             {
                 existingVehicle.Model = vehicle.Model;
+                existingVehicle.StationId = vehicle.StationId;
                 existingVehicle.Color = vehicle.Color;
                 existingVehicle.Status = vehicle.Status;
                 existingVehicle.IsActive = vehicle.IsActive;
-                await _vehicleRepository.UpdateVehicle(existingVehicle); // Using AddVehicle to save changes
+                await _vehicleRepository.UpdateVehicle(existingVehicle); 
             }
         }
     }

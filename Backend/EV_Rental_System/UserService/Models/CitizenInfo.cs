@@ -13,9 +13,8 @@ namespace UserService.Models
             public int Id { get; set; }
 
             public int UserId { get; set; }
-
-            public string CitizenId { get; set; }
-
+            public User? User { get; set; }
+            public int CitizenId { get; set; }
             public string Sex { get; set; }
 
             public DateOnly CitiRegisDate { get; set; }
@@ -30,12 +29,16 @@ namespace UserService.Models
 
             public string Status { get; set; }
 
+            public bool? IsApproved { get; set; }
+
+            public DateTime DayCreated { get; set; }
+
             // Navigation property → liên kết với bảng Image
             public ICollection<Image> Images { get; set; } = new List<Image>();
 
             public CitizenInfo() { }
 
-            public CitizenInfo(int userId, string sex, string status, string citizenId, DateOnly citiRegisDate, string citiRegisOffice, string fullName, string address, DateOnly dayOfBirth)
+            public CitizenInfo(int userId, string sex, string status, int citizenId, DateOnly citiRegisDate, string citiRegisOffice, string fullName, string address, DateOnly dayOfBirth, bool isApproved, DateTime dayCreated)
             {
                 UserId = userId;
                 Sex = sex;
@@ -46,6 +49,8 @@ namespace UserService.Models
                 Status = status;
                 Address = address;
                 DayOfBirth = dayOfBirth;
+                IsApproved = isApproved;
+                DayCreated = dayCreated;
             }
         }
     }
