@@ -8,7 +8,7 @@ namespace UserService.Models
         public int Id { get; set; }
         public int UserId { get; set; }
         public User? User { get; set; }
-        public int LicenseId { get; set; }
+        public string LicenseId { get; set; }
         public string LicenseType { get; set; }
         public string Status { get; set; }
         public DateOnly RegisterDate { get; set; }
@@ -22,7 +22,7 @@ namespace UserService.Models
 
         public DriverLicense() { }
 
-        public DriverLicense(int userId, DateTime dateCreated, string status, int licenseId, string licenseType, bool isApproved, DateOnly registerDate, string registerOffice)
+        public DriverLicense(int userId, DateTime dateCreated, string status, string licenseId, string licenseType, bool isApproved, DateOnly registerDate, string registerOffice)
         {
             UserId = userId;
             LicenseId = licenseId;

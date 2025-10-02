@@ -20,10 +20,57 @@ namespace UserService.Services
             _notificationService = notificationService;
         }
 
-        public async Task<DriverLicense> AddDriverLicense(DriverLicenseRequest request)
+        public async Task<ResponseDTO> AddDriverLicense(DriverLicenseRequest request)
         {
+            if (request == null)
+            {
+                return new ResponseDTO
+                {
+                    Message = "Dữ liệu Giấy phép lái xe không hợp lệ",
+                    Data = null
+                };
+            }
+
+            // Kiểm tra nếu có giấy phép đang chờ
+            var pending = await _driverLicenseRepository.GetPendingDriverLicense(request.UserId);
+            if (pending != null)
+            {
+                return new ResponseDTO
+                {
+                    Message = "Đã có một bản Giấy phép lái xe đang chờ xác thực. Vui lòng chờ hoặc liên hệ quản trị viên",
+                    Data = pending
+                };
+            }
+
+            // Kiểm tra nếu đã có giấy phép xác thực
+            var existing = await _driverLicenseRepository.GetDriverLicenseByUserId(request.UserId);
+            if (existing != null)
+            {
+                return new ResponseDTO
+                {
+                    Message = "Người dùng đã có Giấy phép lái xe.",
+                    Data = existing
+                };
+            }
+
+            // Kiểm tra file upload
+            if (request.Files == null || request.Files.Count == 0)
+            {
+                return new ResponseDTO
+                {
+                    Message = "Vui lòng tải lên ít nhất một hình ảnh của Giấy phép lái xe",
+                    Data = null
+                };
+            }
+
+            // Tạo mới giấy phép
             var entity = await CreatePendingDriverLicense(request);
-            return await _driverLicenseRepository.GetDriverLicenseByUserId(entity.UserId);
+
+            return new ResponseDTO
+            {
+                Message = "Yêu cầu tạo Giấy phép lái xe đã được gửi. Vui lòng chờ xác thực.",
+                Data = entity
+            };
         }
 
         public async Task<DriverLicenseDTO> GetDriverLicenseByUserId(int userId)

@@ -5,7 +5,7 @@
     public class CitizenInfoRequest
     {
         public int UserId { get; set; }
-        public int CitizenId { get; set; }
+        public string CitizenId { get; set; }
         public string Sex { get; set; }
         public DateOnly CitiRegisDate { get; set; }
         public string CitiRegisOffice { get; set; }

@@ -27,13 +27,9 @@ namespace UserService.Controllers
                 }
 
                 // FIXED: Await the async method
-                var citizenInfo = await _citizenInfoService.AddCitizenInfo(request);
+                var response = await _citizenInfoService.AddCitizenInfo(request);
 
-                return Ok(new
-                {
-                    message = "CitizenInfo Create request send successfully.",
-                    data = citizenInfo
-                });
+                return Ok(response);
             }
             catch (ArgumentException ex)
             {
@@ -84,7 +80,7 @@ namespace UserService.Controllers
             }
         }
 
-        [HttpDelete("{id}")] 
+        [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCitizenInfo(int id)
         {
             await _citizenInfoService.DeleteCitizenInfo(id);
