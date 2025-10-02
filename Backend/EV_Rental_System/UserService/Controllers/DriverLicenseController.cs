@@ -17,7 +17,7 @@ namespace UserService.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateDriverLicense([FromForm] DriverLicenseRequest request) 
+        public async Task<IActionResult> CreateDriverLicense([FromForm] DriverLicenseRequest request)
         {
             try
             {
@@ -26,13 +26,19 @@ namespace UserService.Controllers
                     return BadRequest(ModelState);
                 }
 
-                await _driverLicenseService.AddDriverLicense(request); 
-                return Ok(new { message = "Driver license created successfully." });
+                await _driverLicenseService.AddDriverLicense(request);
+                return Ok(new { message = "Driver license create request send successfully." });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
             }
+        }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteDriverLicense(int id)
+        {
+            await _driverLicenseService.DeleteDriverLicense(id);
+            return Ok();
         }
 
         [HttpPut]
@@ -46,7 +52,7 @@ namespace UserService.Controllers
                 }
 
                 await _driverLicenseService.UpdateDriverLicense(request);
-                return Ok(new { message = "Driver license updated successfully." });
+                return Ok(new { message = "Driver license update request send successfully." });
             }
             catch (Exception ex)
             {
@@ -73,13 +79,13 @@ namespace UserService.Controllers
             }
         }
 
-        [HttpPut("SetStatus/{userId}")]
-        public async Task<IActionResult> SetStatus(int userId) 
+        [HttpPost("set-status/{userId}/{isApproved}")]
+        public async Task<IActionResult> SetStatus(int userId, bool isApproved)
         {
             try
             {
-                await _driverLicenseService.SetStatus(userId); 
-                return Ok(new { message = "Driver license status updated successfully." });
+                var notification = await _driverLicenseService.SetStatus(userId, isApproved);
+                return Ok(notification);
             }
             catch (Exception ex)
             {

@@ -150,5 +150,19 @@ namespace UserService.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> SetRole(int id)
+        {
+            try
+            {
+                await _userService.SetRole(id);
+                return Ok(new { message = "Role set successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
     }
 }
