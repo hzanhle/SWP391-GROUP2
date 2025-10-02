@@ -46,7 +46,7 @@ namespace TwoWheelVehicleService.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateVehicle([FromBody] Vehicle vehicle)
+        public async Task<IActionResult> CreateVehicle([FromBody] VehicleRequest vehicle)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
