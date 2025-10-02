@@ -26,14 +26,23 @@ namespace UserService.Controllers
                     return BadRequest(ModelState);
                 }
 
-                await _driverLicenseService.AddDriverLicense(request);
-                return Ok(new { message = "Driver license create request send successfully." });
+                // Await method async và nhận ResponseDTO
+                var response = await _driverLicenseService.AddDriverLicense(request);
+
+                // Trả về Ok với dữ liệu từ service
+                return Ok(response);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+                // Có thể log ex ở đây
+                return StatusCode(500, new { error = "Internal server error occurred.", details = ex.Message });
             }
         }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDriverLicense(int id)
         {

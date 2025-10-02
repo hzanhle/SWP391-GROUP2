@@ -21,13 +21,47 @@ namespace UserService.Services
             _notificationService = notificationService;
         }
 
-        public async Task<CitizenInfo> AddCitizenInfo(CitizenInfoRequest request)
+        public async Task<ResponseDTO> AddCitizenInfo(CitizenInfoRequest request)
         {
-            // Sử dụng method chung để tạo pending record
+            if (request == null)
+            {
+                return new ResponseDTO
+                {
+                    Message = "Dữ liệu CitizenInfo không hợp lệ",
+                    Data = null
+                };
+            }
+
+            // Kiểm tra nếu có bản ghi đang chờ
+            var pending = await _citizenInfoRepository.GetPendingCitizenInfo(request.UserId);
+            if (pending != null)
+            {
+                return new ResponseDTO
+                {
+                    Message = "Đã có một bản CitizenInfo đang chờ xác thực. Vui lòng chờ hoặc liên hệ quản trị viên",
+                    Data = pending
+                };
+            }
+
+            // Kiểm tra nếu đã có bản ghi xác thực
+            var existing = await _citizenInfoRepository.GetCitizenInfoByUserId(request.UserId);
+            if (existing != null)
+            {
+                return new ResponseDTO
+                {
+                    Message = "Người dùng đã có CitizenInfo được xác thực.",
+                    Data = existing
+                };
+            }
+
+            // Tạo mới record pending
             var entity = await CreatePendingCitizenInfo(request);
 
-            // Load lại từ database với Images included
-            return await _citizenInfoRepository.GetCitizenInfoByUserId(entity.UserId);
+            return new ResponseDTO
+            {
+                Message = "Yêu cầu tạo CitizenInfo đã được gửi. Vui lòng chờ xác thực.",
+                Data = entity
+            };
         }
 
         public async Task DeleteCitizenInfo(int id)
