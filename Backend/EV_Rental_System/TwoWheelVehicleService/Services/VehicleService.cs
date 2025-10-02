@@ -12,9 +12,18 @@ namespace TwoWheelVehicleService.Services
         {
             _vehicleRepository = vehicleRepository;
         }
-        public async Task AddVehicleAsync(Vehicle vehicle)
+        public async Task AddVehicleAsync(VehicleRequest vehicle)
         {
-            await _vehicleRepository.AddVehicle(vehicle);
+            var newVehicle = new Vehicle
+            {
+                ModelId = vehicle.ModelId,
+                StationId = vehicle.StationId,
+                Color = vehicle.Color,
+                Status = "Available", // Default status
+                IsActive = true // New vehicles are active by default
+            };
+            
+            await _vehicleRepository.AddVehicle(newVehicle);
 
         }
 

@@ -7,7 +7,7 @@ namespace TwoWheelVehicleService.Services
     {
         Task<List<Vehicle>> GetAllVehiclesAsync();
         Task<List<Vehicle>> GetActiveVehiclesAsync();
-        Task AddVehicleAsync(Vehicle vehicle);
+        Task AddVehicleAsync(VehicleRequest vehicle);
         Task UpdateVehicleAsync(Vehicle vehicle);
         Task DeleteVehicleAsync(int vehicleId);
         Task<VehicleDTO> GetVehicleByIdAsync(int vehicleId);
