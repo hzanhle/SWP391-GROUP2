@@ -31,7 +31,7 @@ namespace UserService.Controllers
 
                 return Ok(new
                 {
-                    message = "Citizen info created successfully.",
+                    message = "CitizenInfo Create request send successfully.",
                     data = citizenInfo
                 });
             }
@@ -57,7 +57,7 @@ namespace UserService.Controllers
                 }
 
                 await _citizenInfoService.UpdateCitizenInfo(request);
-                return Ok(new { message = "Citizen info updated successfully." });
+                return Ok(new { message = "CitizenInfo Update request send successfully." });
             }
             catch (Exception ex)
             {
@@ -84,13 +84,20 @@ namespace UserService.Controllers
             }
         }
 
-        [HttpPost("set-status/{userId}")]
-        public async Task<IActionResult> SetStatus(int userId)
+        [HttpDelete("{id}")] 
+        public async Task<IActionResult> DeleteCitizenInfo(int id)
+        {
+            await _citizenInfoService.DeleteCitizenInfo(id);
+            return Ok();
+        }
+
+        [HttpPost("set-status/{userId}&{isApproved}")]
+        public async Task<IActionResult> SetStatus(int userId, bool isApproved)
         {
             try
             {
-                await _citizenInfoService.SetStatus(userId);
-                return Ok(new { message = "Status updated successfully." });
+                var notification = await _citizenInfoService.SetStatus(userId, isApproved);
+                return Ok(notification);
             }
             catch (Exception ex)
             {
