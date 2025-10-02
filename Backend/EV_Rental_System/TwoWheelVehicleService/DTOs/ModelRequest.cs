@@ -11,6 +11,7 @@
         public int ChargingTime { get; set; }
         public int BatteryRange { get; set; }
         public int VehicleCapacity { get; set; }
-        public int Price { get; set; }
+        public double ModelCost { get; set; } // Giá thành của mẫu xe
+        public double RentFeeForHour { get; set; } // Giá thuê theo giờ
     }
 }

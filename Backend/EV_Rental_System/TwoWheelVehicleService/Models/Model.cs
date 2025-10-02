@@ -16,7 +16,8 @@ namespace TwoWheelVehicleService.Models
         public int BatteryRange { get; set; }
         public int VehicleCapacity { get; set; }
         public bool IsActive { get; set; }
-        public int Price { get; set; }
+        public double ModelCost { get; set; } // Giá thành của mẫu xe
+        public double RentFeeForHour { get; set; } // Giá thuê theo giờ
 
         // Navigation properties
         public ICollection<Image> Images { get; set; } = new List<Image>();
@@ -24,8 +25,8 @@ namespace TwoWheelVehicleService.Models
 
         public Model() { }
 
-        public Model(string modelName, string manufacturer, int year, int maxSpeed, int batteryCapacity, int chargingTime, int batteryRange, int vehicleCapacity, bool isActive, int price)
-        {
+        public Model(string modelName, string manufacturer, int year, int maxSpeed, int batteryCapacity, int chargingTime, int batteryRange, int vehicleCapacity, bool isActive, double modelCost, double rentFeeForHour) { 
+        
             ModelName = modelName;
             Manufacturer = manufacturer;
             Year = year;
@@ -35,7 +36,8 @@ namespace TwoWheelVehicleService.Models
             BatteryRange = batteryRange;
             VehicleCapacity = vehicleCapacity;
             IsActive = isActive;
-            Price = price;
+            RentFeeForHour = rentFeeForHour;
+            ModelCost = modelCost;
         }
     }
 

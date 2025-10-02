@@ -28,7 +28,8 @@ namespace TwoWheelVehicleService.Services
                 ChargingTime = request.ChargingTime,
                 BatteryRange = request.BatteryRange,
                 VehicleCapacity = request.VehicleCapacity,
-                Price = request.Price,
+                ModelCost = request.ModelCost,
+                RentFeeForHour = request.RentFeeForHour,
                 IsActive = true // Default value
             };
 
@@ -66,7 +67,8 @@ namespace TwoWheelVehicleService.Services
                 BatteryRange = model.BatteryRange,
                 VehicleCapacity = model.VehicleCapacity,
                 IsActive = model.IsActive,
-                Price = model.Price,
+                ModelCost = model.ModelCost,
+                RentFeeForHour = model.RentFeeForHour,
                 ImageUrls = imageUrls
             };
         }
@@ -91,7 +93,8 @@ namespace TwoWheelVehicleService.Services
                     BatteryRange = model.BatteryRange,
                     VehicleCapacity = model.VehicleCapacity,
                     IsActive = model.IsActive,
-                    Price = model.Price,
+                    ModelCost = model.ModelCost,
+                    RentFeeForHour = model.RentFeeForHour,
                     ImageUrls = imageUrls
                 });
             }
@@ -119,7 +122,8 @@ namespace TwoWheelVehicleService.Services
                     BatteryRange = model.BatteryRange,
                     VehicleCapacity = model.VehicleCapacity,
                     IsActive = model.IsActive,
-                    Price = model.Price,
+                    ModelCost = model.ModelCost,
+                    RentFeeForHour = model.RentFeeForHour,
                     ImageUrls = imageUrls
                 });
             }
@@ -142,7 +146,8 @@ namespace TwoWheelVehicleService.Services
             existingModel.ChargingTime = request.ChargingTime;
             existingModel.BatteryRange = request.BatteryRange;
             existingModel.VehicleCapacity = request.VehicleCapacity;
-            existingModel.Price = request.Price;
+            existingModel.ModelCost = request.ModelCost;
+            existingModel.RentFeeForHour = request.RentFeeForHour;
 
             await _modelRepository.UpdateModel(existingModel);
 
