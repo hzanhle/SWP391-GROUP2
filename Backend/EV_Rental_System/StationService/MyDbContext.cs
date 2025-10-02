@@ -14,11 +14,19 @@ namespace StationService
         {
             base.OnModelCreating(modelBuilder);
 
-            // Cấu hình Station
+            ConfigureStation(modelBuilder);
+            ConfigureStaffShift(modelBuilder);
+            SeedData(modelBuilder);
+        }
+
+        private void ConfigureStation(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<Station>(entity =>
             {
+                // Primary Key
                 entity.HasKey(e => e.Id);
 
+                // Properties
                 entity.Property(e => e.Name)
                     .IsRequired()
                     .HasMaxLength(200);
@@ -27,18 +35,29 @@ namespace StationService
                     .IsRequired()
                     .HasMaxLength(500);
 
-                // Relationship: 1 Station có nhiều StaffShifts
+                entity.Property(e => e.ManagerId)
+                    .IsRequired(false);
+
+                entity.Property(e => e.IsActive)
+                    .IsRequired()
+                    .HasDefaultValue(true);
+
+                // Relationships
                 entity.HasMany(s => s.StaffShifts)
                     .WithOne(ss => ss.Station)
                     .HasForeignKey(ss => ss.StationId)
-                    .OnDelete(DeleteBehavior.Cascade); // Xóa Station → xóa tất cả shifts
+                    .OnDelete(DeleteBehavior.Cascade);
             });
+        }
 
-            // Cấu hình StaffShift
+        private void ConfigureStaffShift(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<StaffShift>(entity =>
             {
+                // Primary Key
                 entity.HasKey(e => e.Id);
 
+                // Properties
                 entity.Property(e => e.UserId)
                     .IsRequired();
 
@@ -46,38 +65,43 @@ namespace StationService
                     .IsRequired();
 
                 entity.Property(e => e.ShiftDate)
-                    .IsRequired();
+                    .IsRequired()
+                    .HasColumnType("date");
 
                 entity.Property(e => e.StartTime)
-                    .IsRequired();
+                    .IsRequired()
+                    .HasColumnType("time");
 
                 entity.Property(e => e.EndTime)
-                    .IsRequired();
+                    .IsRequired()
+                    .HasColumnType("time");
 
                 entity.Property(e => e.Status)
+                    .IsRequired()
                     .HasMaxLength(50)
                     .HasDefaultValue("Scheduled");
 
-                // Index để tìm kiếm nhanh
+                entity.Property(e => e.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("GETDATE()"); // SQL Server
+                                                      // .HasDefaultValueSql("NOW()"); // PostgreSQL/MySQL
+
+                // Indexes for performance
                 entity.HasIndex(e => new { e.UserId, e.ShiftDate })
                     .HasDatabaseName("IX_StaffShift_User_Date");
 
                 entity.HasIndex(e => new { e.StationId, e.ShiftDate })
                     .HasDatabaseName("IX_StaffShift_Station_Date");
 
-                // Constraint: Không cho trùng ca (cùng user, station, date, time)
+                // Unique constraint - prevent duplicate shifts
                 entity.HasIndex(e => new { e.UserId, e.StationId, e.ShiftDate, e.StartTime })
                     .IsUnique()
                     .HasDatabaseName("UQ_StaffShift_UniqueShift");
             });
-
-            // Seed data mẫu (optional)
-            SeedData(modelBuilder);
         }
 
         private void SeedData(ModelBuilder modelBuilder)
         {
-            // Seed Stations
             modelBuilder.Entity<Station>().HasData(
                 new Station
                 {
@@ -94,32 +118,14 @@ namespace StationService
                     Location = "456 Võ Văn Ngân, Thủ Đức, TP.HCM",
                     ManagerId = null,
                     IsActive = true
-                }
-            );
-
-            // Seed StaffShifts
-            modelBuilder.Entity<StaffShift>().HasData(
-                new StaffShift
-                {
-                    Id = 1,
-                    UserId = 1,
-                    StationId = 1,
-                    ShiftDate = DateOnly.FromDateTime(DateTime.Now),
-                    StartTime = new TimeOnly(8, 0),
-                    EndTime = new TimeOnly(12, 0),
-                    Status = "Scheduled",
-                    CreatedAt = DateTime.Now
                 },
-                new StaffShift
+                new Station
                 {
-                    Id = 2,
-                    UserId = 2,
-                    StationId = 1,
-                    ShiftDate = DateOnly.FromDateTime(DateTime.Now),
-                    StartTime = new TimeOnly(13, 0),
-                    EndTime = new TimeOnly(17, 0),
-                    Status = "Scheduled",
-                    CreatedAt = DateTime.Now
+                    Id = 3,
+                    Name = "Trạm Đăng Kiểm Bình Thạnh",
+                    Location = "789 Xô Viết Nghệ Tĩnh, Bình Thạnh, TP.HCM",
+                    ManagerId = null,
+                    IsActive = true
                 }
             );
         }
