@@ -51,6 +51,17 @@ export default function Profile() {
     // Try fetching existing docs if API is configured
     const token = localStorage.getItem('auth.token') || ''
     const userId = u.id || u.Id
+
+    // Hosted previews (like builder/browser preview) cannot reach localhost APIs.
+    const runningOnHost = typeof window !== 'undefined' ? window.location.hostname : ''
+    const isLocalApi = API_BASE.startsWith('http://localhost') || API_BASE.startsWith('https://localhost')
+    const cannotReachLocalhost = isLocalApi && runningOnHost && runningOnHost !== 'localhost' && runningOnHost !== '127.0.0.1'
+
+    if (cannotReachLocalhost) {
+      setApiError('Hosted preview cannot reach http://localhost APIs. Run the frontend locally or provide a public API URL in VITE_API_URL.')
+      return
+    }
+
     if (API_BASE && token && userId) {
       Promise.allSettled([
         api.getCitizenInfo(userId, token),
@@ -79,7 +90,11 @@ export default function Profile() {
             RegisterOffice: d.registerOffice || d.RegisterOffice || '',
           })
         }
-      }).catch(()=>{})
+        if (cit.status === 'rejected' || dr.status === 'rejected') {
+          const reason = cit.status === 'rejected' ? cit.reason : dr.reason
+          setApiError(reason?.message || 'Failed to fetch documents')
+        }
+      }).catch((e)=>{ setApiError(e?.message || 'Unexpected error') })
     }
   }, [])
 
@@ -107,6 +122,11 @@ export default function Profile() {
     const u = loadUser()
     const userId = u.id || u.Id
     if (!API_BASE) { setApiError('Thiếu cấu hình VITE_API_URL'); return }
+    // prevent calling localhost from hosted previews
+    const runningOnHost = typeof window !== 'undefined' ? window.location.hostname : ''
+    const isLocalApi = API_BASE.startsWith('http://localhost') || API_BASE.startsWith('https://localhost')
+    const cannotReachLocalhost = isLocalApi && runningOnHost && runningOnHost !== 'localhost' && runningOnHost !== '127.0.0.1'
+    if (cannotReachLocalhost) { setApiError('Hosted preview cannot reach http://localhost APIs. Run the frontend locally or provide a public API URL in VITE_API_URL.'); return }
     if (!token || !userId) { setApiError('Bạn cần đăng nhập để gửi thông tin'); return }
 
     const payload = {
@@ -138,6 +158,11 @@ export default function Profile() {
     const u = loadUser()
     const userId = u.id || u.Id
     if (!API_BASE) { setApiError('Thiếu cấu hình VITE_API_URL'); return }
+    // prevent calling localhost from hosted previews
+    const runningOnHost = typeof window !== 'undefined' ? window.location.hostname : ''
+    const isLocalApi = API_BASE.startsWith('http://localhost') || API_BASE.startsWith('https://localhost')
+    const cannotReachLocalhost = isLocalApi && runningOnHost && runningOnHost !== 'localhost' && runningOnHost !== '127.0.0.1'
+    if (cannotReachLocalhost) { setApiError('Hosted preview cannot reach http://localhost APIs. Run the frontend locally or provide a public API URL in VITE_API_URL.'); return }
     if (!token || !userId) { setApiError('Bạn cần đăng nhập để gửi thông tin'); return }
 
     const payload = {

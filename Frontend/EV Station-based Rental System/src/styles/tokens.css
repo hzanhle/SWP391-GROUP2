@@ -52,6 +52,15 @@
   --bp-lg: 1024px;
 }
 
+/* Dark mode via data-theme */
+:root[data-theme='dark'] {
+  --color-background: #0b1220; /* near-slate-950 */
+  --color-surface: #0f172a;    /* slate-900 */
+  --color-text: #e5e7eb;       /* slate-200 */
+  --color-muted: #94a3b8;      /* slate-400 */
+  --color-border: #1f2937;     /* slate-800 */
+}
+
 /* Focus ring for accessibility */
 :where(a, button, input, select, textarea) {
   outline: none;

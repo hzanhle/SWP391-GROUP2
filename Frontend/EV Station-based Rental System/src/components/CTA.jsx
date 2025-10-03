@@ -2,7 +2,14 @@ import React from 'react'
 
 export default function CTA({ as = 'button', variant = 'primary', children, className = '', ...props }) {
   const Comp = as
-  const classes = ['btn', variant === 'primary' ? 'btn-primary' : variant === 'secondary' ? 'btn-secondary' : 'btn-ghost', className].join(' ').trim()
+  const base = 'btn'
+  const map = {
+    primary: 'btn-primary',
+    secondary: 'btn-secondary',
+    ghost: 'btn-ghost',
+    gradient: 'btn-gradient',
+  }
+  const classes = [base, map[variant] || map.primary, className].join(' ').trim()
   return (
     <Comp
       data-figma-layer="CTA"

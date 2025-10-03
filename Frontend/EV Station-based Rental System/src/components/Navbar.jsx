@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import CTA from './CTA'
+import NotificationBell from './NotificationBell'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -31,7 +32,14 @@ export default function Navbar() {
         </a>
 
         <nav className="nav-links" aria-label="Primary navigation" data-figma-layer="NavLinks" data-tailwind='class: "hidden md:flex gap-6"'>
-          <a className="nav-link" href="#stations" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Stations</a>
+          <div className="dropdown">
+            <a className="nav-link dropdown-toggle" href="#stations" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Stations</a>
+            <div className="dropdown-menu card card-body" role="menu">
+              <a className="nav-link" role="menuitem" href="#stations">Nearby stations</a>
+              <a className="nav-link" role="menuitem" href="#vehicles">Vehicles</a>
+              <a className="nav-link" role="menuitem" href="#pricing">Pricing</a>
+            </div>
+          </div>
           <a className="nav-link" href="#how" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>How it works</a>
           <a className="nav-link" href="#pricing" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Pricing</a>
           <a className="nav-link" href="#support" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Support</a>
@@ -54,31 +62,55 @@ export default function Navbar() {
           </div>
         )}
 
-        <button aria-label="Toggle menu" className="menu-toggle btn btn-ghost" onClick={() => setOpen(v=>!v)} data-tailwind='class: "inline-flex md:hidden items-center gap-2 border border-slate-200 px-3 py-2 rounded-md"'>
-          <span>Menu</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-export="svg"><path d="M4 6h16M4 12h16M4 18h16" stroke="#0f172a" strokeWidth="2" strokeLinecap="round"/></svg>
-        </button>
+        <div className="row" aria-label="Quick actions">
+          {isAuthed && (<NotificationBell />)}
+
+          <button
+            aria-label="Toggle theme"
+            className="btn btn-ghost"
+            onClick={() => {
+              try {
+                const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
+                document.documentElement.dataset.theme = next
+                localStorage.setItem('theme', next)
+                setVer(v => v + 1)
+              } catch {}
+            }}
+            title="Toggle dark mode"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span className="sr-only">Toggle dark mode</span>
+          </button>
+
+          <button aria-label="Toggle menu" className="menu-toggle btn btn-ghost" onClick={() => setOpen(v=>!v)} data-tailwind='class: "inline-flex md:hidden items-center gap-2 border border-slate-200 px-3 py-2 rounded-md"'>
+            <span>Menu</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-export="svg"><path d="M4 6h16M4 12h16M4 18h16" stroke="#0f172a" strokeWidth="2" strokeLinecap="round"/></svg>
+          </button>
+        </div>
       </div>
 
       {open && (
-        <div className="container" role="menu" data-figma-layer="MobileMenu" data-tailwind='class: "md:hidden px-6 pb-4"'>
-          <div className="card card-body">
-            <a className="nav-link" role="menuitem" href="#stations">Stations</a>
-            <a className="nav-link" role="menuitem" href="#how">How it works</a>
-            <a className="nav-link" role="menuitem" href="#pricing">Pricing</a>
-            <a className="nav-link" role="menuitem" href="#support">Support</a>
-            {isAuthed ? (
-              <>
-                <a className="nav-link" role="menuitem" href="#profile">Profile</a>
-                <span className="nav-link" role="menuitem">Xin chào, {displayName}</span>
-                <a className="nav-link" role="menuitem" href="#" onClick={handleLogout}>Đăng xuất</a>
-              </>
-            ) : (
-              <a className="nav-link" role="menuitem" href="#login">Login</a>
-            )}
-            {!isAuthed && (<CTA as="a" href="#signup" className="mt-2" data-tailwind='class: "mt-2"'>Sign up / Book</CTA>)}
-          </div>
-        </div>
+        <>
+          <div className="drawer-backdrop" onClick={() => setOpen(false)} />
+          <aside className="mobile-drawer" role="menu">
+            <div className="card card-body">
+              <a className="nav-link" role="menuitem" href="#stations" onClick={() => setOpen(false)}>Stations</a>
+              <a className="nav-link" role="menuitem" href="#how" onClick={() => setOpen(false)}>How it works</a>
+              <a className="nav-link" role="menuitem" href="#pricing" onClick={() => setOpen(false)}>Pricing</a>
+              <a className="nav-link" role="menuitem" href="#support" onClick={() => setOpen(false)}>Support</a>
+              {isAuthed ? (
+                <>
+                  <a className="nav-link" role="menuitem" href="#profile" onClick={() => setOpen(false)}>Profile</a>
+                  <span className="nav-link" role="menuitem">Xin chào, {displayName}</span>
+                  <a className="nav-link" role="menuitem" href="#" onClick={handleLogout}>Đăng xuất</a>
+                </>
+              ) : (
+                <a className="nav-link" role="menuitem" href="#login" onClick={() => setOpen(false)}>Login</a>
+              )}
+              {!isAuthed && (<CTA as="a" href="#signup" className="mt-2" data-tailwind='class: "mt-2"'>Sign up / Book</CTA>)}
+            </div>
+          </aside>
+        </>
       )}
     </header>
   )

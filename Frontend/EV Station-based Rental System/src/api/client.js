@@ -130,4 +130,12 @@ export function getDriverLicense(userId, token) {
   return request(`/api/DriverLicense/${userId}`, { method: 'GET', token })
 }
 
-export default { request, registerUser, login, getUserById, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense }
+export function getNotifications(userId, token) {
+  return request(`/api/Notification/${userId}`, { method: 'GET', token })
+}
+
+export function clearNotifications(userId, token) {
+  return request(`/api/Notification/${userId}`, { method: 'DELETE', token })
+}
+
+export default { request, registerUser, login, getUserById, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense, getNotifications, clearNotifications }

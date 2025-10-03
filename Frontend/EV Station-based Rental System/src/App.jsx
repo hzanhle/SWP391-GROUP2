@@ -50,18 +50,18 @@ export default function App() {
 
   
 
-  if (route === 'signup') return <Signup />
-  if (route === 'login') return <Login />
-  if (route === 'forgot-password') return <ForgotPassword />
-  if (route === 'verify-email') return <VerifyEmail />
-  if (route === 'profile') return <Profile />
-  if (route === 'profile-docs') return <ProfileDocs />
-  if (route === 'stations') return <Stations />
-  if (route === 'vehicles') return <Vehicles />
-  if (route === 'booking-new') return <BookingNew />
-  if (route === 'booking') return <BookingDetail />
-  if (route === 'check-in') return <CheckIn />
-  if (route === 'return') return <Return />
-  if (route === 'history') return <History />
+  if (routeData === 'signup') return <Signup />
+  if (routeData === 'login') return <Login />
+  if (routeData === 'forgot-password') return <ForgotPassword />
+  if (routeData === 'verify-email') return <VerifyEmail />
+  if (routeData === 'profile') return <Profile />
+  if (routeData === 'profile-docs') return <ProfileDocs />
+  if (routeData === 'stations') return <Stations />
+  if (routeData === 'vehicles') return <Vehicles />
+  if (routeData === 'booking-new') return <BookingNew />
+  if (routeData === 'booking') return <BookingDetail />
+  if (routeData === 'check-in') return <CheckIn />
+  if (routeData === 'return') return <Return />
+  if (routeData === 'history') return <History />
   return <Home />
 }
