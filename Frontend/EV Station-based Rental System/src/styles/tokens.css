@@ -50,6 +50,10 @@
   --bp-sm: 640px;
   --bp-md: 768px;
   --bp-lg: 1024px;
+
+  /* Brand gradients */
+  --grad-primary: linear-gradient(135deg, #06b6d4 0%, #a78bfa 100%);
+  --grad-accent: linear-gradient(135deg, #ff7a59 0%, #f472b6 100%);
 }
 
 /* Dark mode via data-theme */
