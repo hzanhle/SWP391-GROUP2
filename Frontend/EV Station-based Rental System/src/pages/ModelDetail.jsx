@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getModelById, deleteModel } from '../api/vehicle'
+import { resolveImageUrl } from '../utils/url'
 
 export default function ModelDetail({ id }) {
   const [model, setModel] = useState(null)
@@ -116,9 +117,10 @@ export default function ModelDetail({ id }) {
             {model.imageUrls && model.imageUrls.length > 0 ? (
               <div className="relative">
                 <img
-                  src={model.imageUrls[currentImageIndex]}
+                  src={resolveImageUrl(model.imageUrls[currentImageIndex])}
                   alt={`${model.modelName} - Image ${currentImageIndex + 1}`}
                   className="w-full h-96 object-cover"
+                  onError={(e) => { e.currentTarget.style.display = 'none' }}
                 />
                 {model.imageUrls.length > 1 && (
                   <>
@@ -166,7 +168,7 @@ export default function ModelDetail({ id }) {
                     idx === currentImageIndex ? 'border-blue-500' : 'border-gray-300'
                   }`}
                 >
-                  <img src={url} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                  <img src={resolveImageUrl(url)} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
