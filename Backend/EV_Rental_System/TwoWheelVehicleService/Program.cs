@@ -39,16 +39,16 @@ builder.Services.AddScoped<IModelService, ModelService>();
 
 var app = builder.Build();
 
-// ====================== Static Files ======================
-app.UseStaticFiles(); // Serve wwwroot mặc định
+//// ====================== Static Files ======================
+//app.UseStaticFiles(); // Serve wwwroot mặc định
 
-// Serve thư mục Data/Vehicles
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "Data", "Vehicles")),
-    RequestPath = "/Data/Vehicles"
-});
+//// Serve thư mục Data/Vehicles
+//app.UseStaticFiles(new StaticFileOptions
+//{
+//    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+//        Path.Combine(builder.Environment.ContentRootPath, "Data", "Vehicles")),
+//    RequestPath = "/Data/Vehicles"
+//});
 
 // ====================== Middleware ======================
 if (app.Environment.IsDevelopment())

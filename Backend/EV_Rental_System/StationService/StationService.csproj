@@ -7,6 +7,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Migration\**" />
+	  <Content Remove="Migration\**" />
+	  <EmbeddedResource Remove="Migration\**" />
+	  <None Remove="Migration\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		  <PrivateAssets>all</PrivateAssets>
@@ -26,7 +33,6 @@
 		<Folder Include="Migrations\" />
 		<Folder Include="Repositories" />
 		<Folder Include="Services" />
-		<Folder Include="Migration\" />
 	</ItemGroup>
 
 </Project>
