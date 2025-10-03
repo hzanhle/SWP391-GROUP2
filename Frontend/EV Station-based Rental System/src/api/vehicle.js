@@ -1,8 +1,8 @@
-const BASE_URL = (import.meta.env.VITE_VEHICLE_API_URL || '').replace(/\/$/, '')
+const BASE_URL = (import.meta.env.VITE_VEHICLE_API_URL || import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
 async function request(path, { method = 'GET', body, token, headers = {} } = {}) {
   if (!BASE_URL) {
-    throw new Error('VITE_VEHICLE_API_URL is not set')
+    throw new Error('VITE_VEHICLE_API_URL or VITE_API_URL is not set')
   }
   const url = `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`
 
