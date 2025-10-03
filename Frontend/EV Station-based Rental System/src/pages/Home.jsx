@@ -48,7 +48,7 @@ export default function Home() {
             {loading && (
               <div className="text-center py-10 fade-in">
                 <div className="spinner" aria-hidden="true"></div>
-                <p className="text-gray-600" style={{ marginTop: '0.75rem' }}>Loading vehicles...</p>
+                <p className="text-gray-600 mt-3">Loading vehicles...</p>
               </div>
             )}
 
