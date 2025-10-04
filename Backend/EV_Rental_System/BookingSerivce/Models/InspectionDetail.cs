@@ -1,4 +1,4 @@
-﻿namespace BookingSerivce.Models
+﻿namespace BookingService.Models
 {
     // Model chi tiết kiểm tra - lưu từng hạng mục kiểm tra cụ thể
     public class InspectionDetail

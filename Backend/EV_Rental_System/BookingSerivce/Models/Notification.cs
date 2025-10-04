@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace BookingSerivce.Models
+namespace BookingService.Models
 {
     public class Notification
     {

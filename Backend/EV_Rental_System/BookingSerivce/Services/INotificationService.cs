@@ -1,5 +1,5 @@
 ﻿using BookingSerivce.DTOs;
-using BookingSerivce.Models;
+using BookingService.Models;
 
 namespace BookingSerivce.Services
 {

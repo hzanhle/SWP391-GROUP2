@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace BookingSerivce.Models
+namespace BookingService.Models
 {
     // Model lưu hình ảnh kiểm tra - CHỈ lưu đường dẫn file
     public class InspectionImage
