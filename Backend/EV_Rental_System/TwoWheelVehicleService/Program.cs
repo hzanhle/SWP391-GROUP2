@@ -42,13 +42,22 @@ var app = builder.Build();
 // ====================== Static Files ======================
 app.UseStaticFiles(); // Serve wwwroot mặc định
 
+// Đường dẫn thư mục Data/Vehicles
+var vehicleDir = Path.Combine(builder.Environment.ContentRootPath, "Data", "Vehicles");
+
+// Kiểm tra thư mục, nếu chưa có thì tạo
+if (!Directory.Exists(vehicleDir))
+{
+    Directory.CreateDirectory(vehicleDir);
+}
+
 // Serve thư mục Data/Vehicles
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "Data", "Vehicles")),
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(vehicleDir),
     RequestPath = "/Data/Vehicles"
 });
+
 
 // ====================== Middleware ======================
 if (app.Environment.IsDevelopment())
