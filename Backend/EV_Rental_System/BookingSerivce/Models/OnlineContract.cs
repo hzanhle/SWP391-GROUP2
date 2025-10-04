@@ -1,4 +1,6 @@
-﻿namespace BookingSerivce.Models
+﻿using BookingService.Models;
+
+namespace BookingService.Models
 {
     public class OnlineContract
     {

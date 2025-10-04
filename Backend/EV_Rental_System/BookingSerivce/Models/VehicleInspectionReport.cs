@@ -1,4 +1,4 @@
-﻿namespace BookingSerivce.Models
+﻿namespace BookingService.Models
 {
     // Model báo cáo kiểm tra xe - quản lý việc kiểm tra khi nhận và trả xe
     public class VehicleInspectionReport

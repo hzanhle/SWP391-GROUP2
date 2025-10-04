@@ -38,9 +38,6 @@ namespace TwoWheelVehicleService.Controllers
         {
             var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
             if (vehicle == null) return NotFound();
-            var model = await _modelService.GetModelByIdAsync(vehicle.VehicleId);
-            vehicle.Model = model;
-
             return Ok(vehicle);
         }
 

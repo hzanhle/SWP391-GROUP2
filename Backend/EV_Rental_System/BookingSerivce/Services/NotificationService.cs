@@ -1,6 +1,7 @@
 ﻿using BookingSerivce.DTOs;
 using BookingSerivce.Models;
 using BookingSerivce.Repositories;
+using BookingService.Models;
 
 namespace BookingSerivce.Services
 {
