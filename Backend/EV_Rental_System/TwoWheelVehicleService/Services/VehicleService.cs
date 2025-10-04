@@ -48,6 +48,7 @@ namespace TwoWheelVehicleService.Services
             var vehicleDTO = new VehicleDTO
             {
                 VehicleId = vehicle.VehicleId,
+                ModelId = vehicle.ModelId,
                 StationId = vehicle.StationId,
                 Color = vehicle.Color,
                 Status = vehicle.Status,
@@ -67,7 +68,7 @@ namespace TwoWheelVehicleService.Services
             var existingVehicle = await _vehicleRepository.GetVehicleById(vehicle.VehicleId);
             if (existingVehicle != null)
             {
-                existingVehicle.Model = vehicle.Model;
+                existingVehicle.ModelId = vehicle.ModelId;
                 existingVehicle.StationId = vehicle.StationId;
                 existingVehicle.Color = vehicle.Color;
                 existingVehicle.Status = vehicle.Status;
