@@ -286,18 +286,18 @@ namespace UserService.Services
             }
         }
 
-        public async Task SetRole(int userId)
+        public async Task SetAdmin(int userId)
         {
             var user = _userRepository.GetUserByIdAsync(userId).Result;
             if (user != null)
             {
-                if (user.RoleId == 1)
+                if (user.RoleId == 2)
                 {
-                    user.RoleId = 2; // Change from Admin to Member
+                    user.RoleId = 3; // Change from Employee to Admin
                 }
-                else if (user.RoleId == 2)
+                else if (user.RoleId == 3)
                 {
-                    user.RoleId = 1; // Change from Member to Admin
+                    user.RoleId = 2; // Change from Admin to Employee
                 }
                 _userRepository.UpdateUserAsync(user);
             }

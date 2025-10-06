@@ -152,12 +152,12 @@ namespace UserService.Controllers
         }
 
         [HttpPatch("{id}")]
-        public async Task<IActionResult> SetRole(int id)
+        public async Task<IActionResult> SetAdmin(int id)
         {
             try
             {
-                await _userService.SetRole(id);
-                return Ok(new { message = "Role set successfully" });
+                await _userService.SetAdmin(id);
+                return Ok(new { message = "Admin set successfully" });
             }
             catch (Exception ex)
             {
