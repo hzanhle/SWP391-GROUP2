@@ -1,0 +1,26 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.cache
+*.pdb
+
+# Build outputs
+bin/
+obj/
+[Bb]uild/
+[Ll]og/
+
+# Temporary files
+*.tmp
+*.log
+*.db
+
+# Packages and dependencies
+*.nupkg
+packages/
+node_modules/
+
+# System files
+.DS_Store
+Thumbs.db
