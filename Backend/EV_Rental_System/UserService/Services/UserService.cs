@@ -158,36 +158,6 @@ namespace UserService.Services
             }
         }
 
-        public async Task AddStaffAccount(User user)
-        {
-            try
-            {
-                var existingUser = await _userRepository.GetUserAsync(user.UserName);
-                if (existingUser != null)
-                {
-                    _logger.LogWarning("Attempted to add staff with existing username: {UserName}", user.UserName);
-                    throw new ArgumentException("Tên đăng nhập đã tồn tại");
-                }
-                // Hash password before saving
-                if (!string.IsNullOrEmpty(user.Password))
-                {
-                    user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
-                }
-                var role = await _roleRepository.GetRoleByNameAsync("Employee"); // Default role to "Employee"
-                user.CreatedAt = DateTime.UtcNow;
-                user.IsActive = true; // Set default active status
-                user.RoleId = role.RoleId;
-                user.Role = role;
-                await _userRepository.AddUserAsync(user);
-                _logger.LogInformation("Staff account added successfully: {UserId}", user.Id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error adding staff account: {UserName}", user.UserName);
-                throw;
-            }
-        }
-
         public async Task DeleteUserAsync(int userId)
         {
             try
@@ -316,7 +286,7 @@ namespace UserService.Services
             }
         }
 
-        public async Task SetRole(int userId)  // Toggle between Employee (2) and Admin (3)
+        public async Task SetAdmin(int userId)
         {
             var user = _userRepository.GetUserByIdAsync(userId).Result;
             if (user != null)
@@ -330,26 +300,6 @@ namespace UserService.Services
                     user.RoleId = 2; // Change from Admin to Employee
                 }
                 _userRepository.UpdateUserAsync(user);
-            }
-        }
-
-        public async Task ChangePassword(ChangePasswordRequest passwordRequest)
-        {
-            var user = await _userRepository.GetUserByIdAsync(passwordRequest.UserId);
-            if (user != null)
-            {
-                // Verify old password
-                if (!BCrypt.Net.BCrypt.Verify(passwordRequest.CurrentPassword, user.Password))
-                {
-                    throw new ArgumentException("Mật khẩu cũ không đúng");
-                }
-                // Hash and update to new password
-                user.Password = BCrypt.Net.BCrypt.HashPassword(passwordRequest.NewPassword);
-                await _userRepository.UpdateUserAsync(user);
-            }
-            else
-            {
-                throw new ArgumentException("User not found");
             }
         }
     }
