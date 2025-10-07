@@ -1,6 +1,6 @@
 ﻿namespace UserService.DTOs
 {
-    public class OtpResponse
+    public class OtpAttribute
     {
         public bool Success { get; set; }
         public string Message { get; set; }

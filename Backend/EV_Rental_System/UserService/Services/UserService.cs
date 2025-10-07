@@ -1,9 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using UserService.DTOs;
+﻿using UserService.DTOs;
 using UserService.Models;
 using UserService.Repositories;
 
@@ -17,15 +12,17 @@ namespace UserService.Services
         private readonly ILogger<UserService> _logger;
         private readonly IJwtService _jwtService;
         private readonly IConfiguration _configuration;
+        private readonly IOtpService _otpService;
 
-        
+
         public UserService(
             IRoleRepository roleRepository,
             IUserRepository userRepository,
             ICitizenInfoRepository citizenInfoRepository,
             ILogger<UserService> logger,
             IJwtService jwtService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IOtpService otpService)
         {
             _userRepository = userRepository;
             _citizenInfoRepository = citizenInfoRepository;
@@ -33,6 +30,7 @@ namespace UserService.Services
             _jwtService = jwtService;
             _configuration = configuration;
             _roleRepository = roleRepository;
+            _otpService = otpService;
         }
 
         public async Task<LoginResponse> Login(LoginRequest loginRequest)
@@ -374,5 +372,83 @@ namespace UserService.Services
             };
         }
 
+        public async Task<ResponseDTO> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            try
+            {
+                // Validate
+                if (string.IsNullOrWhiteSpace(request.NewPassword))
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Mật khẩu không được để trống"
+                    };
+                }
+
+                if (request.NewPassword != request.ConfirmPassword)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Mật khẩu xác nhận không khớp"
+                    };
+                }
+
+                if (request.NewPassword.Length < 6)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Mật khẩu phải có ít nhất 6 ký tự"
+                    };
+                }
+
+                // ✅ Verify OTP lần nữa để đảm bảo security
+                var otpResult = await _otpService.VerifyPasswordResetOtpAsync(request.Email, request.Otp);
+                if (!otpResult.Success)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Mã OTP không hợp lệ hoặc đã hết hạn"
+                    };
+                }
+
+                // Get user từ database
+                var user = await _userRepository.GetUserByEmailAsync(request.Email);
+                if (user == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Không tìm thấy người dùng"
+                    };
+                }
+
+                // ✅ Hash password mới
+                user.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+                // ✅ Update vào database
+                await _userRepository.UpdateUserAsync(user);
+
+                _logger.LogInformation($"Password reset successfully for user: {user.Email}");
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Mật khẩu đã được đặt lại thành công. Bạn có thể đăng nhập với mật khẩu mới."
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error resetting password for {request.Email}");
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra. Vui lòng thử lại sau."
+                };
+            }
+        }
     }
 }

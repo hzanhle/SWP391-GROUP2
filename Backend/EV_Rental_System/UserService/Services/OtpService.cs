@@ -26,7 +26,7 @@ namespace UserService.Services
         }
 
         // ✅ Gửi OTP đến email
-        public async Task<OtpResponse> SendOtpAsync(string email)
+        public async Task<OtpAttribute> SendOtpAsync(string email)
         {
             try
             {
@@ -35,21 +35,21 @@ namespace UserService.Services
 
                 if (!sent)
                 {
-                    return new OtpResponse { Success = false, Message = "Không thể gửi email" };
+                    return new OtpAttribute { Success = false, Message = "Không thể gửi email" };
                 }
 
                 await StoreOtpAsync(email, otp);
 
-                return new OtpResponse { Success = true, Message = "OTP đã được gửi đến email của bạn" };
+                return new OtpAttribute { Success = true, Message = "OTP đã được gửi đến email của bạn" };
             }
             catch (Exception ex)
             {
-                return new OtpResponse { Success = false, Message = $"Lỗi: {ex.Message}" };
+                return new OtpAttribute { Success = false, Message = $"Lỗi: {ex.Message}" };
             }
         }
 
         // ✅ Xác thực OTP
-        public async Task<OtpResponse> VerifyOtpAsync(string email, string otp)
+        public async Task<OtpAttribute> VerifyOtpAsync(string email, string otp)
         {
             try
             {
@@ -57,24 +57,24 @@ namespace UserService.Services
                 var cachedOtp = await _cache.GetStringAsync(cacheKey);
 
                 if (string.IsNullOrEmpty(cachedOtp))
-                    return new OtpResponse { Success = false, Message = "OTP không tồn tại hoặc đã hết hạn" };
+                    return new OtpAttribute { Success = false, Message = "OTP không tồn tại hoặc đã hết hạn" };
 
                 if (cachedOtp == otp)
                 {
                     await _cache.RemoveAsync(cacheKey);
-                    return new OtpResponse { Success = true, Message = "Xác thực thành công" };
+                    return new OtpAttribute { Success = true, Message = "Xác thực thành công" };
                 }
 
-                return new OtpResponse { Success = false, Message = "OTP không chính xác" };
+                return new OtpAttribute { Success = false, Message = "OTP không chính xác" };
             }
             catch (Exception ex)
             {
-                return new OtpResponse { Success = false, Message = $"Lỗi: {ex.Message}" };
+                return new OtpAttribute { Success = false, Message = $"Lỗi: {ex.Message}" };
             }
         }
 
         // ✅ Gửi OTP cho đặt lại mật khẩu
-        public async Task<OtpResponse> SendPasswordResetOtpAsync(string email)
+        public async Task<OtpAttribute> SendPasswordResetOtpAsync(string email)
         {
             try
             {
@@ -82,7 +82,7 @@ namespace UserService.Services
                 if (user == null)
                 {
                     // Không tiết lộ thông tin nhạy cảm
-                    return new OtpResponse
+                    return new OtpAttribute
                     {
                         Success = true,
                         Message = "Nếu email tồn tại, mã OTP đã được gửi đến hộp thư của bạn"
@@ -93,11 +93,11 @@ namespace UserService.Services
                 var sent = await SendPasswordResetEmailAsync(email, otp);
 
                 if (!sent)
-                    return new OtpResponse { Success = false, Message = "Không thể gửi email. Vui lòng thử lại sau." };
+                    return new OtpAttribute { Success = false, Message = "Không thể gửi email. Vui lòng thử lại sau." };
 
                 await StoreOtpAsync($"RESET_{email}", otp);
 
-                return new OtpResponse
+                return new OtpAttribute
                 {
                     Success = true,
                     Message = "Mã OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư."
@@ -105,12 +105,12 @@ namespace UserService.Services
             }
             catch (Exception ex)
             {
-                return new OtpResponse { Success = false, Message = $"Lỗi: {ex.Message}" };
+                return new OtpAttribute { Success = false, Message = $"Lỗi: {ex.Message}" };
             }
         }
 
         // ✅ Xác thực OTP cho đặt lại mật khẩu
-        public async Task<OtpResponse> VerifyPasswordResetOtpAsync(string email, string otp)
+        public async Task<OtpAttribute> VerifyPasswordResetOtpAsync(string email, string otp)
         {
             try
             {
@@ -118,11 +118,11 @@ namespace UserService.Services
                 var cachedOtp = await _cache.GetStringAsync(cacheKey);
 
                 if (string.IsNullOrEmpty(cachedOtp))
-                    return new OtpResponse { Success = false, Message = "OTP không tồn tại hoặc đã hết hạn" };
+                    return new OtpAttribute { Success = false, Message = "OTP không tồn tại hoặc đã hết hạn" };
 
                 if (cachedOtp == otp)
                 {
-                    return new OtpResponse
+                    return new OtpAttribute
                     {
                         Success = true,
                         Message = "Xác thực thành công. Bạn có thể đặt mật khẩu mới.",
@@ -131,11 +131,11 @@ namespace UserService.Services
                     };
                 }
 
-                return new OtpResponse { Success = false, Message = "OTP không chính xác" };
+                return new OtpAttribute { Success = false, Message = "OTP không chính xác" };
             }
             catch (Exception ex)
             {
-                return new OtpResponse { Success = false, Message = $"Lỗi: {ex.Message}" };
+                return new OtpAttribute { Success = false, Message = $"Lỗi: {ex.Message}" };
             }
         }
 
