@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using UserService;
+using UserService.Models;
 using UserService.Repositories;
 using UserService.Services;
 
@@ -44,6 +45,10 @@ builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddScoped<IImageRepository, ImageRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddScoped<IOtpService, OtpService>();
 
 // ====================== JWT Configuration (Basic) ======================
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
