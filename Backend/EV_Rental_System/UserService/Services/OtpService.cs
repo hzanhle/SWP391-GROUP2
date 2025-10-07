@@ -13,16 +13,16 @@ namespace UserService.Services
     {
         private readonly EmailSettings _emailSettings;
         private readonly IDistributedCache _cache;
-        private readonly IUserRepository _userRepository; // ✨ THÊM dependency này
+        private readonly IUserRepository _userRepository;
 
         public OtpService(
             IOptions<EmailSettings> emailSettings,
             IDistributedCache cache,
-            IUserRepository userRepository) // ✨ THÊM vào constructor
+            IUserRepository userRepository)
         {
             _emailSettings = emailSettings.Value;
             _cache = cache;
-            _userRepository = userRepository; // ✨ THÊM
+            _userRepository = userRepository;
         }
 
         // ✅ Gửi OTP đến email
@@ -30,37 +30,21 @@ namespace UserService.Services
         {
             try
             {
-                // Tạo OTP 6 số
                 var otp = GenerateOtp();
-
-                // Gửi email
                 var sent = await SendEmailAsync(email, otp);
 
                 if (!sent)
                 {
-                    return new OtpResponse
-                    {
-                        Success = false,
-                        Message = "Không thể gửi email"
-                    };
+                    return new OtpResponse { Success = false, Message = "Không thể gửi email" };
                 }
 
-                // Lưu OTP vào cache (5 phút)
                 await StoreOtpAsync(email, otp);
 
-                return new OtpResponse
-                {
-                    Success = true,
-                    Message = "OTP đã được gửi đến email của bạn"
-                };
+                return new OtpResponse { Success = true, Message = "OTP đã được gửi đến email của bạn" };
             }
             catch (Exception ex)
             {
-                return new OtpResponse
-                {
-                    Success = false,
-                    Message = $"Lỗi: {ex.Message}"
-                };
+                return new OtpResponse { Success = false, Message = $"Lỗi: {ex.Message}" };
             }
         }
 
@@ -69,57 +53,35 @@ namespace UserService.Services
         {
             try
             {
-                // Lấy OTP từ cache
                 var cacheKey = $"OTP_{email}";
                 var cachedOtp = await _cache.GetStringAsync(cacheKey);
 
                 if (string.IsNullOrEmpty(cachedOtp))
-                {
-                    return new OtpResponse
-                    {
-                        Success = false,
-                        Message = "OTP không tồn tại hoặc đã hết hạn"
-                    };
-                }
+                    return new OtpResponse { Success = false, Message = "OTP không tồn tại hoặc đã hết hạn" };
 
-                // So sánh OTP
                 if (cachedOtp == otp)
                 {
-                    // Xóa OTP sau khi verify thành công
                     await _cache.RemoveAsync(cacheKey);
-
-                    return new OtpResponse
-                    {
-                        Success = true,
-                        Message = "Xác thực thành công"
-                    };
+                    return new OtpResponse { Success = true, Message = "Xác thực thành công" };
                 }
 
-                return new OtpResponse
-                {
-                    Success = false,
-                    Message = "OTP không chính xác"
-                };
+                return new OtpResponse { Success = false, Message = "OTP không chính xác" };
             }
             catch (Exception ex)
             {
-                return new OtpResponse
-                {
-                    Success = false,
-                    Message = $"Lỗi: {ex.Message}"
-                };
+                return new OtpResponse { Success = false, Message = $"Lỗi: {ex.Message}" };
             }
         }
 
+        // ✅ Gửi OTP cho đặt lại mật khẩu
         public async Task<OtpResponse> SendPasswordResetOtpAsync(string email)
         {
             try
             {
-                // Kiểm tra email có tồn tại không
                 var user = await _userRepository.GetUserByEmailAsync(email);
                 if (user == null)
                 {
-                    // Không tiết lộ email không tồn tại (security)
+                    // Không tiết lộ thông tin nhạy cảm
                     return new OtpResponse
                     {
                         Success = true,
@@ -127,22 +89,12 @@ namespace UserService.Services
                     };
                 }
 
-                // Tạo OTP 6 số
                 var otp = GenerateOtp();
-
-                // Gửi email
                 var sent = await SendPasswordResetEmailAsync(email, otp);
 
                 if (!sent)
-                {
-                    return new OtpResponse
-                    {
-                        Success = false,
-                        Message = "Không thể gửi email. Vui lòng thử lại sau."
-                    };
-                }
+                    return new OtpResponse { Success = false, Message = "Không thể gửi email. Vui lòng thử lại sau." };
 
-                // Lưu OTP với prefix RESET_ để phân biệt
                 await StoreOtpAsync($"RESET_{email}", otp);
 
                 return new OtpResponse
@@ -153,56 +105,37 @@ namespace UserService.Services
             }
             catch (Exception ex)
             {
-                return new OtpResponse
-                {
-                    Success = false,
-                    Message = $"Lỗi: {ex.Message}"
-                };
+                return new OtpResponse { Success = false, Message = $"Lỗi: {ex.Message}" };
             }
         }
+
+        // ✅ Xác thực OTP cho đặt lại mật khẩu
         public async Task<OtpResponse> VerifyPasswordResetOtpAsync(string email, string otp)
         {
             try
             {
-                // Lấy OTP từ cache với prefix RESET_
                 var cacheKey = $"OTP_RESET_{email}";
                 var cachedOtp = await _cache.GetStringAsync(cacheKey);
 
                 if (string.IsNullOrEmpty(cachedOtp))
-                {
-                    return new OtpResponse
-                    {
-                        Success = false,
-                        Message = "OTP không tồn tại hoặc đã hết hạn"
-                    };
-                }
+                    return new OtpResponse { Success = false, Message = "OTP không tồn tại hoặc đã hết hạn" };
 
-                // So sánh OTP
                 if (cachedOtp == otp)
                 {
-                    // KHÔNG xóa OTP ở đây - sẽ xóa sau khi reset password thành công
                     return new OtpResponse
                     {
                         Success = true,
                         Message = "Xác thực thành công. Bạn có thể đặt mật khẩu mới.",
                         Email = email,
-                        Otp = otp // Giữ lại để dùng cho bước reset
+                        Otp = otp
                     };
                 }
 
-                return new OtpResponse
-                {
-                    Success = false,
-                    Message = "OTP không chính xác"
-                };
+                return new OtpResponse { Success = false, Message = "OTP không chính xác" };
             }
             catch (Exception ex)
             {
-                return new OtpResponse
-                {
-                    Success = false,
-                    Message = $"Lỗi: {ex.Message}"
-                };
+                return new OtpResponse { Success = false, Message = $"Lỗi: {ex.Message}" };
             }
         }
 
@@ -213,13 +146,7 @@ namespace UserService.Services
             using var rng = RandomNumberGenerator.Create();
             var bytes = new byte[6];
             rng.GetBytes(bytes);
-
-            var otp = "";
-            foreach (var b in bytes)
-            {
-                otp += (b % 10).ToString();
-            }
-            return otp;
+            return string.Concat(bytes.Select(b => (b % 10).ToString()));
         }
 
         private async Task StoreOtpAsync(string key, string otp)
@@ -229,7 +156,6 @@ namespace UserService.Services
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
             };
-
             await _cache.SetStringAsync(cacheKey, otp, options);
         }
 
@@ -237,53 +163,50 @@ namespace UserService.Services
         {
             try
             {
-                using var mail = new MailMessage();
-                mail.From = new MailAddress(_emailSettings.SenderEmail, _emailSettings.SenderName);
+                using var mail = new MailMessage
+                {
+                    From = new MailAddress(_emailSettings.SenderEmail, _emailSettings.SenderName),
+                    Subject = "Mã OTP xác thực",
+                    Body = CreateEmailBody(otp, "Mã OTP của bạn"),
+                    IsBodyHtml = true
+                };
                 mail.To.Add(email);
-                mail.Subject = "Mã OTP xác thực";
-                mail.Body = CreateEmailBody(otp, "Mã OTP của bạn");
-                mail.IsBodyHtml = true;
 
-                using var smtp = new SmtpClient(_emailSettings.SmtpServer, _emailSettings.SmtpPort);
-                smtp.Credentials = new NetworkCredential(
-                    _emailSettings.SenderEmail,
-                    _emailSettings.SenderPassword);
-                smtp.EnableSsl = _emailSettings.EnableSsl;
+                using var smtp = new SmtpClient(_emailSettings.SmtpServer, _emailSettings.SmtpPort)
+                {
+                    Credentials = new NetworkCredential(_emailSettings.SenderEmail, _emailSettings.SenderPassword),
+                    EnableSsl = _emailSettings.EnableSsl
+                };
 
                 await smtp.SendMailAsync(mail);
                 return true;
             }
-            catch
-            {
-                return false;
-            }
+            catch { return false; }
         }
 
-        // ✨ NEW - Email cho reset password
         private async Task<bool> SendPasswordResetEmailAsync(string email, string otp)
         {
             try
             {
-                using var mail = new MailMessage();
-                mail.From = new MailAddress(_emailSettings.SenderEmail, _emailSettings.SenderName);
+                using var mail = new MailMessage
+                {
+                    From = new MailAddress(_emailSettings.SenderEmail, _emailSettings.SenderName),
+                    Subject = "Đặt lại mật khẩu - Mã OTP",
+                    Body = CreateEmailBody(otp, "Đặt lại mật khẩu"),
+                    IsBodyHtml = true
+                };
                 mail.To.Add(email);
-                mail.Subject = "Đặt lại mật khẩu - Mã OTP";
-                mail.Body = CreateEmailBody(otp, "Đặt lại mật khẩu");
-                mail.IsBodyHtml = true;
 
-                using var smtp = new SmtpClient(_emailSettings.SmtpServer, _emailSettings.SmtpPort);
-                smtp.Credentials = new NetworkCredential(
-                    _emailSettings.SenderEmail,
-                    _emailSettings.SenderPassword);
-                smtp.EnableSsl = _emailSettings.EnableSsl;
+                using var smtp = new SmtpClient(_emailSettings.SmtpServer, _emailSettings.SmtpPort)
+                {
+                    Credentials = new NetworkCredential(_emailSettings.SenderEmail, _emailSettings.SenderPassword),
+                    EnableSsl = _emailSettings.EnableSsl
+                };
 
                 await smtp.SendMailAsync(mail);
                 return true;
             }
-            catch
-            {
-                return false;
-            }
+            catch { return false; }
         }
 
         private string CreateEmailBody(string otp, string title)
