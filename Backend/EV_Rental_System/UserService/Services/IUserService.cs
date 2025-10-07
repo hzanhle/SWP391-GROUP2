@@ -15,5 +15,7 @@ namespace UserService.Services
         Task<User?> GetUserDetailByIdAsync(int userId);
         Task<List<User>> GetAllUsersAsync();
         Task SetAdmin(int userId);
+        Task AddStaffAsync(User user); // Create staff user
+        Task<ResponseDTO> ChangePassword(ChangePasswordRequest request);
     }
 }
