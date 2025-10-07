@@ -14,11 +14,6 @@ namespace UserService.Services
         Task<User?> GetUserByIdAsync(int userId); // Read
         Task<User?> GetUserDetailByIdAsync(int userId);
         Task<List<User>> GetAllUsersAsync();
-        Task SetRole(int userId); 
-        Task AddStaffAccount(User user);
-        Task ChangePassword(ChangePasswordRequest passwordRequest);
-
-
-
+        Task SetAdmin(int userId);
     }
 }
