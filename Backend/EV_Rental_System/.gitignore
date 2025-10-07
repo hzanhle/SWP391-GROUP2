@@ -1,26 +1,26 @@
-# Visual Studio
+﻿# Tệp và thư mục dành riêng cho Visual Studio
 .vs/
-*.user
 *.suo
-*.cache
-*.pdb
+*.user
+*.userosscache
+*.sln.docstates
 
-# Build outputs
-bin/
-obj/
-[Bb]uild/
-[Ll]og/
+# Tệp và thư mục do build process sinh ra
+[Bb]in/
+[Oo]bj/
 
-# Temporary files
-*.tmp
-*.log
-*.db
+# Tệp do Rider IDE sinh ra
+.idea/
 
-# Packages and dependencies
+# Gói NuGet
+[Pp]ackages/
 *.nupkg
-packages/
-node_modules/
 
-# System files
+# Tệp tạm thời và log
+*.log
+*.tmp
+*.temp
+
+# Tệp hệ điều hành
+[Tt]humbs.db
 .DS_Store
-Thumbs.db
