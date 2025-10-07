@@ -18,7 +18,7 @@ namespace UserService.Services
         private readonly IJwtService _jwtService;
         private readonly IConfiguration _configuration;
 
-        // Fixed constructor - inject all dependencies
+        
         public UserService(
             IRoleRepository roleRepository,
             IUserRepository userRepository,
