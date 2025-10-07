@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using UserService.DTOs;
 using UserService.Models;
@@ -11,14 +12,11 @@ namespace UserService.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
-        private readonly IOtpService _otpService;
         private readonly ILogger<UserController> _logger;
 
-        public UserController(IUserService userService, IOtpService otpService, ILogger<UserController> logger)
+        public UserController(IUserService userService)
         {
             _userService = userService;
-            _otpService = otpService;
-            _logger = logger;
         }
 
         [HttpGet]
@@ -31,16 +29,15 @@ namespace UserService.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting all users");
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
         {
             try
             {
+                // ✅ Validation with ModelState
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState
@@ -51,21 +48,26 @@ namespace UserService.Controllers
                     return BadRequest(new LoginResponse
                     {
                         IsSuccess = false,
-                        Message = "Dữ liệu không hợp lệ"
+                        Message = "Dữ liệu không hợp lệ",
+                        //Errors = errors
                     });
                 }
 
                 var result = await _userService.Login(loginRequest);
 
+                // ✅ Handle different response cases properly
                 if (!result.IsSuccess)
                 {
+                    // Return 401 for authentication failures
                     if (result.Message.Contains("mật khẩu") || result.Message.Contains("khóa"))
                     {
                         return Unauthorized(result);
                     }
+                    // Return 400 for validation failures
                     return BadRequest(result);
                 }
 
+                // ✅ Success response with proper structure
                 return Ok(result);
             }
             catch (Exception ex)
@@ -75,6 +77,7 @@ namespace UserService.Controllers
                 {
                     IsSuccess = false,
                     Message = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau."
+                    // ❌ KHÔNG expose ex.Message cho user (security risk)
                 });
             }
         }
@@ -82,20 +85,12 @@ namespace UserService.Controllers
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserById(int userId)
         {
-            try
+            var user = await _userService.GetUserByIdAsync(userId);
+            if (user == null)
             {
-                var user = await _userService.GetUserByIdAsync(userId);
-                if (user == null)
-                {
-                    return NotFound();
-                }
-                return Ok(user);
+                return NotFound();
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting user {UserId}", userId);
-                return StatusCode(500, "Internal server error");
-            }
+            return Ok(user);
         }
 
         [HttpGet("UserDetail{userId}")]
@@ -112,8 +107,7 @@ namespace UserService.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting user detail {UserId}", userId);
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
@@ -123,42 +117,37 @@ namespace UserService.Controllers
             try
             {
                 await _userService.AddUserAsync(user);
-                return Ok(new { message = "User registered successfully" });
+                return Ok();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error registering user");
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-
         [HttpPut]
         public async Task<IActionResult> UpdateUser([FromBody] User user)
         {
             try
             {
                 await _userService.UpdateUserAsync(user);
-                return Ok(new { message = "User updated successfully" });
+                return Ok();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating user");
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-
         [HttpDelete]
         public async Task<IActionResult> DeleteUser([FromQuery] int userId)
         {
             try
             {
                 await _userService.DeleteUserAsync(userId);
-                return Ok(new { message = "User deleted successfully" });
+                return Ok();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting user {UserId}", userId);
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
@@ -167,82 +156,13 @@ namespace UserService.Controllers
         {
             try
             {
-                await _userService.SetRole(id);
+                await _userService.SetAdmin(id);
                 return Ok(new { message = "Admin set successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting admin role for user {UserId}", id);
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
-        }
-
-        [HttpPost("AddStaffAccount")]
-        public async Task<IActionResult> AddStaffAccount([FromBody] User user)
-        {
-            try
-            {
-                await _userService.AddStaffAccount(user);
-                return Ok(new { message = "Staff account created successfully" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error adding staff account");
-                return StatusCode(500, "Internal server error");
-            }
-        }
-
-        [HttpPost("ChangePassword")]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest passwordRequest)
-        {
-            try
-            {
-                await _userService.ChangePassword(passwordRequest);
-                return Ok(new { message = "Password changed successfully" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error changing password");
-                return StatusCode(500, "Internal server error");
-            }
-        }
-
-        // ============================================
-        // OTP ENDPOINTS - ĐƠN GIẢN
-        // ============================================
-
-        /// <summary>
-        /// Gửi OTP đến email
-        /// </summary>
-        [HttpPost("send-otp")]
-        public async Task<IActionResult> SendOTP([FromBody] string email)
-        {
-            var result = await _otpService.SendOtpAsync(email);
-
-            if (result.Success)
-                return Ok(result);
-
-            return BadRequest(result);
-        }
-
-        /// <summary>
-        /// Xác thực OTP
-        /// </summary>
-        [HttpPost("verify-otp")]
-        public async Task<IActionResult> VerifyOTP([FromBody] OtpResponse request)
-        {
-            var result = await _otpService.VerifyOtpAsync(request.Email, request.Otp);
-
-            if (result.Success)
-                return Ok(result);
-
-            return BadRequest(result);
         }
     }
-
-    
-
-    
-
-    
 }
