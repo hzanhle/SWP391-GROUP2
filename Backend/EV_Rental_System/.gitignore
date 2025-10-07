@@ -1,26 +1,61 @@
-﻿# Tệp và thư mục dành riêng cho Visual Studio
+﻿# ================================
+# .NET + React project .gitignore
+# ================================
+
+# Ignore Visual Studio cache and settings
 .vs/
-*.suo
+.vscode/
 *.user
-*.userosscache
-*.sln.docstates
+*.suo
+*.userprefs
 
-# Tệp và thư mục do build process sinh ra
-[Bb]in/
-[Oo]bj/
-
-# Tệp do Rider IDE sinh ra
-.idea/
-
-# Gói NuGet
-[Pp]ackages/
-*.nupkg
-
-# Tệp tạm thời và log
+# Ignore build outputs
+bin/
+obj/
+out/
+TestResults/
+Debug/
+Release/
+*.exe
+*.dll
+*.pdb
+*.cache
 *.log
-*.tmp
-*.temp
 
-# Tệp hệ điều hành
-[Tt]humbs.db
-.DS_Store
+# Ignore NuGet and packages
+packages/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+
+# Ignore system or IDE generated files
+*.db
+*.db-shm
+*.db-wal
+*.sdf
+*.ldf
+*.mdf
+
+# Ignore publish output
+publish/
+wwwroot/
+dist/
+node_modules/
+
+# Ignore environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# ================================
+# Files to KEEP (tracked)
+# ================================
+!*.cs
+!*.json
+!*.csproj
+!*.sln
+!*.config
+!*.xml
