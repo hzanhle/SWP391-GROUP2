@@ -4,9 +4,9 @@ namespace UserService.Services
 {
     public interface IOtpService
     {
-        Task<OtpResponse> SendOtpAsync(string email);
-        Task<OtpResponse> VerifyOtpAsync(string email, string otp);
-        Task<OtpResponse> SendPasswordResetOtpAsync(string email);
-        Task<OtpResponse> VerifyPasswordResetOtpAsync(string email, string otp);
+        Task<OtpAttribute> SendOtpAsync(string email);
+        Task<OtpAttribute> VerifyOtpAsync(string email, string otp);
+        Task<OtpAttribute> SendPasswordResetOtpAsync(string email);
+        Task<OtpAttribute> VerifyPasswordResetOtpAsync(string email, string otp);
     }
 }

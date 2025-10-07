@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using UserService.DTOs;
 using UserService.Models;
@@ -33,49 +34,6 @@ namespace UserService.Controllers
             {
                 _logger.LogError(ex, "Error getting all users");
                 return StatusCode(500, "Internal server error");
-            }
-        }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState
-                        .SelectMany(x => x.Value.Errors)
-                        .Select(x => x.ErrorMessage)
-                        .ToList();
-
-                    return BadRequest(new LoginResponse
-                    {
-                        IsSuccess = false,
-                        Message = "Dữ liệu không hợp lệ"
-                    });
-                }
-
-                var result = await _userService.Login(loginRequest);
-
-                if (!result.IsSuccess)
-                {
-                    if (result.Message.Contains("mật khẩu") || result.Message.Contains("khóa"))
-                    {
-                        return Unauthorized(result);
-                    }
-                    return BadRequest(result);
-                }
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error during login");
-                return StatusCode(500, new LoginResponse
-                {
-                    IsSuccess = false,
-                    Message = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau."
-                });
             }
         }
 
@@ -197,8 +155,12 @@ namespace UserService.Controllers
         {
             try
             {
-                await _userService.ChangePassword(passwordRequest);
-                return Ok(new { message = "Password changed successfully" });
+                var result = await _userService.ChangePassword(passwordRequest);
+
+                if (result.IsSuccess)
+                    return Ok(result);
+
+                return BadRequest(result);
             }
             catch (Exception ex)
             {
@@ -208,7 +170,49 @@ namespace UserService.Controllers
         }
 
         // ============================================
-        // OTP ENDPOINTS - ĐƠN GIẢN
+        // AUTHENTICATION
+        // ============================================
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] DTOs.LoginRequest loginRequest)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new LoginResponse
+                    {
+                        IsSuccess = false,
+                        Message = "Dữ liệu không hợp lệ"
+                    });
+                }
+
+                var result = await _userService.Login(loginRequest);
+
+                if (!result.IsSuccess)
+                {
+                    if (result.Message.Contains("mật khẩu") || result.Message.Contains("khóa"))
+                    {
+                        return Unauthorized(result);
+                    }
+                    return BadRequest(result);
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during login");
+                return StatusCode(500, new LoginResponse
+                {
+                    IsSuccess = false,
+                    Message = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau."
+                });
+            }
+        }
+
+        // ============================================
+        // OTP BASIC ENDPOINTS
         // ============================================
 
         /// <summary>
@@ -229,11 +233,59 @@ namespace UserService.Controllers
         /// Xác thực OTP
         /// </summary>
         [HttpPost("verify-otp")]
-        public async Task<IActionResult> VerifyOTP([FromBody] OtpResponse request)
+        public async Task<IActionResult> VerifyOTP([FromBody] OtpAttribute request)
         {
             var result = await _otpService.VerifyOtpAsync(request.Email, request.Otp);
 
             if (result.Success)
+                return Ok(result);
+
+            return BadRequest(result);
+        }
+
+        // ============================================
+        // ✨ FORGOT PASSWORD FLOW (3 STEP)
+        // ============================================
+
+        /// <summary>
+        /// STEP 1: Gửi OTP để reset password
+        /// </summary>
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return BadRequest(new { message = "Email không được để trống" });
+
+            var result = await _otpService.SendPasswordResetOtpAsync(email);
+            return Ok(result);
+        }
+
+        [HttpPost("verify-reset-otp")]
+        public async Task<IActionResult> VerifyResetOTP([FromBody] OtpAttribute request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Otp))
+                return BadRequest(new { message = "Email và OTP không được để trống" });
+
+            var result = await _otpService.VerifyPasswordResetOtpAsync(request.Email, request.Otp);
+
+            if (result.Success)
+                return Ok(result);
+
+            return BadRequest(result);
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] DTOs.ResetPasswordRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email))
+                return BadRequest(new { message = "Email không được để trống" });
+
+            if (string.IsNullOrWhiteSpace(request.Otp))
+                return BadRequest(new { message = "Mã OTP không được để trống" });
+
+            var result = await _userService.ResetPasswordAsync(request);
+
+            if (result.IsSuccess)
                 return Ok(result);
 
             return BadRequest(result);
