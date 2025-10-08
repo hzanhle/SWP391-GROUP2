@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TwoWheelVehicleService.Services;
 using TwoWheelVehicleService.Models;
@@ -85,5 +85,82 @@ namespace TwoWheelVehicleService.Controllers
             await _vehicleService.SetVehicleStatus(id, status);
             return Ok(new { message = "Status updated successfully" });
         }
+
+        /// <summary>
+        /// Check vehicle availability for booking (called by BookingService)
+        /// </summary>
+        [HttpPost("check-availability")]
+        public async Task<IActionResult> CheckAvailability([FromBody] CheckAvailabilityRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var vehicle = await _vehicleService.GetVehicleByIdAsync(request.VehicleId);
+                if (vehicle == null)
+                    return NotFound(new { success = false, message = "Vehicle not found" });
+
+                // Check if vehicle is active and available
+                bool isAvailable = vehicle.IsActive && vehicle.Status == "Available";
+
+                return Ok(new
+                {
+                    success = true,
+                    isAvailable = isAvailable,
+                    vehicle = new
+                    {
+                        vehicleId = vehicle.VehicleId,
+                        modelId = vehicle.ModelId,
+                        color = vehicle.Color,
+                        status = vehicle.Status,
+                        isActive = vehicle.IsActive
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get available vehicles by model for specific dates
+        /// </summary>
+        [HttpPost("available-by-model")]
+        public async Task<IActionResult> GetAvailableVehiclesByModel([FromBody] AvailableByModelRequest request)
+        {
+            try
+            {
+                var allVehicles = await _vehicleService.GetAllVehiclesAsync();
+
+                var availableVehicles = allVehicles
+                    .Where(v => v.ModelId == request.ModelId
+                        && v.IsActive
+                        && v.Status == "Available")
+                    .ToList();
+
+                return Ok(new
+                {
+                    success = true,
+                    count = availableVehicles.Count,
+                    vehicles = availableVehicles
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+    }
+
+    public class CheckAvailabilityRequest
+    {
+        public int VehicleId { get; set; }
+    }
+
+    public class AvailableByModelRequest
+    {
+        public int ModelId { get; set; }
     }
 }

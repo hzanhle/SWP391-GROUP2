@@ -1,4 +1,4 @@
-﻿using BookingSerivce.Models;
+using BookingSerivce.Models;
 using BookingService.Models;
 using System.Linq.Expressions;
 
@@ -10,7 +10,7 @@ namespace BookingSerivce.Repositories
         Task<Order?> GetByIdAsync(int orderId);
         Task<IEnumerable<Order>> GetAllAsync();
         Task<Order> AddAsync(Order order);
-        Task UpdateAsync(Order order);
+        Task<Order> UpdateAsync(Order order);
         Task DeleteAsync(int orderId);
         Task<bool> ExistsAsync(int orderId);
 
@@ -47,5 +47,11 @@ namespace BookingSerivce.Repositories
         Task<decimal> GetRevenueByDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<Dictionary<string, int>> GetOrderCountByStatusGroupAsync();
         Task<int> GetUserOrderCountAsync(int userId);
+
+        // Additional methods from lam branch
+        Task<IEnumerable<Order>> GetOrdersByVehicleAsync(int vehicleId);
+        Task<Order?> GetOrderWithPaymentAsync(int orderId);
+        Task<Order?> GetOrderWithContractAsync(int orderId);
+        Task<IEnumerable<Order>> GetOverlappingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate);
     }
 }
