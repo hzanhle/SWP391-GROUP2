@@ -1,4 +1,4 @@
-﻿using BookingSerivce.Models;
+using BookingSerivce.Models;
 using BookingSerivce.Repositories;
 using BookingSerivce.Services;
 using BookingService.DTOs;
