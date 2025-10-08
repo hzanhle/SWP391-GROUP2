@@ -11,6 +11,6 @@ namespace UserService.Repositories
         Task<User> GetUserByIdAsync(int userId); // Lấy user theo Id
         Task<User?> GetUserDetailByIdAsync(int userId); // Lấy user theo Id, bao gồm cả CitizenInfo và DriverLicense
         Task<List<User>> GetAllUsersAsync(); // Lấy tất cả user (cho admin)
-
+        Task<User> GetUserByEmailAsync(string email);
     }
 }

@@ -1,9 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using UserService.DTOs;
+﻿using UserService.DTOs;
 using UserService.Models;
 using UserService.Repositories;
 
@@ -17,15 +12,17 @@ namespace UserService.Services
         private readonly ILogger<UserService> _logger;
         private readonly IJwtService _jwtService;
         private readonly IConfiguration _configuration;
+        private readonly IOtpService _otpService;
 
-        // Fixed constructor - inject all dependencies
+
         public UserService(
             IRoleRepository roleRepository,
             IUserRepository userRepository,
             ICitizenInfoRepository citizenInfoRepository,
             ILogger<UserService> logger,
             IJwtService jwtService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IOtpService otpService)
         {
             _userRepository = userRepository;
             _citizenInfoRepository = citizenInfoRepository;
@@ -33,6 +30,7 @@ namespace UserService.Services
             _jwtService = jwtService;
             _configuration = configuration;
             _roleRepository = roleRepository;
+            _otpService = otpService;
         }
 
         public async Task<LoginResponse> Login(LoginRequest loginRequest)
@@ -154,6 +152,36 @@ namespace UserService.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding user: {UserName}", user.UserName);
+                throw;
+            }
+        }
+
+        public async Task AddStaffAsync(User user)
+        {
+            try
+            {
+                var existingUser = await _userRepository.GetUserAsync(user.UserName);
+                if (existingUser != null)
+                {
+                    _logger.LogWarning("Attempted to add staff with existing username: {UserName}", user.UserName);
+                    throw new ArgumentException("Tên đăng nhập đã tồn tại");
+                }
+                // Hash password before saving
+                if (!string.IsNullOrEmpty(user.Password))
+                {
+                    user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+                }
+                var role = await _roleRepository.GetRoleByNameAsync("Employee"); // Default role to "Employee" for staff
+                user.CreatedAt = DateTime.UtcNow;
+                user.IsActive = true; // Set default active status
+                user.RoleId = role.RoleId;
+                user.Role = role;
+                await _userRepository.AddUserAsync(user);
+                _logger.LogInformation("Staff user added successfully: {UserId}", user.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding staff user: {UserName}", user.UserName);
                 throw;
             }
         }
@@ -286,20 +314,140 @@ namespace UserService.Services
             }
         }
 
-        public async Task SetRole(int userId)
+        public async Task SetAdmin(int userId)
         {
             var user = _userRepository.GetUserByIdAsync(userId).Result;
             if (user != null)
             {
-                if (user.RoleId == 1)
+                if (user.RoleId == 2)
                 {
-                    user.RoleId = 2; // Change from Admin to Member
+                    user.RoleId = 3; // Change from Employee to Admin
                 }
-                else if (user.RoleId == 2)
+                else if (user.RoleId == 3)
                 {
-                    user.RoleId = 1; // Change from Member to Admin
+                    user.RoleId = 2; // Change from Admin to Employee
                 }
                 _userRepository.UpdateUserAsync(user);
+            }
+        }
+
+        public async Task<ResponseDTO> ChangePassword(ChangePasswordRequest request)
+        {
+            if (request.NewPassword != request.ConfirmPassword)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Mật khẩu mới và xác nhận mật khẩu không khớp"
+                };
+            }
+
+            var user = await _userRepository.GetUserByIdAsync(request.UserId);
+            if (user == null)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Người dùng không tồn tại"
+                };
+            }
+
+            var oldPasswordValid = BCrypt.Net.BCrypt.Verify(request.OldPassword, user.Password);
+            if (!oldPasswordValid)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Mật khẩu không đúng"
+                };
+            }
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            await _userRepository.UpdateUserAsync(user);
+
+            return new ResponseDTO
+            {
+                IsSuccess = true,
+                Message = "Đổi mật khẩu thành công"
+            };
+        }
+
+        public async Task<ResponseDTO> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            try
+            {
+                // Validate
+                if (string.IsNullOrWhiteSpace(request.NewPassword))
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Mật khẩu không được để trống"
+                    };
+                }
+
+                if (request.NewPassword != request.ConfirmPassword)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Mật khẩu xác nhận không khớp"
+                    };
+                }
+
+                if (request.NewPassword.Length < 6)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Mật khẩu phải có ít nhất 6 ký tự"
+                    };
+                }
+
+                // ✅ Verify OTP lần nữa để đảm bảo security
+                var otpResult = await _otpService.VerifyPasswordResetOtpAsync(request.Email, request.Otp);
+                if (!otpResult.Success)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Mã OTP không hợp lệ hoặc đã hết hạn"
+                    };
+                }
+
+                // Get user từ database
+                var user = await _userRepository.GetUserByEmailAsync(request.Email);
+                if (user == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Không tìm thấy người dùng"
+                    };
+                }
+
+                // ✅ Hash password mới
+                user.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+                // ✅ Update vào database
+                await _userRepository.UpdateUserAsync(user);
+
+                _logger.LogInformation($"Password reset successfully for user: {user.Email}");
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Mật khẩu đã được đặt lại thành công. Bạn có thể đăng nhập với mật khẩu mới."
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error resetting password for {request.Email}");
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra. Vui lòng thử lại sau."
+                };
             }
         }
     }
