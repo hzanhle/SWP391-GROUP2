@@ -1,4 +1,8 @@
 # ===========================================
+# .NET + React Project .gitignore
+# ===========================================
+
+# ===========================================
 # VISUAL STUDIO / IDE FILES
 # ===========================================
 
@@ -21,26 +25,6 @@ _NCrunch_*/
 _TeamCity*/
 *.DotSettings.user
 
-# Build artifacts
-bin/
-obj/
-Debug/
-Release/
-**/bin/
-**/obj/
-**/Debug/
-**/Release/
-*.dll
-*.exe
-*.pdb
-*.cache
-*.log
-*.tmp
-*.idb
-*.ipdb
-*.iobj
-*.meta
-
 # VS Code / JetBrains
 .vscode/*
 !.vscode/settings.json
@@ -50,49 +34,34 @@ Release/
 .idea/
 *.sln.iml
 
-# Temporary / system files
-*.tmp
-tmp/
-temp/
-Thumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-.DS_Store
-.AppleDouble
-.LSOverride
-
 # ===========================================
-# CONFIGURATION / SECRET FILES
+# BUILD ARTIFACTS / BINARIES
 # ===========================================
 
-# App settings
-appsettings.Development.json
-appsettings.Production.json
-appsettings.Staging.json
-appsettings.Local.json
-**/appsettings.*.json
-!**/appsettings.json
-!**/appsettings.*.example
+bin/
+obj/
+out/
+Debug/
+Release/
+TestResults/
+publish/
+wwwroot/
+dist/
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
 
-# Environment / secret
-.env
-.env.local
-.env.*.local
-secrets.json
-*.secret
-*.key
-
-# Database files
-*.db
-*.db-shm
-*.db-wal
-*.sqlite
-*.sqlite3
-
-# Logs
-logs/
-Logs/
+*.exe
+*.dll
+*.pdb
+*.cache
 *.log
+*.tmp
+*.idb
+*.ipdb
+*.iobj
+*.meta
 
 # ===========================================
 # DEPENDENCY / PACKAGE FILES
@@ -104,12 +73,57 @@ node_modules/
 **/.paket/
 paket-files/
 **/.fake/
+packages/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
 
 # ===========================================
-# OTHERS / MISC
+# CONFIGURATION / SECRETS
 # ===========================================
 
-# Test results
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*.local
+secrets.json
+*.secret
+*.key
+
+# App settings
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+appsettings.Local.json
+**/appsettings.*.json
+!**/appsettings.json
+!**/appsettings.*.example
+
+# ===========================================
+# DATABASE / LOG FILES
+# ===========================================
+
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.sdf
+*.ldf
+*.mdf
+
+logs/
+Logs/
+*.log
+
+# ===========================================
+# TEST / COVERAGE / BACKUP
+# ===========================================
+
 [Tt]est[Rr]esult*/
 *.trx
 *.VisualState.xml
@@ -126,7 +140,12 @@ coverage*.info
 .axoCover/*
 !.axoCover/settings.json
 
-# Azure / web publish
+# Backup / migration
+_UpgradeReport_Files/
+Backup*/
+UpgradeLog*.XML
+UpgradeLog*.htm
+MigrationBackup/
 PublishScripts/
 *.publishproj
 *.pubxml
@@ -134,16 +153,27 @@ PublishScripts/
 AppPackages/
 BundleArtifacts/
 
-# Backup / migration
-_UpgradeReport_Files/
-Backup*/
-UpgradeLog*.XML
-UpgradeLog*.htm
-MigrationBackup/
+# ===========================================
+# SYSTEM / TEMPORARY FILES
+# ===========================================
 
-# Misc
-*.snk
-*.plg
-*.opt
-*.vbw
-*.rptproj.bak
+*.tmp
+tmp/
+temp/
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ===========================================
+# FILES TO KEEP (TRACKED)
+# ===========================================
+
+!*.cs
+!*.json
+!*.csproj
+!*.sln
+!*.config
+!*.xml
