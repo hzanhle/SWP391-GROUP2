@@ -1,6 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using StationService;
+using StationService.Services;
+using StationService.Repositories;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,6 +34,9 @@ builder.Services.AddCors(options =>
 // ====================== Dependency Injection ======================
 //builder.Services.AddScoped<IVehicleRepository, VehicleRepository>(); // Example 
 //builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<IStationRepository, StationRepository>();
+builder.Services.AddScoped<IStationService, StationService.Services.StationService>();
+
 
 
 var app = builder.Build();
