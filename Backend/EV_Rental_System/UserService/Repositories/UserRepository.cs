@@ -55,9 +55,9 @@ namespace UserService.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public Task SetStatus(string status)
+        public async Task<User> GetUserByEmailAsync(string email)
         {
-            throw new NotImplementedException();
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);   
         }
     }
 }
