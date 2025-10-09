@@ -8,12 +8,10 @@ namespace BookingSerivce.Services
     public class OrderService : IOrderService
     {
         private readonly IOrderRepository _orderRepo;
-        private readonly IPaymentRepository _paymentRepo;
 
-        public OrderService(IOrderRepository orderRepo, IPaymentRepository paymentRepo)
+        public OrderService(IOrderRepository orderRepo)
         {
             _orderRepo = orderRepo;
-            _paymentRepo = paymentRepo;
         }
 
         public async Task<Order> CreateOrderAsync(OrderRequest request)
@@ -72,7 +70,8 @@ namespace BookingSerivce.Services
                 throw new Exception("Order not found");
 
             // Validate status transitions
-            var validStatuses = new[] {
+            var validStatuses = new[]
+            {
                 "Pending", "AwaitingContract", "ContractSigned",
                 "AwaitingDeposit", "DepositPaid", "Confirmed",
                 "InProgress", "Completed", "Cancelled"

@@ -25,7 +25,9 @@ namespace BookingSerivce.Repositories
         // Advanced queries
         Task<IEnumerable<Order>> GetOrdersByDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<IEnumerable<Order>> GetOrdersWithPaymentAsync();
+        Task<Order?> GetOrderWithPaymentAsync(int orderId);
         Task<Order?> GetOrderWithPaymentByIdAsync(int orderId);
+        Task<Order?> GetOrderWithContractAsync(int orderId);
         Task<IEnumerable<Order>> GetActiveOrdersAsync(); // Orders đang trong quá trình thuê
         Task<IEnumerable<Order>> GetUpcomingOrdersAsync(); // Orders sắp bắt đầu
         Task<IEnumerable<Order>> FindAsync(Expression<Func<Order, bool>> predicate);
@@ -36,9 +38,11 @@ namespace BookingSerivce.Repositories
         Task<Order?> GetUserLatestOrderAsync(int userId);
 
         // Vehicle specific queries
+        Task<IEnumerable<Order>> GetOrdersByVehicleAsync(int vehicleId);
         Task<IEnumerable<Order>> GetVehicleBookingHistoryAsync(int vehicleId);
         Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime fromDate, DateTime toDate);
         Task<IEnumerable<Order>> GetVehicleBookingsInRangeAsync(int vehicleId, DateTime fromDate, DateTime toDate);
+        Task<IEnumerable<Order>> GetOverlappingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate);
 
         // Statistics
         Task<int> GetTotalOrdersCountAsync();
