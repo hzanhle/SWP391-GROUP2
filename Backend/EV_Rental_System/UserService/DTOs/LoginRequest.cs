@@ -1,8 +1,12 @@
-﻿namespace UserService.DTOs
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace UserService.DTOs
 {
     public class LoginRequest
     {
+        [Required]
         public string UserName { get; set; }
+        [Required]
         public string Password { get; set; }
     }
 }

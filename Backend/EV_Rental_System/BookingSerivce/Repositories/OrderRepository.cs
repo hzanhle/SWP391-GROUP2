@@ -85,26 +85,17 @@ namespace BookingSerivce.Repositories
 
         public async Task<IEnumerable<Order>> GetPendingOrdersAsync()
         {
-            return await _context.Orders
-                .Where(o => o.Status == "Pending")
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
+            return await GetByStatusAsync("Pending");
         }
 
         public async Task<IEnumerable<Order>> GetConfirmedOrdersAsync()
         {
-            return await _context.Orders
-                .Where(o => o.Status == "Confirmed")
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
+            return await GetByStatusAsync("Confirmed");
         }
 
         public async Task<IEnumerable<Order>> GetCompletedOrdersAsync()
         {
-            return await _context.Orders
-                .Where(o => o.Status == "Completed")
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
+            return await GetByStatusAsync("Completed");
         }
 
         // ===== ADVANCED QUERIES =====
@@ -125,13 +116,6 @@ namespace BookingSerivce.Repositories
         }
 
         public async Task<Order?> GetOrderWithPaymentAsync(int orderId)
-        {
-            return await _context.Orders
-                .Include(o => o.Payment)
-                .FirstOrDefaultAsync(o => o.OrderId == orderId);
-        }
-
-        public async Task<Order?> GetOrderWithPaymentByIdAsync(int orderId)
         {
             return await _context.Orders
                 .Include(o => o.Payment)
@@ -204,10 +188,7 @@ namespace BookingSerivce.Repositories
         // ===== VEHICLE SPECIFIC QUERIES =====
         public async Task<IEnumerable<Order>> GetOrdersByVehicleAsync(int vehicleId)
         {
-            return await _context.Orders
-                .Where(o => o.VehicleId == vehicleId)
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
+            return await GetByVehicleIdAsync(vehicleId);
         }
 
         public async Task<IEnumerable<Order>> GetVehicleBookingHistoryAsync(int vehicleId)
@@ -221,14 +202,8 @@ namespace BookingSerivce.Repositories
 
         public async Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime fromDate, DateTime toDate)
         {
-            // Xe available nếu KHÔNG có booking nào overlap với khoảng thời gian này
-            var hasConflict = await _context.Orders
-                .AnyAsync(o => o.VehicleId == vehicleId &&
-                              o.Status != "Cancelled" &&
-                              o.Status != "Completed" &&
-                              ((o.FromDate <= toDate && o.ToDate >= fromDate)));
-
-            return !hasConflict;
+            var overlappingOrders = await GetOverlappingOrdersAsync(vehicleId, fromDate, toDate);
+            return !overlappingOrders.Any();
         }
 
         public async Task<IEnumerable<Order>> GetVehicleBookingsInRangeAsync(int vehicleId, DateTime fromDate, DateTime toDate)
@@ -243,18 +218,13 @@ namespace BookingSerivce.Repositories
 
         public async Task<IEnumerable<Order>> GetOverlappingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate)
         {
-            // Check for orders that overlap with the requested date range
-            // Exclude cancelled or completed orders
             return await _context.Orders
                 .Where(o => o.VehicleId == vehicleId
                     && o.Status != "Cancelled"
                     && o.Status != "Completed"
                     && (
-                        // New booking starts during existing booking
                         (fromDate >= o.FromDate && fromDate < o.ToDate)
-                        // New booking ends during existing booking
                         || (toDate > o.FromDate && toDate <= o.ToDate)
-                        // New booking completely contains existing booking
                         || (fromDate <= o.FromDate && toDate >= o.ToDate)
                     ))
                 .ToListAsync();
@@ -302,41 +272,9 @@ namespace BookingSerivce.Repositories
                 .CountAsync(o => o.UserId == userId);
         }
 
-        // ===== ADDITIONAL METHODS FROM LAM BRANCH =====
-        public async Task<IEnumerable<Order>> GetOrdersByVehicleAsync(int vehicleId)
+        public async Task<Order?> GetOrderWithPaymentByIdAsync(int orderId)
         {
-            return await GetByVehicleIdAsync(vehicleId);
-        }
-
-        public async Task<Order?> GetOrderWithPaymentAsync(int orderId)
-        {
-            return await GetOrderWithPaymentByIdAsync(orderId);
-        }
-
-        public async Task<Order?> GetOrderWithContractAsync(int orderId)
-        {
-            return await _context.Orders
-                .Include(o => o.OnlineContract)
-                .FirstOrDefaultAsync(o => o.OrderId == orderId);
-        }
-
-        public async Task<IEnumerable<Order>> GetOverlappingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate)
-        {
-            // Check for orders that overlap with the requested date range
-            // Exclude cancelled or completed orders
-            return await _context.Orders
-                .Where(o => o.VehicleId == vehicleId
-                    && o.Status != "Cancelled"
-                    && o.Status != "Completed"
-                    && (
-                        // New booking starts during existing booking
-                        (fromDate >= o.FromDate && fromDate < o.ToDate)
-                        // New booking ends during existing booking
-                        || (toDate > o.FromDate && toDate <= o.ToDate)
-                        // New booking completely contains existing booking
-                        || (fromDate <= o.FromDate && toDate >= o.ToDate)
-                    ))
-                .ToListAsync();
+            return await GetOrderWithPaymentAsync(orderId);
         }
     }
 }

@@ -7,5 +7,6 @@ namespace UserService.Services
         Task AddNotification(Notification notification);
         Task RemoveNotificationByUserId(int userId);
         Task<List<Notification>> GetAllByUserId(int userId);
+        Task UpdateNotification(Notification notification);
     }
 }

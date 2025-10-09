@@ -26,5 +26,17 @@ namespace UserService.Services
         {
             await _notificationRepository.RemoveNotificationByUserId(userId);
         }
+
+        public async Task UpdateNotification(Notification notification)
+        {
+            var existingNotifications = await _notificationRepository.GetNotification(notification.UserId);
+            if (existingNotifications != null)
+            {
+                existingNotifications.Title = notification.Title;
+                existingNotifications.Message = notification.Message;
+                existingNotifications.Created = DateTime.Now;
+            }
+            await _notificationRepository.UpdateNotification(existingNotifications);
+        }
     }
 }

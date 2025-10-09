@@ -26,7 +26,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// JWT Authentication (same as UserService)
+// JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
 
@@ -49,6 +49,7 @@ if (!string.IsNullOrEmpty(secretKey) && secretKey.Length >= 32)
                 ClockSkew = TimeSpan.Zero
             };
         });
+
     builder.Services.AddAuthorization();
 }
 
@@ -78,7 +79,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
