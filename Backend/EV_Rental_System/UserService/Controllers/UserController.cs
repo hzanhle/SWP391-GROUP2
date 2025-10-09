@@ -80,6 +80,24 @@ namespace UserService.Controllers
         {
             try
             {
+                // Kiểm tra ModelState
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
                 await _userService.AddUserAsync(user);
                 return Ok(new { message = "User registered successfully" });
             }
@@ -95,6 +113,24 @@ namespace UserService.Controllers
         {
             try
             {
+                // Kiểm tra ModelState
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
                 await _userService.UpdateUserAsync(user);
                 return Ok(new { message = "User updated successfully" });
             }
@@ -120,7 +156,7 @@ namespace UserService.Controllers
             }
         }
 
-        [HttpPatch("{id}")]
+        [HttpPatch("SetRole{id}")]
         public async Task<IActionResult> SetAdmin(int id)
         {
             try
@@ -140,6 +176,24 @@ namespace UserService.Controllers
         {
             try
             {
+                // Kiểm tra ModelState
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
                 await _userService.AddStaffAsync(user);
                 return Ok(new { message = "Staff account created successfully" });
             }
@@ -155,6 +209,24 @@ namespace UserService.Controllers
         {
             try
             {
+                // Kiểm tra ModelState
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
                 var result = await _userService.ChangePassword(passwordRequest);
 
                 if (result.IsSuccess)
@@ -169,9 +241,6 @@ namespace UserService.Controllers
             }
         }
 
-        // ============================================
-        // AUTHENTICATION
-        // ============================================
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] DTOs.LoginRequest loginRequest)
@@ -180,7 +249,7 @@ namespace UserService.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new LoginResponse
+                    return BadRequest(new ResponseDTO
                     {
                         IsSuccess = false,
                         Message = "Dữ liệu không hợp lệ"
@@ -203,7 +272,7 @@ namespace UserService.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error during login");
-                return StatusCode(500, new LoginResponse
+                return StatusCode(500, new ResponseDTO
                 {
                     IsSuccess = false,
                     Message = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau."
@@ -211,13 +280,7 @@ namespace UserService.Controllers
             }
         }
 
-        // ============================================
-        // OTP BASIC ENDPOINTS
-        // ============================================
-
-        /// <summary>
-        /// Gửi OTP đến email
-        /// </summary>
+        
         [HttpPost("send-otp")]
         public async Task<IActionResult> SendOTP([FromBody] string email)
         {
@@ -229,9 +292,7 @@ namespace UserService.Controllers
             return BadRequest(result);
         }
 
-        /// <summary>
-        /// Xác thực OTP
-        /// </summary>
+        
         [HttpPost("verify-otp")]
         public async Task<IActionResult> VerifyOTP([FromBody] OtpAttribute request)
         {
@@ -243,13 +304,7 @@ namespace UserService.Controllers
             return BadRequest(result);
         }
 
-        // ============================================
-        // ✨ FORGOT PASSWORD FLOW (3 STEP)
-        // ============================================
-
-        /// <summary>
-        /// STEP 1: Gửi OTP để reset password
-        /// </summary>
+        
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] string email)
         {
@@ -277,6 +332,24 @@ namespace UserService.Controllers
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] DTOs.ResetPasswordRequest request)
         {
+            // Kiểm tra ModelState
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new
+                    {
+                        Field = x.Key,
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    })
+                    .ToList();
+
+                return BadRequest(new ResponseDTO
+                {
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
             if (string.IsNullOrWhiteSpace(request.Email))
                 return BadRequest(new { message = "Email không được để trống" });
 
@@ -290,5 +363,6 @@ namespace UserService.Controllers
 
             return BadRequest(result);
         }
+        
     }
 }

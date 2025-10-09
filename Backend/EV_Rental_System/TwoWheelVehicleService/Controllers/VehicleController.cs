@@ -102,7 +102,8 @@ namespace TwoWheelVehicleService.Controllers
                     return NotFound(new { success = false, message = "Vehicle not found" });
 
                 // Check if vehicle is active and available
-                bool isAvailable = vehicle.IsActive && vehicle.Status == "Available";
+                // Using == true to handle nullable bool
+                bool isAvailable = vehicle.IsActive == true && vehicle.Status == "Available";
 
                 return Ok(new
                 {

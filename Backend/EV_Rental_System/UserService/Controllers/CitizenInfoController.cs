@@ -21,9 +21,23 @@ namespace UserService.Controllers
         {
             try
             {
+                // Kiểm tra ModelState
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(ModelState);
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
                 }
 
                 // FIXED: Await the async method
@@ -47,9 +61,23 @@ namespace UserService.Controllers
         {
             try
             {
+                // Kiểm tra ModelState
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(ModelState);
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
                 }
 
                 await _citizenInfoService.UpdateCitizenInfo(request);

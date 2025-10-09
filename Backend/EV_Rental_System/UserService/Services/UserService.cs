@@ -316,20 +316,33 @@ namespace UserService.Services
 
         public async Task SetAdmin(int userId)
         {
-            var user = _userRepository.GetUserByIdAsync(userId).Result;
-            if (user != null)
+            var user = await _userRepository.GetUserByIdAsync(userId);
+            if (user == null)
             {
-                if (user.RoleId == 2)
-                {
-                    user.RoleId = 3; // Change from Employee to Admin
-                }
-                else if (user.RoleId == 3)
-                {
-                    user.RoleId = 2; // Change from Admin to Employee
-                }
-                _userRepository.UpdateUserAsync(user);
+                _logger.LogWarning("User with ID {UserId} not found.", userId);
+                return;
             }
+
+            // Chuyển đổi RoleId
+            if (user.RoleId == 2)
+            {
+                user.RoleId = 3; // Employee -> Admin
+            }
+            else if (user.RoleId == 3)
+            {
+                user.RoleId = 2; // Admin -> Employee
+            }
+            else
+            {
+                _logger.LogWarning("User {UserId} has unsupported RoleId {RoleId}.", user.Id, user.RoleId);
+                return;
+            }
+
+            await _userRepository.UpdateUserAsync(user);
+
+            _logger.LogInformation("User role changed successfully: {UserId} to RoleId: {RoleId}", user.Id, user.RoleId);
         }
+
 
         public async Task<ResponseDTO> ChangePassword(ChangePasswordRequest request)
         {
