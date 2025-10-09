@@ -301,5 +301,42 @@ namespace BookingSerivce.Repositories
             return await _context.Orders
                 .CountAsync(o => o.UserId == userId);
         }
+
+        // ===== ADDITIONAL METHODS FROM LAM BRANCH =====
+        public async Task<IEnumerable<Order>> GetOrdersByVehicleAsync(int vehicleId)
+        {
+            return await GetByVehicleIdAsync(vehicleId);
+        }
+
+        public async Task<Order?> GetOrderWithPaymentAsync(int orderId)
+        {
+            return await GetOrderWithPaymentByIdAsync(orderId);
+        }
+
+        public async Task<Order?> GetOrderWithContractAsync(int orderId)
+        {
+            return await _context.Orders
+                .Include(o => o.OnlineContract)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId);
+        }
+
+        public async Task<IEnumerable<Order>> GetOverlappingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate)
+        {
+            // Check for orders that overlap with the requested date range
+            // Exclude cancelled or completed orders
+            return await _context.Orders
+                .Where(o => o.VehicleId == vehicleId
+                    && o.Status != "Cancelled"
+                    && o.Status != "Completed"
+                    && (
+                        // New booking starts during existing booking
+                        (fromDate >= o.FromDate && fromDate < o.ToDate)
+                        // New booking ends during existing booking
+                        || (toDate > o.FromDate && toDate <= o.ToDate)
+                        // New booking completely contains existing booking
+                        || (fromDate <= o.FromDate && toDate >= o.ToDate)
+                    ))
+                .ToListAsync();
+        }
     }
 }

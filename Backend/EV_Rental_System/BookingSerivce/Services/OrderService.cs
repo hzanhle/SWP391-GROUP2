@@ -16,6 +16,13 @@ namespace BookingSerivce.Services
 
         public async Task<Order> CreateOrderAsync(OrderRequest request)
         {
+            // Validate date range
+            if (request.FromDate >= request.ToDate)
+                throw new Exception("FromDate must be before ToDate");
+
+            if (request.FromDate < DateTime.UtcNow)
+                throw new Exception("FromDate cannot be in the past");
+
             // Check xe có available không
             var isAvailable = await _orderRepo.IsVehicleAvailableAsync(
                 request.VehicleId,
@@ -25,13 +32,6 @@ namespace BookingSerivce.Services
 
             if (!isAvailable)
                 throw new Exception("Vehicle is not available for the selected dates");
-
-            // Validate date range
-            if (request.FromDate >= request.ToDate)
-                throw new Exception("FromDate must be before ToDate");
-
-            if (request.FromDate < DateTime.UtcNow)
-                throw new Exception("FromDate cannot be in the past");
 
             // Calculate deposit amount (30% of total cost)
             var depositAmount = request.TotalCost * 0.3m;
@@ -70,7 +70,8 @@ namespace BookingSerivce.Services
                 throw new Exception("Order not found");
 
             // Validate status transitions
-            var validStatuses = new[] {
+            var validStatuses = new[]
+            {
                 "Pending", "AwaitingContract", "ContractSigned",
                 "AwaitingDeposit", "DepositPaid", "Confirmed",
                 "InProgress", "Completed", "Cancelled"

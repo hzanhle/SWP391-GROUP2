@@ -51,5 +51,11 @@ namespace BookingSerivce.Repositories
         Task<decimal> GetRevenueByDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<Dictionary<string, int>> GetOrderCountByStatusGroupAsync();
         Task<int> GetUserOrderCountAsync(int userId);
+
+        // Additional methods from lam branch
+        Task<IEnumerable<Order>> GetOrdersByVehicleAsync(int vehicleId);
+        Task<Order?> GetOrderWithPaymentAsync(int orderId);
+        Task<Order?> GetOrderWithContractAsync(int orderId);
+        Task<IEnumerable<Order>> GetOverlappingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate);
     }
 }
