@@ -1,25 +1,34 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using StationService;
-using StationService.Services;
 using StationService.Repositories;
-
-
+using StationService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ====================== Services ======================
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// ===================================================
+// 1️⃣  Configure Services
+// ===================================================
 
-// ====================== Database ======================
+// Controllers
+builder.Services.AddControllers();
+// Swagger (API documentation)
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "StationService API",
+        Version = "v1",
+        Description = "API for managing station data and related resources."
+    });
+});
+
+// Database (EF Core)
 builder.Services.AddDbContext<MyDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
-// ====================== CORS ======================
-// Cho phép FE gọi API (cần chỉnh sửa domain khi deploy)
+// CORS (allow frontend apps)
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -31,37 +40,38 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ====================== Dependency Injection ======================
-//builder.Services.AddScoped<IVehicleRepository, VehicleRepository>(); // Example 
-//builder.Services.AddScoped<IVehicleService, VehicleService>();
+// Dependency Injection (repositories & services)
 builder.Services.AddScoped<IStationRepository, StationRepository>();
 builder.Services.AddScoped<IStationService, StationService.Services.StationService>();
-
 
 
 var app = builder.Build();
 
 
-// ====================== Middleware ======================
+
+// ===================================================
+// 3️⃣  Middleware Pipeline
+// ===================================================
+
 if (app.Environment.IsDevelopment())
 {
-    // Swagger chỉ bật khi dev/test, để kiểm tra API nhanh
+    // Swagger only in Development
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "StationService API V1");
-        c.RoutePrefix = string.Empty; // Swagger UI chạy ở root "/"
+        c.RoutePrefix = string.Empty; // Swagger UI tại "/"
     });
 }
 
-
+// Redirect HTTP → HTTPS (vẫn cho phép chạy HTTP trong dev)
 app.UseHttpsRedirection();
 
-// Bật CORS cho phép FE gọi API
+// Enable CORS
 app.UseCors();
 
-
+// No Authentication/Authorization (public API)
 app.MapControllers();
 
-
+// Run the app
 app.Run();

@@ -59,14 +59,9 @@ namespace StationService.Controllers
         }
 
         // PUT: /api/station/5
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateStation(int id, [FromBody] Station station)
+        [HttpPut]
+        public async Task<IActionResult> UpdateStation([FromBody] Station station)
         {
-            if (id != station.Id)
-            {
-                return BadRequest("Station ID mismatch.");
-            }
-
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -82,6 +77,20 @@ namespace StationService.Controllers
         {
             await _stationService.DeleteStationAsync(id);
             return NoContent(); // Trả về 204 No Content (Delete thành công)
+        }
+
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> SetStatus(int id)
+        {
+            try
+            {
+                await _stationService.SetStatus(id);
+                return Ok(); // Trả về 204 No Content (Update thành công)
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message); // Trả về 400 Bad Request nếu có lỗi
+            }
         }
     }
 }

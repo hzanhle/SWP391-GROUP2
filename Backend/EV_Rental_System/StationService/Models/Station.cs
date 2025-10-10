@@ -10,7 +10,7 @@ namespace StationService.Models
         public string Location { get; set; }
         public int? ManagerId { get; set; } // User với role là Staff
         public bool IsActive { get; set; }
-        public ICollection<StaffShift> StaffShifts { get; set; }
+        public ICollection<StaffShift>? StaffShifts { get; set; }
         public Station() { }
 
         public Station(int id, string name, string location, int? managerId, bool isActive)
