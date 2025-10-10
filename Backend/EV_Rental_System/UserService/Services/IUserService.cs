@@ -10,7 +10,8 @@ namespace UserService.Services
         Task<List<User>> SearchUserAsync(string searchValue);
         Task AddUserAsync(User user);  // Create
         Task UpdateUserAsync(User user); // Edit, Update
-        Task DeleteUserAsync(int userId); // Delete (soft delete)
+        Task DeleteUserAsync(int userId); // Delete
+        Task SetStatus(int userId); // Deactive/Active user
         Task<User?> GetUserByIdAsync(int userId); // Read
         Task<User?> GetUserDetailByIdAsync(int userId);
         Task<List<User>> GetAllUsersAsync();

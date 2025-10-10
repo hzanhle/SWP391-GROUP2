@@ -156,6 +156,21 @@ namespace UserService.Controllers
             }
         }
 
+        [HttpPatch("{userId}")]
+        public async Task<IActionResult> SetActive(int userId)
+        {
+            try
+            {
+                await _userService.SetStatus(userId);
+                return Ok(new { message = "User status toggled successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling status for user {UserId}", userId);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
         [HttpPatch("SetRole{id}")]
         public async Task<IActionResult> SetAdmin(int id)
         {
@@ -279,8 +294,7 @@ namespace UserService.Controllers
                 });
             }
         }
-
-        
+       
         [HttpPost("send-otp")]
         public async Task<IActionResult> SendOTP([FromBody] string email)
         {
@@ -291,8 +305,7 @@ namespace UserService.Controllers
 
             return BadRequest(result);
         }
-
-        
+       
         [HttpPost("verify-otp")]
         public async Task<IActionResult> VerifyOTP([FromBody] OtpAttribute request)
         {
@@ -304,7 +317,6 @@ namespace UserService.Controllers
             return BadRequest(result);
         }
 
-        
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] string email)
         {
@@ -363,6 +375,22 @@ namespace UserService.Controllers
 
             return BadRequest(result);
         }
-        
+
+        [HttpGet("staff")]
+        public async Task<IActionResult> GetStaffUsers()
+        {
+            try
+            {
+                var users = await _userService.GetAllUsersAsync();
+                var staffUsers = users.Where(u => u.RoleId == 2).ToList(); // Lấy danh sách nhân viên (RoleId = 2)
+                return Ok(staffUsers);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting staff users");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
     }
 }
