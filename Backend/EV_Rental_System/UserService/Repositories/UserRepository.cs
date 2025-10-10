@@ -21,6 +21,11 @@ namespace UserService.Repositories
             return await _context.Users
                .FirstOrDefaultAsync(u => u.Id == userId);
         }
+        public async Task DeleteUserAsync(User user)
+        {
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+        }
 
         public async Task<User?> GetUserDetailByIdAsync(int userId)
         {

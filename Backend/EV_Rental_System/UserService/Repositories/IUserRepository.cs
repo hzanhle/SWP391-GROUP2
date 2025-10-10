@@ -7,6 +7,7 @@ namespace UserService.Repositories
         Task<User> GetUserAsync(string userName); // Lấy user theo userName
         Task<List<User>> SearchUserAsync(string searchValue); // Tìm kiếm user theo userName, email, phoneNumber
         Task AddUserAsync(User user);
+        Task DeleteUserAsync(User user);
         Task UpdateUserAsync(User user);
         Task<User> GetUserByIdAsync(int userId); // Lấy user theo Id
         Task<User?> GetUserDetailByIdAsync(int userId); // Lấy user theo Id, bao gồm cả CitizenInfo và DriverLicense

@@ -186,16 +186,23 @@ namespace UserService.Services
             }
         }
 
-        public async Task DeleteUserAsync(int userId)
+        public async Task SetStatus(int userId)
         {
             try
             {
                 var user = await _userRepository.GetUserByIdAsync(userId);
                 if (user != null)
                 {
-                    user.IsActive = false;
+                    if (user.IsActive == true)
+                    {
+                        user.IsActive = false;
+                    }
+                    else
+                    {
+                        user.IsActive = true;
+                    }
                     await _userRepository.UpdateUserAsync(user);
-                    _logger.LogInformation("User deactivated: {UserId}", userId);
+                    _logger.LogInformation("User change status: {UserId}", userId);
                 }
                 else
                 {
@@ -204,8 +211,22 @@ namespace UserService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting user: {UserId}", userId);
+                _logger.LogError(ex, "Error deactive user: {UserId}", userId);
                 throw;
+            }
+        }
+        public async Task DeleteUserAsync(int userId)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                if (user != null)
+                {
+                    _userRepository.DeleteUserAsync(user);
+                }
+            } catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user: {UserId}", userId);
             }
         }
 
@@ -342,7 +363,6 @@ namespace UserService.Services
 
             _logger.LogInformation("User role changed successfully: {UserId} to RoleId: {RoleId}", user.Id, user.RoleId);
         }
-
 
         public async Task<ResponseDTO> ChangePassword(ChangePasswordRequest request)
         {
