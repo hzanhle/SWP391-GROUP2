@@ -10,9 +10,13 @@ export default function StationCard({ name, address, vehicles, distance }) {
             <h3 className="card-title">{name}</h3>
             <p className="card-subtext">{address}</p>
           </div>
-          <span className="badge gray" aria-label={`${distance} km away`}>{distance} km</span>
+          {distance != null && (
+            <span className="badge gray" aria-label={`${distance} km away`}>{distance} km</span>
+          )}
         </div>
-        <p className="vehicle-meta" aria-label={`${vehicles} vehicles available`}>{vehicles} available</p>
+        {vehicles != null && (
+          <p className="vehicle-meta" aria-label={`${vehicles} vehicles available`}>{vehicles} available</p>
+        )}
         <CTA as="a" href="#" variant="secondary" aria-label={`View ${name}`}>View station</CTA>
       </div>
     </div>

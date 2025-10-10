@@ -1,16 +1,33 @@
 import React from 'react'
+import { useEffect, useState } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import SearchBar from '../components/SearchBar'
 import StationCard from '../components/StationCard'
-
-const stations = [
-  { name: 'Central Hub', address: '123 Main St', vehicles: 8, distance: 1.2 },
-  { name: 'Riverside', address: '45 River Rd', vehicles: 5, distance: 3.4 },
-  { name: 'Airport West', address: 'Terminal 2', vehicles: 12, distance: 7.8 },
-]
+import { getAllStations } from '../api/station'
 
 export default function Stations() {
+  const [stations, setStations] = useState([])
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const { data } = await getAllStations()
+        if (!mounted) return
+        const mapped = Array.isArray(data) ? data.map(s => ({
+          name: s.name ?? s.Name,
+          address: s.location ?? s.Location,
+        })) : []
+        setStations(mapped)
+      } catch (e) {
+        setError(e.message)
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
+
   return (
     <div data-figma-layer="Stations Page">
       <Navbar />
@@ -23,11 +40,17 @@ export default function Stations() {
               <p className="section-subtitle">Chọn điểm để xem xe có sẵn và đặt xe.</p>
             </div>
 
-            <div className="vehicle-grid">
-              {stations.map((s) => (
-                <StationCard key={s.name} {...s} />
-              ))}
-            </div>
+            {error ? (
+              <div role="alert" className="card card-body">
+                <p className="card-subtext">{error}</p>
+              </div>
+            ) : (
+              <div className="vehicle-grid">
+                {stations.map((s) => (
+                  <StationCard key={`${s.name}-${s.address}`} {...s} />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </main>
