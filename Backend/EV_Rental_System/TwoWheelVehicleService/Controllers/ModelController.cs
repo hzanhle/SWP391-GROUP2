@@ -41,7 +41,24 @@ namespace TwoWheelVehicleService.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateModel([FromForm] ModelRequest request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // Kiểm tra ModelState
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new
+                    {
+                        Field = x.Key,
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    })
+                    .ToList();
+
+                return BadRequest(new ResponseDTO
+                {
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
 
             await _modelService.AddModelAsync(request);
             return Ok(new { message = "Model created successfully" });
@@ -50,7 +67,24 @@ namespace TwoWheelVehicleService.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateModel(int id, [FromForm] ModelRequest request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // Kiểm tra ModelState
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new
+                    {
+                        Field = x.Key,
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    })
+                    .ToList();
+
+                return BadRequest(new ResponseDTO
+                {
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
 
             try
             {
