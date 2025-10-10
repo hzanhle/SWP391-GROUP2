@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TwoWheelVehicleService.Services;
 using TwoWheelVehicleService.Models;
@@ -45,7 +45,24 @@ namespace TwoWheelVehicleService.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateVehicle([FromBody] VehicleRequest vehicle)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // Kiểm tra ModelState
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new
+                    {
+                        Field = x.Key,
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    })
+                    .ToList();
+
+                return BadRequest(new ResponseDTO
+                {
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
 
             await _vehicleService.AddVehicleAsync(vehicle);
             return Ok(new { message = "Vehicle created successfully" });
@@ -54,7 +71,24 @@ namespace TwoWheelVehicleService.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateVehicle(int id, [FromBody] Vehicle vehicle)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // Kiểm tra ModelState
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new
+                    {
+                        Field = x.Key,
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    })
+                    .ToList();
+
+                return BadRequest(new ResponseDTO
+                {
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
 
             var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
             if (existingVehicle == null) return NotFound();
@@ -90,14 +124,14 @@ namespace TwoWheelVehicleService.Controllers
         /// Check vehicle availability for booking (called by BookingService)
         /// </summary>
         [HttpPost("check-availability")]
-        public async Task<IActionResult> CheckAvailability([FromBody] CheckAvailabilityRequest request)
+        public async Task<IActionResult> CheckAvailabilityByVehicleId([FromBody] int vehicleId)
         {
             try
             {
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                var vehicle = await _vehicleService.GetVehicleByIdAsync(request.VehicleId);
+                var vehicle = await _vehicleService.GetVehicleByIdAsync(vehicleId);
                 if (vehicle == null)
                     return NotFound(new { success = false, message = "Vehicle not found" });
 
@@ -129,14 +163,14 @@ namespace TwoWheelVehicleService.Controllers
         /// Get available vehicles by model for specific dates
         /// </summary>
         [HttpPost("available-by-model")]
-        public async Task<IActionResult> GetAvailableVehiclesByModel([FromBody] AvailableByModelRequest request)
+        public async Task<IActionResult> GetAvailableVehiclesByModel([FromBody] int modelId)
         {
             try
             {
                 var allVehicles = await _vehicleService.GetAllVehiclesAsync();
 
                 var availableVehicles = allVehicles
-                    .Where(v => v.ModelId == request.ModelId
+                    .Where(v => v.ModelId == modelId
                         && v.IsActive
                         && v.Status == "Available")
                     .ToList();
@@ -155,13 +189,5 @@ namespace TwoWheelVehicleService.Controllers
         }
     }
 
-    public class CheckAvailabilityRequest
-    {
-        public int VehicleId { get; set; }
-    }
-
-    public class AvailableByModelRequest
-    {
-        public int ModelId { get; set; }
-    }
+    
 }
