@@ -14,15 +14,18 @@ namespace UserService.Services
         private readonly EmailSettings _emailSettings;
         private readonly IDistributedCache _cache;
         private readonly IUserRepository _userRepository;
+        private readonly ILogger<OtpService> _logger;
 
         public OtpService(
             IOptions<EmailSettings> emailSettings,
             IDistributedCache cache,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            ILogger<OtpService> logger)
         {
             _emailSettings = emailSettings.Value;
             _cache = cache;
             _userRepository = userRepository;
+            _logger = logger;
         }
 
         // ✅ Gửi OTP đến email
@@ -188,6 +191,8 @@ namespace UserService.Services
         {
             try
             {
+                _logger.LogInformation("Bắt đầu gửi email đặt lại mật khẩu đến {Email}", email);
+
                 using var mail = new MailMessage
                 {
                     From = new MailAddress(_emailSettings.SenderEmail, _emailSettings.SenderName),
@@ -197,16 +202,33 @@ namespace UserService.Services
                 };
                 mail.To.Add(email);
 
+                _logger.LogDebug("Đã tạo MailMessage với Subject: {Subject}", mail.Subject);
+
                 using var smtp = new SmtpClient(_emailSettings.SmtpServer, _emailSettings.SmtpPort)
                 {
                     Credentials = new NetworkCredential(_emailSettings.SenderEmail, _emailSettings.SenderPassword),
                     EnableSsl = _emailSettings.EnableSsl
                 };
 
+                _logger.LogDebug("Kết nối SMTP Server: {Server}:{Port}, SSL: {EnableSsl}",
+                    _emailSettings.SmtpServer, _emailSettings.SmtpPort, _emailSettings.EnableSsl);
+
                 await smtp.SendMailAsync(mail);
+
+                _logger.LogInformation("Đã gửi email đặt lại mật khẩu thành công đến {Email}", email);
                 return true;
             }
-            catch { return false; }
+            catch (SmtpException ex)
+            {
+                _logger.LogError(ex, "Lỗi SMTP khi gửi email đặt lại mật khẩu đến {Email}. StatusCode: {StatusCode}",
+                    email, ex.StatusCode);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi không xác định khi gửi email đặt lại mật khẩu đến {Email}", email);
+                return false;
+            }
         }
 
         private string CreateEmailBody(string otp, string title)

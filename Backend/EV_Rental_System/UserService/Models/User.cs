@@ -33,8 +33,8 @@ namespace UserService.Models
 
         public DateTime CreatedAt { get; set; }
 
-        [Required(ErrorMessage = "RoleId là bắt buộc")]
-        [Range(1, int.MaxValue, ErrorMessage = "RoleId phải lớn hơn 0")]
+        //[Required(ErrorMessage = "RoleId là bắt buộc")]
+        //[Range(1, int.MaxValue, ErrorMessage = "RoleId phải lớn hơn 0")]
         public int RoleId { get; set; }
 
         public Role? Role { get; set; }
