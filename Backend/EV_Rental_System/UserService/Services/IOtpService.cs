@@ -8,5 +8,8 @@ namespace UserService.Services
         Task<OtpAttribute> VerifyOtpAsync(string email, string otp);
         Task<OtpAttribute> SendPasswordResetOtpAsync(string email);
         Task<OtpAttribute> VerifyPasswordResetOtpAsync(string email, string otp);
+        Task<OtpAttribute> SendRegistrationOtpAsync(string email, RegisterRequestDTO registerData);
+        Task<OtpAttribute> VerifyRegistrationOtpAsync(string email, string otp);
+
     }
 }

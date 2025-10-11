@@ -23,8 +23,16 @@ namespace UserService.Repositories
         }
         public async Task DeleteUserAsync(User user)
         {
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.InnerException?.Message ?? ex.Message);
+            }
+
         }
 
         public async Task<User?> GetUserDetailByIdAsync(int userId)

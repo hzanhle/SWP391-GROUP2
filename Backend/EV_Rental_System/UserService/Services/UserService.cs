@@ -123,33 +123,57 @@ namespace UserService.Services
                 };
             }
         }
-        public async Task AddUserAsync(User user)
+        public async Task<User> CreateUserFromRegistrationAsync(RegisterRequestDTO registerData)
         {
             try
             {
-                var existingUser = await _userRepository.GetUserAsync(user.UserName);
+                // Kiểm tra lại username (double check)
+                var existingUser = await _userRepository.GetUserAsync(registerData.UserName);
                 if (existingUser != null)
                 {
-                    _logger.LogWarning("Attempted to add user with existing username: {UserName}", user.UserName);
+                    _logger.LogWarning("Attempted to create user with existing username: {UserName}", registerData.UserName);
                     throw new ArgumentException("Tên đăng nhập đã tồn tại");
                 }
-                // Hash password before saving
-                if (!string.IsNullOrEmpty(user.Password))
+
+                // Kiểm tra lại email (double check)
+                var existingEmail = await _userRepository.GetUserByEmailAsync(registerData.Email);
+                if (existingEmail != null)
                 {
-                    user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+                    _logger.LogWarning("Attempted to create user with existing email: {Email}", registerData.Email);
+                    throw new ArgumentException("Email đã được sử dụng");
                 }
-                var role = await _roleRepository.GetRoleByNameAsync("Member"); // Default role to "Member"
-                user.CreatedAt = DateTime.UtcNow;
-                user.IsActive = true; // Set default active status
-                user.RoleId = role.RoleId;
-                user.Role = role;
+
+                // Lấy role mặc định
+                var role = await _roleRepository.GetRoleByNameAsync("Member");
+                if (role == null)
+                {
+                    _logger.LogError("Role 'Member' not found in database");
+                    throw new InvalidOperationException("Không tìm thấy role mặc định");
+                }
+
+                // Tạo user mới
+                var user = new User
+                {
+                    UserName = registerData.UserName,
+                    Email = registerData.Email,
+                    PhoneNumber = registerData.PhoneNumber,
+                    Password = BCrypt.Net.BCrypt.HashPassword(registerData.Password), // Hash password
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    RoleId = role.RoleId,
+                    Role = role
+                };
 
                 await _userRepository.AddUserAsync(user);
-                _logger.LogInformation("User added successfully: {UserId}", user.Id);
+
+                _logger.LogInformation("User registered successfully: {UserId}, Username: {UserName}",
+                    user.Id, user.UserName);
+
+                return user;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding user: {UserName}", user.UserName);
+                _logger.LogError(ex, "Error creating user from registration: {UserName}", registerData.UserName);
                 throw;
             }
         }
@@ -220,11 +244,13 @@ namespace UserService.Services
                 var user = await _userRepository.GetUserByIdAsync(userId);
                 if (user != null)
                 {
-                    _userRepository.DeleteUserAsync(user);
+                    await _userRepository.DeleteUserAsync(user); 
                 }
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting user: {UserId}", userId);
+                
             }
         }
 
@@ -436,7 +462,7 @@ namespace UserService.Services
 
                 // ✅ Verify OTP lần nữa để đảm bảo security
                 var otpResult = await _otpService.VerifyPasswordResetOtpAsync(request.Email, request.Otp);
-                if (!otpResult.Success)
+                if (!otpResult.Success == true)
                 {
                     return new ResponseDTO
                     {

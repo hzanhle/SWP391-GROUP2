@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using UserService.DTOs;
 using UserService.Models;
 using UserService.Services;
@@ -75,12 +76,11 @@ namespace UserService.Controllers
             }
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Register([FromBody] User user)
+        [HttpPost("register/send-otp")] // Gửi OTP khi đăng ký
+        public async Task<IActionResult> SendRegistrationOtp([FromBody] RegisterRequestDTO registerRequest)
         {
             try
             {
-                // Kiểm tra ModelState
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState
@@ -98,13 +98,105 @@ namespace UserService.Controllers
                         Data = errors
                     });
                 }
-                await _userService.AddUserAsync(user);
-                return Ok(new { message = "User registered successfully" });
+
+                var result = await _otpService.SendRegistrationOtpAsync(
+                    registerRequest.Email,
+                    registerRequest
+                );
+
+                if (!result.Success == true)
+                {
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = result.Message
+                    });
+                }
+
+                return Ok(new ResponseDTO
+                {
+                    Message = result.Message,
+                    Data = new { email = registerRequest.Email }
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error registering user");
-                return StatusCode(500, "Internal server error");
+                _logger.LogError(ex, "Error sending registration OTP");
+                return StatusCode(500, new ResponseDTO
+                {
+                    Message = "Đã xảy ra lỗi khi gửi OTP"
+                });
+            }
+        }
+
+        [HttpPost("register/verify-otp")]
+        public async Task<IActionResult> VerifyRegistrationOtp([FromBody] OtpAttribute verifyRequest)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ"
+                    });
+                }
+
+                // Xác thực OTP
+                var otpResult = await _otpService.VerifyRegistrationOtpAsync(
+                    verifyRequest.Email,
+                    verifyRequest.Otp
+                );
+
+                if (!otpResult.Success == true)
+                {
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = otpResult.Message
+                    });
+                }
+
+                // Deserialize thông tin đăng ký từ cache
+                var registerData = JsonSerializer.Deserialize<RegisterRequestDTO>(
+                    otpResult.Data,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+
+                if (registerData == null)
+                {
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Không thể lấy thông tin đăng ký"
+                    });
+                }
+
+                // Tạo user
+                var user = await _userService.CreateUserFromRegistrationAsync(registerData);
+
+                return Ok(new ResponseDTO
+                {
+                    Message = "Đăng ký tài khoản thành công",
+                    Data = new
+                    {
+                        userId = user.Id,
+                        userName = user.UserName,
+                        email = user.Email
+                    }
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new ResponseDTO
+                {
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying registration OTP");
+                return StatusCode(500, new ResponseDTO
+                {
+                    Message = "Đã xảy ra lỗi khi xác thực OTP"
+                });
             }
         }
 
@@ -300,7 +392,7 @@ namespace UserService.Controllers
         {
             var result = await _otpService.SendOtpAsync(email);
 
-            if (result.Success)
+            if (result.Success == true)
                 return Ok(result);
 
             return BadRequest(result);
@@ -311,7 +403,7 @@ namespace UserService.Controllers
         {
             var result = await _otpService.VerifyOtpAsync(request.Email, request.Otp);
 
-            if (result.Success)
+            if (result.Success == true)
                 return Ok(result);
 
             return BadRequest(result);
@@ -335,7 +427,7 @@ namespace UserService.Controllers
 
             var result = await _otpService.VerifyPasswordResetOtpAsync(request.Email, request.Otp);
 
-            if (result.Success)
+            if (result.Success == true)
                 return Ok(result);
 
             return BadRequest(result);
