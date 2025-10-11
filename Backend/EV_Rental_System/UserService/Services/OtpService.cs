@@ -231,6 +231,36 @@ namespace UserService.Services
             }
         }
 
+        private string CreateRegistrationEmailBody(string otp, string userName)
+        {
+            return $@"
+            <!DOCTYPE html>
+            <html>
+            <body style='font-family: Arial; padding: 20px;'>
+                <div style='max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;'>
+                    <h2 style='color: #333; text-align: center;'>Xác thực đăng ký tài khoản</h2>
+                    <p style='color: #666; text-align: center;'>
+                        Xin chào <strong>{userName}</strong>,
+                    </p>
+                    <p style='color: #666; text-align: center;'>
+                        Cảm ơn bạn đã đăng ký tài khoản. Vui lòng sử dụng mã OTP bên dưới để hoàn tất đăng ký:
+                    </p>
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <span style='font-size: 32px; font-weight: bold; color: #4CAF50; letter-spacing: 5px;'>
+                            {otp}
+                        </span>
+                    </div>
+                    <p style='color: #666; text-align: center;'>
+                        Mã OTP có hiệu lực trong <strong>10 phút</strong>
+                    </p>
+                    <p style='color: #999; font-size: 12px; text-align: center;'>
+                        Nếu bạn không yêu cầu đăng ký này, vui lòng bỏ qua email này.
+                    </p>
+                </div>
+            </body>
+            </html>";
+        }
+
         private string CreateEmailBody(string otp, string title)
         {
             return $@"
@@ -253,6 +283,174 @@ namespace UserService.Services
                 </div>
             </body>
             </html>";
+        }
+
+        // ✅ Gửi OTP cho đăng ký (lưu thông tin đăng ký tạm thời)
+        public async Task<OtpAttribute> SendRegistrationOtpAsync(string email, RegisterRequestDTO registerData)
+        {
+            try
+            {
+                // Kiểm tra email đã tồn tại chưa
+                var existingUser = await _userRepository.GetUserByEmailAsync(email);
+                if (existingUser != null)
+                {
+                    return new OtpAttribute
+                    {
+                        Success = false,
+                        Message = "Email đã được sử dụng"
+                    };
+                }
+
+                // Kiểm tra username đã tồn tại chưa
+                var existingUsername = await _userRepository.GetUserAsync(registerData.UserName);
+                if (existingUsername != null)
+                {
+                    return new OtpAttribute
+                    {
+                        Success = false,
+                        Message = "Tên đăng nhập đã tồn tại"
+                    };
+                }
+
+                var otp = GenerateOtp();
+                var sent = await SendRegistrationEmailAsync(email, otp, registerData.UserName);
+
+                if (!sent)
+                {
+                    return new OtpAttribute
+                    {
+                        Success = false,
+                        Message = "Không thể gửi email. Vui lòng thử lại sau."
+                    };
+                }
+
+                // Lưu OTP vào cache
+                await StoreOtpAsync($"REGISTER_{email}", otp);
+
+                // Lưu thông tin đăng ký tạm thời vào cache (10 phút)
+                var registrationData = System.Text.Json.JsonSerializer.Serialize(registerData);
+                var cacheKey = $"REGISTRATION_DATA_{email}";
+                var options = new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+                };
+                await _cache.SetStringAsync(cacheKey, registrationData, options);
+
+                _logger.LogInformation("Đã gửi OTP đăng ký đến email: {Email}", email);
+
+                return new OtpAttribute
+                {
+                    Success = true,
+                    Message = "Mã OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư."
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi gửi OTP đăng ký cho email: {Email}", email);
+                return new OtpAttribute
+                {
+                    Success = false,
+                    Message = $"Lỗi: {ex.Message}"
+                };
+            }
+        }
+
+        // ✅ Xác thực OTP đăng ký và trả về thông tin đăng ký
+        public async Task<OtpAttribute> VerifyRegistrationOtpAsync(string email, string otp)
+        {
+            try
+            {
+                var cacheKey = $"OTP_REGISTER_{email}";
+                var cachedOtp = await _cache.GetStringAsync(cacheKey);
+
+                if (string.IsNullOrEmpty(cachedOtp))
+                {
+                    return new OtpAttribute
+                    {
+                        Success = false,
+                        Message = "OTP không tồn tại hoặc đã hết hạn"
+                    };
+                }
+
+                if (cachedOtp != otp)
+                {
+                    return new OtpAttribute
+                    {
+                        Success = false,
+                        Message = "OTP không chính xác"
+                    };
+                }
+
+                // Lấy thông tin đăng ký từ cache
+                var dataKey = $"REGISTRATION_DATA_{email}";
+                var registrationDataJson = await _cache.GetStringAsync(dataKey);
+
+                if (string.IsNullOrEmpty(registrationDataJson))
+                {
+                    return new OtpAttribute
+                    {
+                        Success = false,
+                        Message = "Thông tin đăng ký đã hết hạn. Vui lòng đăng ký lại."
+                    };
+                }
+
+                // Xóa OTP và data khỏi cache
+                await _cache.RemoveAsync(cacheKey);
+                await _cache.RemoveAsync(dataKey);
+
+                _logger.LogInformation("Xác thực OTP đăng ký thành công cho email: {Email}", email);
+
+                return new OtpAttribute
+                {
+                    Success = true,
+                    Message = "Xác thực thành công",
+                    Email = email,
+                    Data = registrationDataJson // Trả về JSON data để service xử lý
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi xác thực OTP đăng ký cho email: {Email}", email);
+                return new OtpAttribute
+                {
+                    Success = false,
+                    Message = $"Lỗi: {ex.Message}"
+                };
+            }
+        }
+
+        // ✅ Gửi email đăng ký với OTP
+        private async Task<bool> SendRegistrationEmailAsync(string email, string otp, string userName)
+        {
+            try
+            {
+                _logger.LogInformation("Bắt đầu gửi email đăng ký đến {Email}", email);
+
+                using var mail = new MailMessage
+                {
+                    From = new MailAddress(_emailSettings.SenderEmail, _emailSettings.SenderName),
+                    Subject = "Xác thực đăng ký tài khoản - Mã OTP",
+                    Body = CreateRegistrationEmailBody(otp, userName),
+                    IsBodyHtml = true
+                };
+                mail.To.Add(email);
+
+                using var smtp = new SmtpClient(_emailSettings.SmtpServer, _emailSettings.SmtpPort)
+                {
+                    Credentials = new NetworkCredential(_emailSettings.SenderEmail, _emailSettings.SenderPassword),
+                    EnableSsl = _emailSettings.EnableSsl
+                };
+
+                await smtp.SendMailAsync(mail);
+
+                _logger.LogInformation("Đã gửi email đăng ký thành công đến {Email}", email);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi gửi email đăng ký đến {Email}", email);
+                return false;
+            }
         }
     }
 }

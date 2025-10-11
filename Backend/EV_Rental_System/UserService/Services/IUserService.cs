@@ -8,7 +8,7 @@ namespace UserService.Services
         Task<User> GetUserAsync(string userName);
         Task<LoginResponse> Login(LoginRequest loginRequest);
         Task<List<User>> SearchUserAsync(string searchValue);
-        Task AddUserAsync(User user);  // Create
+        Task<User> CreateUserFromRegistrationAsync(RegisterRequestDTO registerData);  // Create, tạo khi verify otp cho email thành công
         Task UpdateUserAsync(User user); // Edit, Update
         Task DeleteUserAsync(int userId); // Delete
         Task SetStatus(int userId); // Deactive/Active user
