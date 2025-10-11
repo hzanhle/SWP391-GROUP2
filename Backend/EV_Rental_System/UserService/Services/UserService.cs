@@ -1,4 +1,5 @@
-﻿using UserService.DTOs;
+﻿using BCrypt.Net;
+using UserService.DTOs;
 using UserService.Models;
 using UserService.Repositories;
 
@@ -122,9 +123,6 @@ namespace UserService.Services
                 };
             }
         }
-
-        // Removed duplicate GenerateJwtToken method since using IJwtService
-
         public async Task AddUserAsync(User user)
         {
             try
@@ -234,7 +232,8 @@ namespace UserService.Services
         {
             try
             {
-                return await _userRepository.GetAllUsersAsync();
+                var result = await _userRepository.GetAllUsersAsync();
+                return result;
             }
             catch (Exception ex)
             {
@@ -242,8 +241,6 @@ namespace UserService.Services
                 throw;
             }
         }
-
-
         public async Task<User?> GetUserAsync(string userName)
         {
             try
