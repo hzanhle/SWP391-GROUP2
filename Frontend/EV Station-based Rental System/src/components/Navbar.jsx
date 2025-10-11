@@ -8,10 +8,15 @@ export default function Navbar() {
   const isAuthed = typeof window !== 'undefined' && !!localStorage.getItem('auth.token')
   const rawUser = (typeof window !== 'undefined' && localStorage.getItem('auth.user')) || '{}'
   let displayName = 'Bạn'
+  let roleId = 0
+  let roleName = ''
   try {
     const u = JSON.parse(rawUser)
     displayName = (u.fullName || u.userName || u.username || 'Bạn')
+    roleId = Number(u.roleId ?? u.RoleId ?? 0)
+    roleName = String(u.roleName ?? u.RoleName ?? '')
   } catch {}
+  const isAdmin = roleId === 3 || roleName.toLowerCase() === 'admin'
 
   function handleLogout(e) {
     e.preventDefault()
@@ -43,6 +48,9 @@ export default function Navbar() {
           <a className="nav-link" href="#how" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>How it works</a>
           <a className="nav-link" href="#pricing" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Pricing</a>
           <a className="nav-link" href="#support" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Support</a>
+          {isAdmin && (
+            <a className="nav-link" href="#admin-users" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Admin</a>
+          )}
           {isAuthed ? (
             <>
               <a className="nav-link" href="#profile" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Profile</a>
@@ -98,6 +106,9 @@ export default function Navbar() {
               <a className="nav-link" role="menuitem" href="#how" onClick={() => setOpen(false)}>How it works</a>
               <a className="nav-link" role="menuitem" href="#pricing" onClick={() => setOpen(false)}>Pricing</a>
               <a className="nav-link" role="menuitem" href="#support" onClick={() => setOpen(false)}>Support</a>
+              {isAdmin && (
+                <a className="nav-link" role="menuitem" href="#admin-users" onClick={() => setOpen(false)}>Admin</a>
+              )}
               {isAuthed ? (
                 <>
                   <a className="nav-link" role="menuitem" href="#profile" onClick={() => setOpen(false)}>Profile</a>

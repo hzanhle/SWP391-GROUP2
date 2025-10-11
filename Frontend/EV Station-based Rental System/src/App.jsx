@@ -13,13 +13,20 @@ import BookingDetail from './pages/BookingDetail'
 import CheckIn from './pages/CheckIn'
 import Return from './pages/Return'
 import History from './pages/History'
+import AdminUsers from './pages/AdminUsers'
 
+function getRoleId() {
+  try {
+    const raw = localStorage.getItem('auth.user') || '{}'
+    const u = JSON.parse(raw)
+    return Number(u.roleId ?? u.RoleId ?? 0)
+  } catch { return 0 }
+}
 
 function resolveRoute() {
   const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
-  
-  
-  
+  const path = typeof window !== 'undefined' ? window.location.pathname.replace(/^\//, '') : ''
+  if (!hash && path.toLowerCase() === 'admin') return 'admin-users'
   switch (hash) {
     case 'signup': return 'signup'
     case 'login': return 'login'
@@ -34,7 +41,7 @@ function resolveRoute() {
     case 'check-in': return 'check-in'
     case 'return': return 'return'
     case 'history': return 'history'
-    
+    case 'admin-users': return 'admin-users'
     default: return 'home'
   }
 }
@@ -47,8 +54,6 @@ export default function App() {
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
-
-  
 
   if (routeData === 'signup') return <Signup />
   if (routeData === 'login') return <Login />
@@ -63,5 +68,12 @@ export default function App() {
   if (routeData === 'check-in') return <CheckIn />
   if (routeData === 'return') return <Return />
   if (routeData === 'history') return <History />
+  if (routeData === 'admin-users') {
+    const roleId = getRoleId()
+    if (roleId !== 3) {
+      return <AdminUsers />
+    }
+    return <AdminUsers />
+  }
   return <Home />
 }
