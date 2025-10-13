@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using TwoWheelVehicleService.DTOs;
 using TwoWheelVehicleService.Services;
 
@@ -19,101 +18,146 @@ namespace TwoWheelVehicleService.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllModels()
         {
-            var models = await _modelService.GetAllModelsAsync();
-            return Ok(models);
+            try
+            {
+                var models = await _modelService.GetAllModelsAsync();
+                return Ok(models);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
 
         [HttpGet("active")]
         public async Task<IActionResult> GetActiveModels()
         {
-            var models = await _modelService.GetActiveModelsAsync();
-            return Ok(models);
+            try
+            {
+                var models = await _modelService.GetActiveModelsAsync();
+                return Ok(models);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetModelById(int id)
         {
-            var model = await _modelService.GetModelByIdAsync(id);
-            if (model == null) return NotFound();
-            return Ok(model);
+            try
+            {
+                var model = await _modelService.GetModelByIdAsync(id);
+                if (model == null)
+                    return NotFound(new ResponseDTO { Message = "Model not found" });
+
+                return Ok(model);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateModel([FromForm] ModelRequest request)
         {
-            // Kiểm tra ModelState
-            if (!ModelState.IsValid)
+            try
             {
-                var errors = ModelState
-                    .Where(x => x.Value.Errors.Any())
-                    .Select(x => new
-                    {
-                        Field = x.Key,
-                        Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                    })
-                    .ToList();
-
-                return BadRequest(new ResponseDTO
+                if (!ModelState.IsValid)
                 {
-                    Message = "Dữ liệu không hợp lệ",
-                    Data = errors
-                });
-            }
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
 
-            await _modelService.AddModelAsync(request);
-            return Ok(new { message = "Model created successfully" });
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
+
+                await _modelService.AddModelAsync(request);
+                return Ok(new ResponseDTO { Message = "Model created successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateModel(int id, [FromForm] ModelRequest request)
         {
-            // Kiểm tra ModelState
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState
-                    .Where(x => x.Value.Errors.Any())
-                    .Select(x => new
-                    {
-                        Field = x.Key,
-                        Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                    })
-                    .ToList();
-
-                return BadRequest(new ResponseDTO
-                {
-                    Message = "Dữ liệu không hợp lệ",
-                    Data = errors
-                });
-            }
-
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
+
                 await _modelService.UpdateModelAsync(id, request);
-                return Ok(new { message = "Model updated successfully" });
+                return Ok(new ResponseDTO { Message = "Model updated successfully" });
             }
             catch (ArgumentException)
             {
-                return NotFound();
+                return NotFound(new ResponseDTO { Message = "Model not found" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
             }
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteModel(int id)
         {
-            var existingModel = await _modelService.GetModelByIdAsync(id);
-            if (existingModel == null) return NotFound();
+            try
+            {
+                var existingModel = await _modelService.GetModelByIdAsync(id);
+                if (existingModel == null)
+                    return NotFound(new ResponseDTO { Message = "Model not found" });
 
-            await _modelService.DeleteModelAsync(id);
-            return Ok(new { message = "Model deleted successfully" });
+                await _modelService.DeleteModelAsync(id);
+                return Ok(new ResponseDTO { Message = "Model deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> ChangeStatus(int id)
         {
-            var existingModel = await _modelService.GetModelByIdAsync(id);
-            if (existingModel == null) return NotFound();
-            await _modelService.ChangeStatusAsync(id);
-            return Ok(new { message = "Model status changed successfully" });
+            try
+            {
+                await _modelService.ToggleStatusAsync(id);
+                return Ok(new ResponseDTO { Message = "Model status changed successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
     }
 }

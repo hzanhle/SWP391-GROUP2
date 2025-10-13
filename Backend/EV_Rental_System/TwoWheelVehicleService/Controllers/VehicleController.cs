@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using TwoWheelVehicleService.Services;
 using TwoWheelVehicleService.Models;
 using TwoWheelVehicleService.DTOs;
@@ -11,113 +10,177 @@ namespace TwoWheelVehicleService.Controllers
     public class VehicleController : ControllerBase
     {
         private readonly IVehicleService _vehicleService;
-        private readonly IModelService _modelService;
 
-        public VehicleController(IVehicleService vehicleService, IModelService modelService)
+        public VehicleController(IVehicleService vehicleService)
         {
             _vehicleService = vehicleService;
-            _modelService = modelService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllVehicles()
         {
-            var vehicles = await _vehicleService.GetAllVehiclesAsync();
-            return Ok(vehicles);
+            try
+            {
+                var vehicles = await _vehicleService.GetAllVehiclesAsync();
+                return Ok(vehicles);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
 
         [HttpGet("active")]
         public async Task<IActionResult> GetActiveVehicles()
         {
-            var vehicles = await _vehicleService.GetActiveVehiclesAsync();
-            return Ok(vehicles);
+            try
+            {
+                var vehicles = await _vehicleService.GetActiveVehiclesAsync();
+                return Ok(vehicles);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetVehicleById(int id)
         {
-            var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
-            if (vehicle == null) return NotFound();
-            return Ok(vehicle);
-        }
+            try
+            {
+                var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
+                if (vehicle == null)
+                    return NotFound(new ResponseDTO { Message = "Vehicle not found" });
 
+                return Ok(vehicle);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
+        }
 
         [HttpPost]
         public async Task<IActionResult> CreateVehicle([FromBody] VehicleRequest vehicle)
         {
-            // Kiểm tra ModelState
-            if (!ModelState.IsValid)
+            try
             {
-                var errors = ModelState
-                    .Where(x => x.Value.Errors.Any())
-                    .Select(x => new
-                    {
-                        Field = x.Key,
-                        Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                    })
-                    .ToList();
-
-                return BadRequest(new ResponseDTO
+                if (!ModelState.IsValid)
                 {
-                    Message = "Dữ liệu không hợp lệ",
-                    Data = errors
-                });
-            }
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
 
-            await _vehicleService.AddVehicleAsync(vehicle);
-            return Ok(new { message = "Vehicle created successfully" });
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
+
+                await _vehicleService.AddVehicleAsync(vehicle);
+                return Ok(new ResponseDTO { Message = "Vehicle created successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateVehicle(int id, [FromBody] Vehicle vehicle)
         {
-            // Kiểm tra ModelState
-            if (!ModelState.IsValid)
+            try
             {
-                var errors = ModelState
-                    .Where(x => x.Value.Errors.Any())
-                    .Select(x => new
-                    {
-                        Field = x.Key,
-                        Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                    })
-                    .ToList();
-
-                return BadRequest(new ResponseDTO
+                if (!ModelState.IsValid)
                 {
-                    Message = "Dữ liệu không hợp lệ",
-                    Data = errors
-                });
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
+
+                var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
+                if (existingVehicle == null)
+                    return NotFound(new ResponseDTO { Message = "Vehicle not found" });
+
+                vehicle.VehicleId = id;
+                await _vehicleService.UpdateVehicleAsync(vehicle);
+                return Ok(new ResponseDTO { Message = "Vehicle updated successfully" });
             }
-
-            var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
-            if (existingVehicle == null) return NotFound();
-
-            vehicle.VehicleId = id;
-            await _vehicleService.UpdateVehicleAsync(vehicle);
-            return Ok(new { message = "Vehicle updated successfully" });
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVehicle(int id)
         {
-            var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
-            if (existingVehicle == null) return NotFound();
+            try
+            {
+                var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
+                if (existingVehicle == null)
+                    return NotFound(new ResponseDTO { Message = "Vehicle not found" });
 
-            await _vehicleService.DeleteVehicleAsync(id);
-            return Ok(new { message = "Vehicle deleted successfully" });
+                await _vehicleService.DeleteVehicleAsync(id);
+                return Ok(new ResponseDTO { Message = "Vehicle deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
 
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateVehicleStatus(int id, [FromBody] string status)
         {
-            if (string.IsNullOrEmpty(status)) return BadRequest("Status is required");
+            try
+            {
+                if (string.IsNullOrEmpty(status))
+                    return BadRequest(new ResponseDTO { Message = "Status is required" });
 
-            var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
-            if (existingVehicle == null) return NotFound();
+                var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
+                if (existingVehicle == null)
+                    return NotFound(new ResponseDTO { Message = "Vehicle not found" });
 
-            await _vehicleService.SetVehicleStatus(id, status);
-            return Ok(new { message = "Status updated successfully" });
+                await _vehicleService.SetVehicleStatus(id, status);
+                return Ok(new ResponseDTO { Message = "Status updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
+        }
+
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> ToggleVehicleActiveStatus(int id)
+        {
+            try
+            {
+                await _vehicleService.ToggleActiveStatus(id);
+                return Ok(new ResponseDTO { Message = "Vehicle active status toggled successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -133,29 +196,27 @@ namespace TwoWheelVehicleService.Controllers
 
                 var vehicle = await _vehicleService.GetVehicleByIdAsync(vehicleId);
                 if (vehicle == null)
-                    return NotFound(new { success = false, message = "Vehicle not found" });
+                    return NotFound(new ResponseDTO { Message = "Vehicle not found" });
 
-                // Check if vehicle is active and available
-                // Using == true to handle nullable bool
                 bool isAvailable = vehicle.IsActive == true && vehicle.Status == "Available";
 
                 return Ok(new
                 {
                     success = true,
-                    isAvailable = isAvailable,
+                    isAvailable,
                     vehicle = new
                     {
-                        vehicleId = vehicle.VehicleId,
-                        modelId = vehicle.ModelId,
-                        color = vehicle.Color,
-                        status = vehicle.Status,
-                        isActive = vehicle.IsActive
+                        vehicle.VehicleId,
+                        vehicle.ModelId,
+                        vehicle.Color,
+                        vehicle.Status,
+                        vehicle.IsActive
                     }
                 });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { success = false, message = ex.Message });
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
             }
         }
 
@@ -171,8 +232,8 @@ namespace TwoWheelVehicleService.Controllers
 
                 var availableVehicles = allVehicles
                     .Where(v => v.ModelId == modelId
-                        && v.IsActive
-                        && v.Status == "Available")
+                             && v.IsActive
+                             && v.Status == "Available")
                     .ToList();
 
                 return Ok(new
@@ -184,10 +245,8 @@ namespace TwoWheelVehicleService.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { success = false, message = ex.Message });
+                return StatusCode(500, new ResponseDTO { Message = ex.Message });
             }
         }
     }
-
-    
 }

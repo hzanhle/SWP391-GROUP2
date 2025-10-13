@@ -10,6 +10,6 @@ namespace TwoWheelVehicleService.Services
         Task<List<ModelDTO>> GetActiveModelsAsync();
         Task UpdateModelAsync(int modelId, ModelRequest request);
         Task DeleteModelAsync(int modelId);
-        Task ChangeStatusAsync(int modelId);
+        Task ToggleStatusAsync(int modelId);
     }
 }

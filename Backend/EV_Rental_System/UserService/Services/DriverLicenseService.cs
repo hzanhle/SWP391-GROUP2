@@ -1,5 +1,7 @@
-﻿using UserService.DTOs;
+﻿using Microsoft.Extensions.Logging;
+using UserService.DTOs;
 using UserService.Models;
+using UserService.Models.Enums;
 using UserService.Repositories;
 
 namespace UserService.Services
@@ -9,106 +11,131 @@ namespace UserService.Services
         private readonly IDriverLicenseRepository _driverLicenseRepository;
         private readonly IImageService _imageService;
         private readonly INotificationService _notificationService;
+        private readonly ILogger<DriverLicenseService> _logger;
 
         public DriverLicenseService(
             IDriverLicenseRepository driverLicenseRepository,
             IImageService imageService,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            ILogger<DriverLicenseService> logger)
         {
             _driverLicenseRepository = driverLicenseRepository;
             _imageService = imageService;
             _notificationService = notificationService;
+            _logger = logger;
         }
 
         public async Task<ResponseDTO> AddDriverLicense(DriverLicenseRequest request)
         {
-            if (request == null)
+            try
             {
+                if (request == null)
+                    return new ResponseDTO { Message = "Dữ liệu Giấy phép lái xe không hợp lệ" };
+
+                var pending = await _driverLicenseRepository.GetPendingDriverLicense(request.UserId);
+                if (pending != null)
+                    return new ResponseDTO
+                    {
+                        Message = "Đã có một bản Giấy phép lái xe đang chờ xác thực",
+                        Data = pending
+                    };
+
+                var existing = await _driverLicenseRepository.GetDriverLicenseByUserId(request.UserId);
+                if (existing != null)
+                    return new ResponseDTO
+                    {
+                        Message = "Người dùng đã có Giấy phép lái xe",
+                        Data = existing
+                    };
+
+                if (request.Files == null || request.Files.Count == 0)
+                    return new ResponseDTO
+                    {
+                        Message = "Vui lòng tải lên ít nhất một hình ảnh của Giấy phép lái xe"
+                    };
+
+                var entity = await CreatePendingDriverLicense(request);
+
                 return new ResponseDTO
                 {
-                    Message = "Dữ liệu Giấy phép lái xe không hợp lệ",
-                    Data = null
+                    Message = "Yêu cầu tạo Giấy phép lái xe đã được gửi. Vui lòng chờ xác thực",
+                    Data = entity
                 };
             }
-
-            // Kiểm tra nếu có giấy phép đang chờ
-            var pending = await _driverLicenseRepository.GetPendingDriverLicense(request.UserId);
-            if (pending != null)
+            catch (Exception ex)
             {
-                return new ResponseDTO
-                {
-                    Message = "Đã có một bản Giấy phép lái xe đang chờ xác thực. Vui lòng chờ hoặc liên hệ quản trị viên",
-                    Data = pending
-                };
+                _logger.LogError(ex, "Error in AddDriverLicense for UserId {UserId}", request?.UserId);
+                return new ResponseDTO { Message = $"Lỗi: {ex.Message}" };
             }
-
-            // Kiểm tra nếu đã có giấy phép xác thực
-            var existing = await _driverLicenseRepository.GetDriverLicenseByUserId(request.UserId);
-            if (existing != null)
-            {
-                return new ResponseDTO
-                {
-                    Message = "Người dùng đã có Giấy phép lái xe.",
-                    Data = existing
-                };
-            }
-
-            // Kiểm tra file upload
-            if (request.Files == null || request.Files.Count == 0)
-            {
-                return new ResponseDTO
-                {
-                    Message = "Vui lòng tải lên ít nhất một hình ảnh của Giấy phép lái xe",
-                    Data = null
-                };
-            }
-
-            // Tạo mới giấy phép
-            var entity = await CreatePendingDriverLicense(request);
-
-            return new ResponseDTO
-            {
-                Message = "Yêu cầu tạo Giấy phép lái xe đã được gửi. Vui lòng chờ xác thực.",
-                Data = entity
-            };
         }
 
         public async Task<DriverLicenseDTO> GetDriverLicenseByUserId(int userId)
         {
-            var entity = await _driverLicenseRepository.GetDriverLicenseByUserId(userId);
-            if (entity == null) return null;
-
-            var dto = new DriverLicenseDTO
+            try
             {
-                Id = entity.Id,
-                UserId = entity.UserId,
-                LicenseId = entity.LicenseId,
-                LicenseType = entity.LicenseType,
-                RegisterDate = entity.RegisterDate,
-                RegisterOffice = entity.RegisterOffice,
-                Status = entity.Status,
-                ImageUrls = await _imageService.GetImagePathsAsync("DriverLicense", entity.Id)
-            };
-            return dto;
+                var entity = await _driverLicenseRepository.GetDriverLicenseByUserId(userId);
+                if (entity == null) return null;
+
+                return new DriverLicenseDTO
+                {
+                    Id = entity.Id,
+                    UserId = entity.UserId,
+                    LicenseId = entity.LicenseId,
+                    LicenseType = entity.LicenseType,
+                    RegisterDate = entity.RegisterDate,
+                    RegisterOffice = entity.RegisterOffice,
+                    Status = entity.Status,
+                    ImageUrls = await _imageService.GetImagePathsAsync("DriverLicense", entity.Id)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetDriverLicenseByUserId for UserId {UserId}", userId);
+                return null;
+            }
         }
 
         public async Task UpdateDriverLicense(DriverLicenseRequest request)
         {
-            await CreatePendingDriverLicense(request);
+            try
+            {
+                await CreatePendingDriverLicense(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in UpdateDriverLicense for UserId {UserId}", request?.UserId);
+                throw;
+            }
         }
 
         public async Task<Notification> SetStatus(int userId, bool isApproved)
         {
-            var pendingEntity = await _driverLicenseRepository.GetPendingDriverLicense(userId);
-            if (pendingEntity == null)
-                throw new Exception("Không tìm thấy bản DriverLicense đang chờ xác thực");
+            try
+            {
+                var pendingEntity = await _driverLicenseRepository.GetPendingDriverLicense(userId);
+                if (pendingEntity == null)
+                    throw new Exception("Không tìm thấy bản DriverLicense đang chờ xác thực");
 
-            return await ProcessApproval(pendingEntity, isApproved);
+                return await ProcessApproval(pendingEntity, isApproved);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in SetStatus for UserId {UserId}", userId);
+                throw;
+            }
         }
 
         public async Task DeleteDriverLicense(int id)
         {
-            await _driverLicenseRepository.DeleteDriverLicense(id);
+            try
+            {
+                await _driverLicenseRepository.DeleteDriverLicense(id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in DeleteDriverLicense for Id {Id}", id);
+                throw;
+            }
         }
 
         // ==================== private helpers ====================
@@ -122,7 +149,7 @@ namespace UserService.Services
                 LicenseType = request.LicenseType,
                 RegisterDate = request.RegisterDate,
                 RegisterOffice = request.RegisterOffice,
-                Status = "Chờ Xác Thực",
+                Status = StatusInformation.Pending,
                 IsApproved = false,
                 DateCreated = DateTime.Now
             };
@@ -130,9 +157,7 @@ namespace UserService.Services
             await _driverLicenseRepository.AddDriverLicense(entity);
 
             if (request.Files != null && request.Files.Count > 0)
-            {
                 await _imageService.UploadImagesAsync(request.Files, "DriverLicense", entity.Id);
-            }
 
             return entity;
         }
@@ -143,11 +168,10 @@ namespace UserService.Services
 
             if (isApproved)
             {
-                pendingEntity.Status = "Đã xác nhận";
+                pendingEntity.Status = StatusInformation.Approved;
                 pendingEntity.IsApproved = true;
                 await _driverLicenseRepository.UpdateDriverLicense(pendingEntity);
 
-                // Xóa bản cũ nhất đã xác nhận trước đó
                 await _driverLicenseRepository.DeleteOldApprovedRecords(pendingEntity.UserId, pendingEntity.Id);
 
                 notification = new Notification
@@ -160,7 +184,7 @@ namespace UserService.Services
             }
             else
             {
-                pendingEntity.Status = "Bị từ chối";
+                pendingEntity.Status = StatusInformation.Rejected;
                 pendingEntity.IsApproved = false;
                 await _driverLicenseRepository.UpdateDriverLicense(pendingEntity);
 

@@ -41,21 +41,6 @@ namespace TwoWheelVehicleService.Repositories
             }
         }
 
-        public async Task ChangeStatus(int vehicleId)
-        {
-            var vehicle = await _context.Models.FindAsync(vehicleId);
-            if (vehicle != null && vehicle.IsActive == true)
-            {
-                vehicle.IsActive = false; // Soft delete by setting IsActive to false
-                await _context.SaveChangesAsync();
-            }
-            else
-            {
-                vehicle.IsActive = true;
-                await _context.SaveChangesAsync();
-            }
-        }
-
         public async Task<Vehicle> GetVehicleById(int Id)
         {
             return await _context.Vehicles.FindAsync(Id);
@@ -75,6 +60,12 @@ namespace TwoWheelVehicleService.Repositories
                 _context.Vehicles.Remove(vehicle);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public Task<List<Vehicle>> GetAllVehiclesByModelId(int modelId)
+        {
+            var vehicles = _context.Vehicles.Where(v => v.ModelId == modelId).ToListAsync();
+            return vehicles;
         }
     }
 }
