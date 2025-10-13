@@ -6,7 +6,7 @@ namespace StationService.Repositories
 {
     public interface IStationRepository
     {
-        Task AddStation(Station station);
+        Task<Station> AddStation(Station station);
         Task UpdateStation(Station station);
         Task<Station> GetStationById(int id);
         Task<List<Station>> GetAllStations();

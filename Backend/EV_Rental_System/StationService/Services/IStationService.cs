@@ -16,10 +16,10 @@ namespace StationService.Services
         Task<List<Station>> GetActiveStationsAsync();
 
         // Nhận vào DTO Request
-        Task AddStationAsync(CreateStationRequest stationRequest);
+        Task <Station> AddStationAsync(CreateStationRequest stationRequest);
 
         // Nhận vào Model
-        Task UpdateStationAsync(Station station);
+        Task UpdateStationAsync(int id, UpdateStationRequest stationRequest);
 
         Task DeleteStationAsync(int stationId);
 
