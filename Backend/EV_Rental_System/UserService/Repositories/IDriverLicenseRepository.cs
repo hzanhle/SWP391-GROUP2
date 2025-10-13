@@ -1,10 +1,12 @@
-﻿using UserService.Models;
+﻿using Microsoft.EntityFrameworkCore.Storage;
+using UserService.Models;
 using UserService.Models.UserService.Models;
 
 namespace UserService.Repositories
 {
     public interface IDriverLicenseRepository
     {
+        Task<IDbContextTransaction> BeginTransactionAsync();
         Task<DriverLicense> GetDriverLicenseByUserId(int userId);
         Task AddDriverLicense(DriverLicense driverLicense);
         Task UpdateDriverLicense(DriverLicense driverLicense);

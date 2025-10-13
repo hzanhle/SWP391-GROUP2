@@ -29,14 +29,20 @@ namespace UserService.Services
 
         public async Task UpdateNotification(Notification notification)
         {
-            var existingNotifications = await _notificationRepository.GetNotification(notification.UserId);
-            if (existingNotifications != null)
+            try
             {
-                existingNotifications.Title = notification.Title;
-                existingNotifications.Message = notification.Message;
-                existingNotifications.Created = DateTime.Now;
+                var existingNotifications = await _notificationRepository.GetNotification(notification.UserId);
+                if (existingNotifications != null)
+                {
+                    existingNotifications.Title = notification.Title;
+                    existingNotifications.Message = notification.Message;
+                    existingNotifications.Created = DateTime.Now;
+                }
+                await _notificationRepository.UpdateNotification(existingNotifications);
+            } catch (Exception ex)
+            {
+                throw new Exception($"Error updating notification: {ex.Message}");
             }
-            await _notificationRepository.UpdateNotification(existingNotifications);
         }
     }
 }

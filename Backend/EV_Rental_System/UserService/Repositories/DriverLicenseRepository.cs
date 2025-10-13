@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using UserService.Models;
-using UserService.Models.UserService.Models;
+using UserService.Models.Enums;
 
 namespace UserService.Repositories
 {
@@ -11,6 +12,11 @@ namespace UserService.Repositories
         public DriverLicenseRepository(MyDbContext context)
         {
             _context = context;
+        }
+
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _context.Database.BeginTransactionAsync();
         }
 
         public async Task AddDriverLicense(DriverLicense driverLicense)
@@ -25,18 +31,18 @@ namespace UserService.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<DriverLicense> GetDriverLicenseByUserId(int userId)
+        public async Task<DriverLicense?> GetDriverLicenseByUserId(int userId)
         {
             return await _context.DriverLicenses
                 .Include(dl => dl.Images)
                 .FirstOrDefaultAsync(dl => dl.UserId == userId);
         }
 
-        public async Task<DriverLicense> GetPendingDriverLicense(int userId)
+        public async Task<DriverLicense?> GetPendingDriverLicense(int userId)
         {
             return await _context.DriverLicenses
                 .Include(dl => dl.Images)
-                .Where(dl => dl.UserId == userId && dl.Status == "Chờ xác thực")
+                .Where(dl => dl.UserId == userId && dl.Status == StatusInformation.Pending)
                 .OrderByDescending(dl => dl.DateCreated)
                 .FirstOrDefaultAsync();
         }
@@ -46,8 +52,8 @@ namespace UserService.Repositories
             var oldApprovedRecords = await _context.DriverLicenses
                 .Include(dl => dl.Images)
                 .Where(dl => dl.UserId == userId
-                    && dl.Status == "Đã xác nhận"
-                    && dl.Id != keepId)
+                          && dl.Status == StatusInformation.Approved
+                          && dl.Id != keepId)
                 .ToListAsync();
 
             if (oldApprovedRecords.Any())
@@ -57,10 +63,10 @@ namespace UserService.Repositories
             }
         }
 
-        public async Task DeleteDriverLicense(int Id)
+        public async Task DeleteDriverLicense(int id)
         {
             var driverLicense = await _context.DriverLicenses
-                .FirstOrDefaultAsync(dl => dl.Id == Id);
+                .FirstOrDefaultAsync(dl => dl.Id == id);
 
             if (driverLicense != null)
             {
@@ -84,13 +90,12 @@ namespace UserService.Repositories
                 var ordered = group.OrderByDescending(dl => dl.DateCreated).ToList();
                 var toDelete = ordered.Skip(1).ToList();
 
-                foreach (var oldRecord in toDelete)
-                {
-                    _context.DriverLicenses.Remove(oldRecord);
-                }
+                if (toDelete.Any())
+                    _context.DriverLicenses.RemoveRange(toDelete);
             }
 
             await _context.SaveChangesAsync();
         }
     }
+
 }

@@ -5,6 +5,7 @@ namespace TwoWheelVehicleService.Services
 {
     public interface IVehicleService
     {
+        Task<List<Vehicle>> GetAllVehiclesByModelId(int modelId);
         Task<List<Vehicle>> GetAllVehiclesAsync();
         Task<List<Vehicle>> GetActiveVehiclesAsync();
         Task AddVehicleAsync(VehicleRequest vehicle);
@@ -12,5 +13,6 @@ namespace TwoWheelVehicleService.Services
         Task DeleteVehicleAsync(int vehicleId);
         Task<VehicleDTO> GetVehicleByIdAsync(int vehicleId);
         Task SetVehicleStatus(int vehicleId, string status); // New method to set vehicle status
+        Task ToggleActiveStatus(int id); // New method to toggle isActive status
     }
 }

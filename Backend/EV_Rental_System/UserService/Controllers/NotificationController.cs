@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using UserService.Models;
 using UserService.Services;
 
 namespace UserService.Controllers
@@ -27,6 +28,17 @@ namespace UserService.Controllers
         public async Task<IActionResult> DeleteAllNotificationsByUserId(int userId)
         {
             await _notificationService.RemoveNotificationByUserId(userId);
+            return NoContent(); // 204 No Content
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> UpdateNotification([FromBody] Notification notification)
+        {
+            if (notification == null || notification.Id == 0)
+            {
+                return BadRequest("Invalid notification data.");
+            }
+            await _notificationService.UpdateNotification(notification);
             return NoContent(); // 204 No Content
         }
     }
