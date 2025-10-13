@@ -9,7 +9,8 @@ namespace UserService.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleRepository;
-        private readonly ICitizenInfoRepository _citizenInfoRepository;
+        private readonly ICitizenInfoService _citizenInfoService;
+        private readonly IDriverLicenseService _driverLicenseService;
         private readonly ILogger<UserService> _logger;
         private readonly IJwtService _jwtService;
         private readonly IConfiguration _configuration;
@@ -19,14 +20,16 @@ namespace UserService.Services
         public UserService(
             IRoleRepository roleRepository,
             IUserRepository userRepository,
-            ICitizenInfoRepository citizenInfoRepository,
+            ICitizenInfoService citizenInfoService,
+            IDriverLicenseService driverLicenseService,
             ILogger<UserService> logger,
             IJwtService jwtService,
             IConfiguration configuration,
             IOtpService otpService)
         {
             _userRepository = userRepository;
-            _citizenInfoRepository = citizenInfoRepository;
+            _citizenInfoService = citizenInfoService;
+            _driverLicenseService = driverLicenseService;
             _logger = logger;
             _jwtService = jwtService;
             _configuration = configuration;
@@ -91,7 +94,7 @@ namespace UserService.Services
                 _logger.LogInformation("User logged in successfully: {UserId}", user.Id);
 
                 // Get citizen info safely
-                var citizenInfo = await _citizenInfoRepository.GetCitizenInfoByUserId(user.Id);
+                var citizenInfo = await _citizenInfoService.GetCitizenInfoByUserId(user.Id);
 
                 return new LoginResponse
                 {
@@ -100,7 +103,7 @@ namespace UserService.Services
                     Token = token,
                     TokenType = "Bearer",
                     ExpiresIn = _configuration.GetSection("JwtSettings").GetValue<int>("ExpiresInMinutes") * 60,
-                    User = new UserDTO
+                    User = new StaffDTO
                     {
                         Id = user.Id,
                         UserName = user.UserName,
@@ -244,13 +247,13 @@ namespace UserService.Services
                 var user = await _userRepository.GetUserByIdAsync(userId);
                 if (user != null)
                 {
-                    await _userRepository.DeleteUserAsync(user); 
+                    await _userRepository.DeleteUserAsync(user);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting user: {UserId}", userId);
-                
+
             }
         }
 
@@ -296,11 +299,34 @@ namespace UserService.Services
             }
         }
 
-        public async Task<User?> GetUserDetailByIdAsync(int userId)
+        public async Task<UserDetailDTO> GetUserDetailByIdAsync(int userId)
         {
             try
             {
-                return await _userRepository.GetUserDetailByIdAsync(userId);
+                // Query User TRƯỚC
+                var user = await _userRepository.GetUserDetailByIdAsync(userId);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User not found with ID: {UserId}", userId);
+                    return null;
+                }
+
+                // Sau đó mới query các thông tin liên quan
+                var citizenInfo = await _citizenInfoService.GetCitizenInfoByUserId(userId);
+                var driverLicense = await _driverLicenseService.GetDriverLicenseByUserId(userId);
+
+                var dto = new UserDetailDTO
+                {
+                    UserId = user.Id,
+                    PhoneNumber = user.PhoneNumber ?? string.Empty, // Thêm null check
+                    Email = user.Email ?? string.Empty,
+                    UserName = user.UserName ?? string.Empty,
+                    CitizenInfo = citizenInfo,
+                    DriverLicense = driverLicense
+                };
+
+                return dto;
             }
             catch (Exception ex)
             {
@@ -508,3 +534,5 @@ namespace UserService.Services
         }
     }
 }
+
+

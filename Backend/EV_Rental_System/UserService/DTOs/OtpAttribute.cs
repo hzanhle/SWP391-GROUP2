@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
-
-namespace UserService.DTOs
+﻿namespace UserService.DTOs
 {
     public class OtpAttribute
     {
@@ -10,4 +8,6 @@ namespace UserService.DTOs
         public string? Otp { get; set; }
         public string? Data { get; set; }
     }
+
+
 }
