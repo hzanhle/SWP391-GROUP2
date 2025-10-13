@@ -129,7 +129,7 @@ namespace UserService.Controllers
         }
 
         [HttpPost("register/verify-otp")]
-        public async Task<IActionResult> VerifyRegistrationOtp([FromBody] OtpAttribute verifyRequest)
+        public async Task<IActionResult> VerifyRegistrationOtp([FromBody] string email, string otp)
         {
             try
             {
@@ -142,10 +142,7 @@ namespace UserService.Controllers
                 }
 
                 // Xác thực OTP
-                var otpResult = await _otpService.VerifyRegistrationOtpAsync(
-                    verifyRequest.Email,
-                    verifyRequest.Otp
-                );
+                var otpResult = await _otpService.VerifyRegistrationOtpAsync(email, otp);
 
                 if (!otpResult.Success == true)
                 {
@@ -386,28 +383,6 @@ namespace UserService.Controllers
                 });
             }
         }
-       
-        [HttpPost("send-otp")]
-        public async Task<IActionResult> SendOTP([FromBody] string email)
-        {
-            var result = await _otpService.SendOtpAsync(email);
-
-            if (result.Success == true)
-                return Ok(result);
-
-            return BadRequest(result);
-        }
-       
-        [HttpPost("verify-otp")]
-        public async Task<IActionResult> VerifyOTP([FromBody] OtpAttribute request)
-        {
-            var result = await _otpService.VerifyOtpAsync(request.Email, request.Otp);
-
-            if (result.Success == true)
-                return Ok(result);
-
-            return BadRequest(result);
-        }
 
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] string email)
@@ -420,12 +395,12 @@ namespace UserService.Controllers
         }
 
         [HttpPost("verify-reset-otp")]
-        public async Task<IActionResult> VerifyResetOTP([FromBody] OtpAttribute request)
+        public async Task<IActionResult> VerifyResetOTP([FromBody] string otp, string email)
         {
-            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Otp))
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(otp))
                 return BadRequest(new { message = "Email và OTP không được để trống" });
 
-            var result = await _otpService.VerifyPasswordResetOtpAsync(request.Email, request.Otp);
+            var result = await _otpService.VerifyPasswordResetOtpAsync(email,otp);
 
             if (result.Success == true)
                 return Ok(result);

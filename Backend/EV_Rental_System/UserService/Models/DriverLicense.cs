@@ -16,13 +16,12 @@ namespace UserService.Models
         [StringLength(12, MinimumLength = 10, ErrorMessage = "Số giấy phép phải từ 10-12 ký tự")]
         public string LicenseId { get; set; }
 
-        public string FullName { get; set; }
-
         [Required(ErrorMessage = "Loại bằng lái là bắt buộc")]
         [StringLength(10, ErrorMessage = "Loại bằng lái không được vượt quá 10 ký tự")]
         [RegularExpression(@"^(A1|A2|A3|A4|B1|B2|C|D|E|F|FB2|FC)$",
             ErrorMessage = "Loại bằng lái không hợp lệ")]
         public string LicenseType { get; set; }
+        public string FullName { get; set; }
 
         [Required(ErrorMessage = "Trạng thái là bắt buộc")]
         [StringLength(50, ErrorMessage = "Trạng thái không được vượt quá 50 ký tự")]
@@ -58,3 +57,4 @@ namespace UserService.Models
         }
     }
 }
+

@@ -13,7 +13,7 @@ namespace UserService.Services
         Task DeleteUserAsync(int userId); // Delete
         Task SetStatus(int userId); // Deactive/Active user
         Task<User?> GetUserByIdAsync(int userId); // Read
-        Task<User?> GetUserDetailByIdAsync(int userId);
+        Task<UserDetailDTO> GetUserDetailByIdAsync(int userId);
         Task<List<User>> GetAllUsersAsync();
         Task SetAdmin(int userId);
         Task AddStaffAsync(User user); // Create staff user

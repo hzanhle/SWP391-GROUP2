@@ -10,19 +10,21 @@ namespace UserService.Services
     {
         private readonly IDriverLicenseRepository _driverLicenseRepository;
         private readonly IImageService _imageService;
+        private readonly ICitizenInfoService _citizenInfoService;
         private readonly INotificationService _notificationService;
         private readonly ILogger<DriverLicenseService> _logger;
 
         public DriverLicenseService(
             IDriverLicenseRepository driverLicenseRepository,
+            ICitizenInfoService citizenInfoService,
             IImageService imageService,
             INotificationService notificationService,
             ILogger<DriverLicenseService> logger)
         {
             _driverLicenseRepository = driverLicenseRepository;
             _imageService = imageService;
+            _citizenInfoService = citizenInfoService;
             _notificationService = notificationService;
-            _logger = logger;
         }
 
         public async Task<ResponseDTO> AddDriverLicense(DriverLicenseRequest request)
@@ -138,29 +140,49 @@ namespace UserService.Services
             }
         }
 
-        // ==================== private helpers ====================
-
         private async Task<DriverLicense> CreatePendingDriverLicense(DriverLicenseRequest request)
         {
-            var entity = new DriverLicense
+            try
             {
-                UserId = request.UserId,
-                LicenseId = request.LicenseId,
-                LicenseType = request.LicenseType,
-                RegisterDate = request.RegisterDate,
-                RegisterOffice = request.RegisterOffice,
-                Status = StatusInformation.Pending,
-                IsApproved = false,
-                DateCreated = DateTime.Now
-            };
+                // Lấy thông tin CitizenInfo
+                var citizenInfo = await _citizenInfoService.GetCitizenInfoByUserId(request.UserId);
+                if (citizenInfo == null)
+                {
+                    throw new Exception($"Không tìm thấy CitizenInfo cho UserId {request.UserId}");
+                }
 
-            await _driverLicenseRepository.AddDriverLicense(entity);
+                var entity = new DriverLicense
+                {
+                    FullName = citizenInfo.FullName,
+                    UserId = request.UserId,
+                    LicenseId = request.LicenseId,
+                    LicenseType = request.LicenseType,
+                    RegisterDate = request.RegisterDate,
+                    RegisterOffice = request.RegisterOffice,
+                    Status = StatusInformation.Pending,
+                    IsApproved = false,
+                    DateCreated = DateTime.Now
+                };
 
-            if (request.Files != null && request.Files.Count > 0)
-                await _imageService.UploadImagesAsync(request.Files, "DriverLicense", entity.Id);
+                await _driverLicenseRepository.AddDriverLicense(entity);
 
-            return entity;
+                if (request.Files != null && request.Files.Count > 0)
+                {
+                    await _imageService.UploadImagesAsync(request.Files, "DriverLicense", entity.Id);
+                }
+
+                return entity;
+            }
+            catch (Exception ex)
+            {
+                // Log nếu có ILogger hoặc dùng Console
+                Console.WriteLine($"❌ Error in CreatePendingDriverLicense: {ex.Message}");
+                // Ném tiếp để caller xử lý
+                throw;
+            }
         }
+
+
 
         private async Task<Notification> ProcessApproval(DriverLicense pendingEntity, bool isApproved)
         {

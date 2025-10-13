@@ -1,4 +1,5 @@
-﻿using UserService.DTOs;
+﻿using Microsoft.Extensions.Logging;
+using UserService.DTOs;
 using UserService.Models;
 using UserService.Models.Enums;
 using UserService.Models.UserService.Models;
@@ -27,106 +28,140 @@ namespace UserService.Services
 
         public async Task<ResponseDTO> AddCitizenInfo(CitizenInfoRequest request)
         {
-            if (request == null)
-                return new ResponseDTO { Message = "Dữ liệu CitizenInfo không hợp lệ" };
-
-            // 1️⃣ Kiểm tra pending record
-            var pending = await _citizenInfoRepository.GetPendingCitizenInfo(request.UserId);
-            if (pending != null)
-                return new ResponseDTO
-                {
-                    Message = "Đã có bản CitizenInfo đang chờ xác thực. Vui lòng chờ hoặc liên hệ quản trị viên.",
-                    Data = pending
-                };
-
-            // 2️⃣ Kiểm tra record đã xác thực
-            var existing = await _citizenInfoRepository.GetCitizenInfoByUserId(request.UserId);
-            if (existing != null)
-                return new ResponseDTO
-                {
-                    Message = "Người dùng đã có CitizenInfo được xác thực.",
-                    Data = existing
-                };
-
-            // 3️⃣ Tạo bản pending
-            var entity = await CreatePendingCitizenInfo(request);
-
-            _logger.LogInformation("User {UserId} submitted new CitizenInfo pending verification.", request.UserId);
-
-            return new ResponseDTO
+            try
             {
-                Message = "Yêu cầu tạo CitizenInfo đã được gửi. Vui lòng chờ xác thực.",
-                Data = entity
-            };
+                if (request == null)
+                    return new ResponseDTO { Message = "Dữ liệu Căn cước công dân không hợp lệ" };
+
+                var pending = await _citizenInfoRepository.GetPendingCitizenInfo(request.UserId);
+                if (pending != null)
+                    return new ResponseDTO
+                    {
+                        Message = "Đã có một bản Căn cước công dân đang chờ xác thực",
+                        Data = pending
+                    };
+
+                var existing = await _citizenInfoRepository.GetCitizenInfoByUserId(request.UserId);
+                if (existing != null)
+                    return new ResponseDTO
+                    {
+                        Message = "Người dùng đã có Căn cước công dân",
+                        Data = existing
+                    };
+
+                if (request.Files == null || request.Files.Count == 0)
+                    return new ResponseDTO
+                    {
+                        Message = "Vui lòng tải lên ít nhất một hình ảnh của Căn cước công dân"
+                    };
+
+                var entity = await CreatePendingCitizenInfo(request);
+
+                return new ResponseDTO
+                {
+                    Message = "Yêu cầu tạo Căn cước công dân đã được gửi. Vui lòng chờ xác thực",
+                    Data = entity
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in AddCitizenInfo for UserId {UserId}", request?.UserId);
+                return new ResponseDTO { Message = $"Lỗi: {ex.Message}" };
+            }
+        }
+
+        public async Task<CitizenInfoDTO> GetCitizenInfoByUserId(int userId)
+        {
+            try
+            {
+                var entity = await _citizenInfoRepository.GetCitizenInfoByUserId(userId);
+                if (entity == null) return null;
+
+                return new CitizenInfoDTO
+                {
+                    Id = entity.Id,
+                    UserId = entity.UserId,
+                    CitizenId = entity.CitizenId,
+                    FullName = entity.FullName,
+                    DayOfBirth = entity.DayOfBirth,
+                    Sex = entity.Sex,
+                    Address = entity.Address,
+                    CitiRegisDate = entity.CitiRegisDate,
+                    CitiRegisOffice = entity.CitiRegisOffice,
+                    Status = entity.Status,
+                    ImageUrls = await _imageService.GetImagePathsAsync("CitizenInfo", entity.Id)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetCitizenInfoByUserId for UserId {UserId}", userId);
+                return null;
+            }
         }
 
         public async Task UpdateCitizenInfo(CitizenInfoRequest request)
         {
-            // Không cho tạo thêm khi đang có bản pending
-            var pending = await _citizenInfoRepository.GetPendingCitizenInfo(request.UserId);
-            if (pending != null)
-                throw new InvalidOperationException("Đã có bản CitizenInfo đang chờ xác thực. Không thể cập nhật thêm.");
-
-            await CreatePendingCitizenInfo(request);
-            _logger.LogInformation("User {UserId} submitted CitizenInfo update pending verification.", request.UserId);
-        }
-
-        public async Task DeleteCitizenInfo(int id)
-        {
-            await _citizenInfoRepository.DeleteCitizenInfo(id);
-            _logger.LogInformation("CitizenInfo {CitizenInfoId} deleted successfully.", id);
-        }
-
-        public async Task<CitizenInfoDTO?> GetCitizenInfoByUserId(int userId)
-        {
-            var citizenInfo = await _citizenInfoRepository.GetCitizenInfoByUserId(userId);
-            if (citizenInfo == null) return null;
-
-            return new CitizenInfoDTO
+            try
             {
-                Id = citizenInfo.Id,
-                CitizenId = citizenInfo.CitizenId,
-                Address = citizenInfo.Address,
-                DayOfBirth = citizenInfo.DayOfBirth,
-                FullName = citizenInfo.FullName,
-                UserId = citizenInfo.UserId,
-                CitiRegisDate = citizenInfo.CitiRegisDate,
-                CitiRegisOffice = citizenInfo.CitiRegisOffice,
-                ImageUrls = await _imageService.GetImagePathsAsync("CitizenInfo", citizenInfo.Id),
-                Sex = citizenInfo.Sex,
-                Status = citizenInfo.Status
-            };
+                await CreatePendingCitizenInfo(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in UpdateCitizenInfo for UserId {UserId}", request?.UserId);
+                throw;
+            }
         }
 
         public async Task<Notification> SetStatus(int userId, bool isApproved)
         {
-            var pendingEntity = await _citizenInfoRepository.GetPendingCitizenInfo(userId);
-            if (pendingEntity == null)
-                throw new KeyNotFoundException("Không tìm thấy bản CitizenInfo đang chờ xác thực");
+            try
+            {
+                var pendingEntity = await _citizenInfoRepository.GetPendingCitizenInfo(userId);
+                if (pendingEntity == null)
+                    throw new Exception("Không tìm thấy bản CitizenInfo đang chờ xác thực");
 
-            return await ProcessApproval(pendingEntity, isApproved);
+                return await ProcessApproval(pendingEntity, isApproved);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in SetStatus for UserId {UserId}", userId);
+                throw;
+            }
+        }
+
+        public async Task DeleteCitizenInfo(int id)
+        {
+            try
+            {
+                await _citizenInfoRepository.DeleteCitizenInfo(id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in DeleteCitizenInfo for Id {Id}", id);
+                throw;
+            }
         }
 
         private async Task<CitizenInfo> CreatePendingCitizenInfo(CitizenInfoRequest request)
         {
             var entity = new CitizenInfo
             {
-                Address = request.Address,
-                DayOfBirth = request.DayOfBirth,
-                FullName = request.FullName,
                 UserId = request.UserId,
                 CitizenId = request.CitizenId,
-                CitiRegisOffice = request.CitiRegisOffice,
+                FullName = request.FullName,
+                DayOfBirth = request.DayOfBirth,
                 Sex = request.Sex,
+                Address = request.Address,
                 CitiRegisDate = request.CitiRegisDate,
-                Status = CitizenStatus.Pending.ToString(),
+                CitiRegisOffice = request.CitiRegisOffice,
+                Status = StatusInformation.Pending,
                 IsApproved = false,
                 DayCreated = DateTime.Now
             };
 
             await _citizenInfoRepository.AddCitizenInfo(entity);
 
-            if (request.Files is { Count: > 0 })
+            if (request.Files != null && request.Files.Count > 0)
                 await _imageService.UploadImagesAsync(request.Files, "CitizenInfo", entity.Id);
 
             return entity;
@@ -134,56 +169,41 @@ namespace UserService.Services
 
         private async Task<Notification> ProcessApproval(CitizenInfo pendingEntity, bool isApproved)
         {
-            using var transaction = await _citizenInfoRepository.BeginTransactionAsync();
+            Notification notification;
 
-            try
+            if (isApproved)
             {
-                Notification notification;
+                pendingEntity.Status = StatusInformation.Approved;
+                pendingEntity.IsApproved = true;
+                await _citizenInfoRepository.UpdateCitizenInfo(pendingEntity);
 
-                if (isApproved)
+                await _citizenInfoRepository.DeleteOldApprovedRecords(pendingEntity.UserId, pendingEntity.Id);
+
+                notification = new Notification
                 {
-                    pendingEntity.Status = CitizenStatus.Approved.ToString();
-                    pendingEntity.IsApproved = true;
-
-                    await _citizenInfoRepository.UpdateCitizenInfo(pendingEntity);
-                    await _citizenInfoRepository.DeleteOldApprovedRecords(pendingEntity.UserId, pendingEntity.Id);
-
-                    notification = new Notification
-                    {
-                        UserId = pendingEntity.UserId,
-                        Title = "Xác thực thành công",
-                        Message = "Thông tin CCCD của bạn đã được xác nhận.",
-                        Created = DateTime.Now
-                    };
-                }
-                else
-                {
-                    pendingEntity.Status = CitizenStatus.Rejected.ToString();
-                    await _citizenInfoRepository.UpdateCitizenInfo(pendingEntity);
-
-                    notification = new Notification
-                    {
-                        UserId = pendingEntity.UserId,
-                        Title = "Xác thực thất bại",
-                        Message = "Thông tin CCCD của bạn bị từ chối. Vui lòng kiểm tra lại.",
-                        Created = DateTime.Now
-                    };
-                }
-
-                await _notificationService.AddNotification(notification);
-                await transaction.CommitAsync();
-
-                _logger.LogInformation("CitizenInfo approval processed for user {UserId}, Approved: {Approved}",
-                    pendingEntity.UserId, isApproved);
-
-                return notification;
+                    UserId = pendingEntity.UserId,
+                    Title = "Xác thực thành công",
+                    Message = "Thông tin Căn cước công dân của bạn đã được xác nhận",
+                    Created = DateTime.Now
+                };
             }
-            catch (Exception ex)
+            else
             {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "Error processing CitizenInfo approval for user {UserId}", pendingEntity.UserId);
-                throw;
+                pendingEntity.Status = StatusInformation.Rejected;
+                pendingEntity.IsApproved = false;
+                await _citizenInfoRepository.UpdateCitizenInfo(pendingEntity);
+
+                notification = new Notification
+                {
+                    UserId = pendingEntity.UserId,
+                    Title = "Xác thực thất bại",
+                    Message = "Thông tin Căn cước công dân của bạn bị từ chối. Vui lòng kiểm tra lại thông tin",
+                    Created = DateTime.Now
+                };
             }
+
+            await _notificationService.AddNotification(notification);
+            return notification;
         }
     }
 }
