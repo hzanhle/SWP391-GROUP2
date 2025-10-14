@@ -275,8 +275,21 @@ namespace UserService.Controllers
             }
         }
 
+        [HttpGet("GetStaffAccounts")]
+        public async Task<IActionResult> GetStaffAccount()
+        {
+            try
+            {
+                var result = await _userService.GetAllStaffAccount();
+                return Ok(result);
+            } catch (Exception ex)
+            {
+                return BadRequest(ex);
+            }
+        }
+
         [HttpPost("AddStaffAccount")]
-        public async Task<IActionResult> AddStaffAccount([FromBody] User user)
+        public async Task<IActionResult> AddStaffAccount([FromBody] StaffDTO staff)
         {
             try
             {
@@ -298,7 +311,7 @@ namespace UserService.Controllers
                         Data = errors
                     });
                 }
-                await _userService.AddStaffAsync(user);
+                await _userService.AddStaffAsync(staff);
                 return Ok(new { message = "Staff account created successfully" });
             }
             catch (Exception ex)

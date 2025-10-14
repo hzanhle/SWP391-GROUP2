@@ -180,37 +180,52 @@ namespace UserService.Services
                 throw;
             }
         }
-
-        public async Task AddStaffAsync(User user)
+        public async Task AddStaffAsync(StaffDTO staffRequest)
         {
             try
             {
-                var existingUser = await _userRepository.GetUserAsync(user.UserName);
+                // Kiểm tra username đã tồn tại
+                var existingUser = await _userRepository.GetUserAsync(staffRequest.UserName);
                 if (existingUser != null)
                 {
-                    _logger.LogWarning("Attempted to add staff with existing username: {UserName}", user.UserName);
+                    _logger.LogWarning("Attempted to add staff with existing username: {UserName}", staffRequest.UserName);
                     throw new ArgumentException("Tên đăng nhập đã tồn tại");
                 }
-                // Hash password before saving
-                if (!string.IsNullOrEmpty(user.Password))
+
+                // Lấy role Employee mặc định cho staff
+                var role = await _roleRepository.GetRoleByNameAsync("Employee");
+                if (role == null)
                 {
-                    user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+                    _logger.LogWarning("Employee role not found");
+                    throw new InvalidOperationException("Vai trò Employee không tồn tại trong hệ thống");
                 }
-                var role = await _roleRepository.GetRoleByNameAsync("Employee"); // Default role to "Employee" for staff
-                user.CreatedAt = DateTime.UtcNow;
-                user.IsActive = true; // Set default active status
-                user.RoleId = role.RoleId;
-                user.Role = role;
-                await _userRepository.AddUserAsync(user);
-                _logger.LogInformation("Staff user added successfully: {UserId}", user.Id);
+
+                // Tạo đối tượng User mới
+                var staff = new User
+                {
+                    UserName = staffRequest.UserName,
+                    FullName = staffRequest.FullName,
+                    Email = staffRequest.Email,
+                    PhoneNumber = staffRequest.PhoneNumber,
+                    StationId = staffRequest.StationId,
+                    Password = BCrypt.Net.BCrypt.HashPassword(staffRequest.Password),
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    RoleId = role.RoleId,
+                    Role = role
+                };
+
+                // Thêm user vào database
+                await _userRepository.AddUserAsync(staff);
+
+                _logger.LogInformation("Staff user added successfully: {UserId} - {UserName}", staff.Id, staff.UserName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding staff user: {UserName}", user.UserName);
+                _logger.LogError(ex, "Error adding staff user: {UserName}", staffRequest.UserName);
                 throw;
             }
         }
-
         public async Task SetStatus(int userId)
         {
             try
@@ -218,14 +233,7 @@ namespace UserService.Services
                 var user = await _userRepository.GetUserByIdAsync(userId);
                 if (user != null)
                 {
-                    if (user.IsActive == true)
-                    {
-                        user.IsActive = false;
-                    }
-                    else
-                    {
-                        user.IsActive = true;
-                    }
+                    user.IsActive = !user.IsActive;
                     await _userRepository.UpdateUserAsync(user);
                     _logger.LogInformation("User change status: {UserId}", userId);
                 }
@@ -256,7 +264,6 @@ namespace UserService.Services
 
             }
         }
-
         public async Task<List<User>> GetAllUsersAsync()
         {
             try
@@ -285,7 +292,6 @@ namespace UserService.Services
                 throw;
             }
         }
-
         public async Task<User?> GetUserByIdAsync(int userId)
         {
             try
@@ -298,7 +304,6 @@ namespace UserService.Services
                 throw;
             }
         }
-
         public async Task<UserDetailDTO> GetUserDetailByIdAsync(int userId)
         {
             try
@@ -334,7 +339,6 @@ namespace UserService.Services
                 throw;
             }
         }
-
         public async Task<List<User>?> SearchUserAsync(string searchValue)
         {
             try
@@ -351,7 +355,6 @@ namespace UserService.Services
                 throw;
             }
         }
-
         public async Task UpdateUserAsync(User user)
         {
             try
@@ -383,7 +386,6 @@ namespace UserService.Services
                 throw;
             }
         }
-
         public async Task SetAdmin(int userId)
         {
             var user = await _userRepository.GetUserByIdAsync(userId);
@@ -412,7 +414,6 @@ namespace UserService.Services
 
             _logger.LogInformation("User role changed successfully: {UserId} to RoleId: {RoleId}", user.Id, user.RoleId);
         }
-
         public async Task<ResponseDTO> ChangePassword(ChangePasswordRequest request)
         {
             if (request.NewPassword != request.ConfirmPassword)
@@ -453,7 +454,6 @@ namespace UserService.Services
                 Message = "Đổi mật khẩu thành công"
             };
         }
-
         public async Task<ResponseDTO> ResetPasswordAsync(ResetPasswordRequest request)
         {
             try
@@ -530,6 +530,35 @@ namespace UserService.Services
                     IsSuccess = false,
                     Message = "Có lỗi xảy ra. Vui lòng thử lại sau."
                 };
+            }
+        }
+        public async Task<List<StaffDTO?>> GetAllStaffAccount()
+        {
+            try
+            {
+                var dtoList = new List<StaffDTO>();
+                var staffList = await _userRepository.GetAllStaffAccount();
+                foreach (var staff in staffList)
+                {
+                    var dto = new StaffDTO
+                    {
+                        Email = staff.Email,
+                        PhoneNumber = staff.PhoneNumber,
+                        Password = staff.Password,
+                        RoleId = staff.RoleId,
+                        RoleName = staff.Role.RoleName,
+                        StationId = staff.StationId,
+                        FullName = staff.FullName,
+                        Id = staff.Id,
+                        UserName = staff.UserName,
+                        IsActive = staff.IsActive
+                    };
+                    dtoList.Add(dto);
+                }
+                return dtoList;
+            } catch (Exception ex)
+            {
+                throw new Exception();
             }
         }
     }
