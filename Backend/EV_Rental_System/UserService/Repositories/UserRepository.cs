@@ -69,5 +69,14 @@ namespace UserService.Repositories
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
+
+        public async Task<List<User>> GetAllStaffAccount()
+        {
+            return await _context.Users
+                .Where(u => u.RoleId == 2) 
+                .Include(u => u.Role)      
+                .ToListAsync();
+        }
+
     }
 }
