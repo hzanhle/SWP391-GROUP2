@@ -1,10 +1,12 @@
 const BASE_URL = (import.meta.env.VITE_VEHICLE_API_URL || import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
+const VEHICLE_BASE_URL = (import.meta.env.VITE_VEHICLE_API_URL || import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+
 async function request(path, { method = 'GET', body, token, headers = {} } = {}) {
-  if (!BASE_URL) {
+  if (!VEHICLE_BASE_URL) {
     throw new Error('VITE_VEHICLE_API_URL or VITE_API_URL is not set')
   }
-  const url = `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`
+  const url = `${VEHICLE_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`
 
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
   const init = {
@@ -22,7 +24,7 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
   try {
     res = await fetch(url, init)
   } catch (fetchErr) {
-    const message = `Network error: failed to reach API at ${BASE_URL}. If you are running the API locally, the hosted preview cannot access localhost. Use a public URL or run the frontend locally.`
+    const message = `Network error: failed to reach API at ${VEHICLE_BASE_URL}. If you are running the API locally, the hosted preview cannot access localhost. Use a public URL or run the frontend locally.`
     const error = new Error(message)
     error.cause = fetchErr
     error.data = null

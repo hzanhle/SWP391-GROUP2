@@ -11,11 +11,11 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
     method,
     headers: {
       'Accept': 'application/json',
-      ...(isFormData ? {} : (body ? { 'Content-Type': 'application/json' } : {})),
+      ...(isFormData ? {} : (body !== undefined ? { 'Content-Type': 'application/json' } : {})),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
-    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
+    body: body !== undefined ? (isFormData ? body : JSON.stringify(body)) : undefined,
   }
 
   let res
@@ -43,6 +43,29 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
   return { status: res.status, data }
 }
 
+// Registration with Email OTP
+export function sendRegistrationOtp(user) {
+  return request('/api/User/register/send-otp', {
+    method: 'POST',
+    body: {
+      userName: user.userName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      password: user.password,
+    },
+  })
+}
+
+export function verifyRegistrationOtp(email, otp) {
+  const q = new URLSearchParams({ otp: String(otp) }).toString()
+  // Controller expects email in body (as raw string) and otp from query
+  return request(`/api/User/register/verify-otp?${q}`, {
+    method: 'POST',
+    body: String(email),
+  })
+}
+
+// Legacy direct register (kept for compatibility, not used in OTP flow)
 export function registerUser(user) {
   return request('/api/User', { method: 'POST', body: {
     userName: user.userName,
@@ -155,4 +178,26 @@ export function clearNotifications(userId, token) {
   return request(`/api/Notification/${userId}`, { method: 'DELETE', token })
 }
 
-export default { request, registerUser, login, getUserById, getAllUsers, deleteUser, toggleUserActive, toggleStaffAdmin, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense, getNotifications, clearNotifications }
+// Password reset via OTP
+export function sendPasswordResetOtp(email) {
+  return request('/api/User/forgot-password', { method: 'POST', body: String(email) })
+}
+
+export function verifyPasswordResetOtp(email, otp) {
+  const q = new URLSearchParams({ email: String(email) }).toString()
+  return request(`/api/User/verify-reset-otp?${q}`, { method: 'POST', body: String(otp) })
+}
+
+export function resetPassword(payload) {
+  return request('/api/User/reset-password', {
+    method: 'POST',
+    body: {
+      email: payload.email,
+      otp: payload.otp,
+      newPassword: payload.newPassword,
+      confirmPassword: payload.confirmPassword,
+    },
+  })
+}
+
+export default { request, sendRegistrationOtp, verifyRegistrationOtp, registerUser, login, getUserById, getAllUsers, deleteUser, toggleUserActive, toggleStaffAdmin, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense, getNotifications, clearNotifications, sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword }

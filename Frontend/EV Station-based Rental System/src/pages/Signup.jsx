@@ -23,12 +23,12 @@ export default function Signup() {
     }
 
     try {
-      await api.registerUser(payload)
-      // show success and redirect to login
-      window.alert('Đăng ký thành công! Vui lòng đăng nhập.')
-      window.location.hash = 'login'
+      const { data } = await api.sendRegistrationOtp(payload)
+      try { localStorage.setItem('pendingVerificationEmail', payload.email) } catch {}
+      window.alert((data && (data.message || data.Message)) || 'Đã gửi OTP. Vui lòng kiểm tra email để lấy mã xác minh.')
+      window.location.hash = 'verify-email'
     } catch (err) {
-      const msg = err?.message || 'Registration failed'
+      const msg = (err?.data && (err.data.message || err.data.Message)) || err?.message || 'Registration failed'
       setError(msg)
     } finally {
       setSubmitting(false)
