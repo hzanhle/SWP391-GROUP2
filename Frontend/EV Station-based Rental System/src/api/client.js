@@ -178,6 +178,24 @@ export function clearNotifications(userId, token) {
   return request(`/api/Notification/${userId}`, { method: 'DELETE', token })
 }
 
+// Staff verification actions
+export function setCitizenInfoStatus(userId, isApproved, token) {
+  return request(`/api/CitizenInfo/set-status/${userId}&${isApproved}`, { method: 'POST', token })
+}
+
+export function setDriverLicenseStatus(userId, isApproved, token) {
+  return request(`/api/DriverLicense/set-status/${userId}/${isApproved}`, { method: 'POST', token })
+}
+
+export function listVerificationUsers({ status, query, page = 1, pageSize = 10 }, token) {
+  const q = new URLSearchParams()
+  if (status) q.set('status', status)
+  if (query) q.set('query', query)
+  q.set('page', String(page))
+  q.set('pageSize', String(pageSize))
+  return request(`/api/Verification/users?${q.toString()}`, { token })
+}
+
 // Password reset via OTP
 export function sendPasswordResetOtp(email) {
   return request('/api/User/forgot-password', { method: 'POST', body: String(email) })
@@ -200,4 +218,4 @@ export function resetPassword(payload) {
   })
 }
 
-export default { request, sendRegistrationOtp, verifyRegistrationOtp, registerUser, login, getUserById, getAllUsers, deleteUser, toggleUserActive, toggleStaffAdmin, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense, getNotifications, clearNotifications, sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword }
+export default { request, sendRegistrationOtp, verifyRegistrationOtp, registerUser, login, getUserById, getAllUsers, deleteUser, toggleUserActive, toggleStaffAdmin, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense, getNotifications, clearNotifications, setCitizenInfoStatus, setDriverLicenseStatus, listVerificationUsers, sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword }

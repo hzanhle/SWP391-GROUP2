@@ -14,6 +14,7 @@ import CheckIn from './pages/CheckIn'
 import Return from './pages/Return'
 import History from './pages/History'
 import AdminUsers from './pages/AdminUsers'
+import StaffVerification from './pages/StaffVerification'
 
 function getRoleId() {
   try {
@@ -42,6 +43,7 @@ function resolveRoute() {
     case 'return': return 'return'
     case 'history': return 'history'
     case 'admin-users': return 'admin-users'
+    case 'staff-verify': return 'staff-verify'
     default: return 'home'
   }
 }
@@ -70,10 +72,10 @@ export default function App() {
   if (routeData === 'history') return <History />
   if (routeData === 'admin-users') {
     const roleId = getRoleId()
-    if (roleId !== 3) {
-      return <AdminUsers />
-    }
     return <AdminUsers />
+  }
+  if (routeData === 'staff-verify') {
+    return <StaffVerification />
   }
   return <Home />
 }

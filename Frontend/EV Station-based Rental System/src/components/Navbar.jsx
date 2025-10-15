@@ -17,6 +17,7 @@ export default function Navbar() {
     roleName = String(u.roleName ?? u.RoleName ?? '')
   } catch {}
   const isAdmin = roleId === 3 || roleName.toLowerCase() === 'admin'
+  const isStaff = roleId === 2 || roleName.toLowerCase() === 'staff'
 
   function handleLogout(e) {
     e.preventDefault()
@@ -50,6 +51,9 @@ export default function Navbar() {
           <a className="nav-link" href="#support" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Support</a>
           {isAdmin && (
             <a className="nav-link" href="#admin-users" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Admin</a>
+          )}
+          {isStaff && (
+            <a className="nav-link" href="#staff-verify" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Staff</a>
           )}
           {isAuthed ? (
             <>
@@ -108,6 +112,9 @@ export default function Navbar() {
               <a className="nav-link" role="menuitem" href="#support" onClick={() => setOpen(false)}>Support</a>
               {isAdmin && (
                 <a className="nav-link" role="menuitem" href="#admin-users" onClick={() => setOpen(false)}>Admin</a>
+              )}
+              {isStaff && (
+                <a className="nav-link" role="menuitem" href="#staff-verify" onClick={() => setOpen(false)}>Staff</a>
               )}
               {isAuthed ? (
                 <>
