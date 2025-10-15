@@ -1,32 +1,37 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿// File: AdminDashboardService/Program.cs
+
+using AdminDashboardService.Data;
+using AdminDashboardService.Repositories;
+using AdminDashboardService.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using StationService;
-using StationService.Repositories;
-using StationService.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ===================================================
-// 1️⃣  Configure Services
+// 1️⃣ Configure Services
 // ===================================================
 
-// Controllers
 builder.Services.AddControllers();
-// Swagger (API documentation)
 builder.Services.AddEndpointsApiExplorer();
+
+// Swagger (với cấu hình cho JWT)
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "StationService API",
+        Title = "AdminDashboardService API",
         Version = "v1",
-        Description = "API for managing station data and related resources."
+        Description = "API for providing summary metrics and analytics for the admin dashboard."
     });
 
-    // Thêm nút "Authorize" vào Swagger UI để nhập token
+    // <-- THÊM DÒNG NÀY ĐỂ GIẢI QUYẾT XUNG ĐỘT TÊN MODEL
+    options.CustomSchemaIds(type => type.FullName);
+
+    // Cho phép nhập Bearer Token vào Swagger UI để test API
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -52,28 +57,27 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-
 // Database (EF Core)
 builder.Services.AddDbContext<MyDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// CORS (allow frontend apps)
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:5080") // FE hosts
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5080")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
     });
 });
 
-// Dependency Injection (repositories & services)
-builder.Services.AddScoped<IStationRepository, StationRepository>();
-builder.Services.AddScoped<IStationService, StationService.Services.StationService>();
+// Dependency Injection
+builder.Services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
+builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService.Services.AdminDashboardService>();
 
-// <-- THÊM TOÀN BỘ KHỐI CẤU HÌNH JWT VÀO ĐÂY
+// <--- THÊM CẤU HÌNH XÁC THỰC JWT
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
 
@@ -100,38 +104,28 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+
 var app = builder.Build();
 
-
-
 // ===================================================
-// 3️⃣  Middleware Pipeline
+// 2️⃣ Middleware Pipeline
 // ===================================================
 
 if (app.Environment.IsDevelopment())
 {
-    // Swagger only in Development
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "StationService API V1");
-        c.RoutePrefix = string.Empty; // Swagger UI tại "/"
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "AdminDashboardService API V1");
+        c.RoutePrefix = string.Empty;
     });
 }
 
-// Redirect HTTP → HTTPS (vẫn cho phép chạy HTTP trong dev)
 app.UseHttpsRedirection();
-
-// Enable CORS
 app.UseCors();
 
-// Middleware xác thực sẽ kiểm tra token trong mỗi request
 app.UseAuthentication();
-// Middleware phân quyền sẽ kiểm tra vai trò (Roles) của người dùng
 app.UseAuthorization();
 
-// No Authentication/Authorization (public API)
 app.MapControllers();
-
-// Run the app
 app.Run();

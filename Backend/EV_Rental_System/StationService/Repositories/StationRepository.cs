@@ -38,10 +38,11 @@ namespace StationService.Repositories
         }
 
 
-        public async Task AddStation(Station station)
+        public async Task<Station> AddStation(Station station)
         {
             await _context.Stations.AddAsync(station);
             await _context.SaveChangesAsync();
+            return station;
         }
 
         public async Task DeleteStation(int id)

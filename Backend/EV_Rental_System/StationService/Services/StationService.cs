@@ -16,7 +16,7 @@ namespace StationService.Services
             _stationRepository = stationRepository;
         }
 
-        public async Task AddStationAsync(CreateStationRequest stationRequest)
+        public async Task<Station> AddStationAsync(CreateStationRequest stationRequest)
         {
             // Chuyển từ Request DTO sang Model
             var newStation = new Station
@@ -26,8 +26,8 @@ namespace StationService.Services
                 ManagerId = stationRequest.ManagerId,
                 IsActive = true // Mặc định là active khi tạo mới
             };
-
-            await _stationRepository.AddStation(newStation);
+            var createdStation = await _stationRepository.AddStation(newStation);   
+            return createdStation;
         }
 
         public async Task DeleteStationAsync(int stationId)
@@ -67,20 +67,24 @@ namespace StationService.Services
             return stationDTO;
         }
 
-        public async Task UpdateStationAsync(Station station)
+        public async Task UpdateStationAsync(int id, UpdateStationRequest stationRequest)
         {
-            var existingStation = await _stationRepository.GetStationById(station.Id);
+            var existingStation = await _stationRepository.GetStationById(id);
             if (existingStation != null)
             {
                 // Cập nhật thông tin từ object station được truyền vào
-                existingStation.Name = station.Name;
-                existingStation.Location = station.Location;
-                existingStation.ManagerId = station.ManagerId;
-                existingStation.IsActive = station.IsActive;
+                existingStation.Name = stationRequest.Name;
+                existingStation.Location = stationRequest.Location;
+                existingStation.ManagerId = stationRequest.ManagerId;
+                existingStation.IsActive = stationRequest.IsActive;
 
                 await _stationRepository.UpdateStation(existingStation);
-
             }
+            else
+            {
+                throw new KeyNotFoundException($"Không tìm thấy trạm với ID: {id} ");
+            }
+            await _stationRepository.UpdateStation(existingStation);
         }
 
         public async Task SetStatus(int stationId)
