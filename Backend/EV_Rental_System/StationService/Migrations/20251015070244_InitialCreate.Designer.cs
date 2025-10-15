@@ -12,7 +12,7 @@ using StationService;
 namespace StationService.Migrations
 {
     [DbContext(typeof(MyDbContext))]
-    [Migration("20251013183747_InitialCreate")]
+    [Migration("20251015070244_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
