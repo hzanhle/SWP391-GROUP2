@@ -50,7 +50,10 @@ export default function Navbar() {
           <a className="nav-link" href="#pricing" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Pricing</a>
           <a className="nav-link" href="#support" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Support</a>
           {isAdmin && (
-            <a className="nav-link" href="#admin-users" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Admin</a>
+            <>
+              <a className="nav-link" href="#admin-users" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Admin</a>
+              <a className="nav-link" href="#admin-models" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Models</a>
+            </>
           )}
           {isStaff && (
             <a className="nav-link" href="#staff-verify" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Staff</a>
@@ -111,7 +114,10 @@ export default function Navbar() {
               <a className="nav-link" role="menuitem" href="#pricing" onClick={() => setOpen(false)}>Pricing</a>
               <a className="nav-link" role="menuitem" href="#support" onClick={() => setOpen(false)}>Support</a>
               {isAdmin && (
-                <a className="nav-link" role="menuitem" href="#admin-users" onClick={() => setOpen(false)}>Admin</a>
+                <>
+                  <a className="nav-link" role="menuitem" href="#admin-users" onClick={() => setOpen(false)}>Admin</a>
+                  <a className="nav-link" role="menuitem" href="#admin-models" onClick={() => setOpen(false)}>Models</a>
+                </>
               )}
               {isStaff && (
                 <a className="nav-link" role="menuitem" href="#staff-verify" onClick={() => setOpen(false)}>Staff</a>

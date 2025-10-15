@@ -168,8 +168,9 @@ export function createModel(model, token) {
   formData.append('ChargingTime', model.chargingTime)
   formData.append('BatteryRange', model.batteryRange)
   formData.append('VehicleCapacity', model.vehicleCapacity)
-  formData.append('Price', model.price)
-  
+  formData.append('ModelCost', model.modelCost)
+  formData.append('RentFeeForHour', model.rentFeeForHour)
+
   return request('/api/Model', {
     method: 'POST',
     body: formData,
@@ -199,8 +200,9 @@ export function updateModel(id, model, token) {
   formData.append('ChargingTime', model.chargingTime)
   formData.append('BatteryRange', model.batteryRange)
   formData.append('VehicleCapacity', model.vehicleCapacity)
-  formData.append('Price', model.price)
-  
+  formData.append('ModelCost', model.modelCost)
+  formData.append('RentFeeForHour', model.rentFeeForHour)
+
   return request(`/api/Model/${id}`, {
     method: 'PUT',
     body: formData,
