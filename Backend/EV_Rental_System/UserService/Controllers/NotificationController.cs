@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using UserService.Models;
 using UserService.Services;
 
@@ -6,6 +7,7 @@ namespace UserService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin,Employee")]
     public class NotificationController : ControllerBase
     {
         private readonly INotificationService _notificationService;

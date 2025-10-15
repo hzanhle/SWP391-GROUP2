@@ -27,14 +27,14 @@ namespace UserService.Services
             _notificationService = notificationService;
         }
 
-        public async Task<ResponseDTO> AddDriverLicense(DriverLicenseRequest request)
+        public async Task<ResponseDTO> AddDriverLicense(DriverLicenseRequest request, int userId)
         {
             try
             {
                 if (request == null)
                     return new ResponseDTO { Message = "Dữ liệu Giấy phép lái xe không hợp lệ" };
 
-                var pending = await _driverLicenseRepository.GetPendingDriverLicense(request.UserId);
+                var pending = await _driverLicenseRepository.GetPendingDriverLicense(userId);
                 if (pending != null)
                     return new ResponseDTO
                     {
@@ -42,7 +42,7 @@ namespace UserService.Services
                         Data = pending
                     };
 
-                var existing = await _driverLicenseRepository.GetDriverLicenseByUserId(request.UserId);
+                var existing = await _driverLicenseRepository.GetDriverLicenseByUserId(userId);
                 if (existing != null)
                     return new ResponseDTO
                     {
@@ -56,7 +56,7 @@ namespace UserService.Services
                         Message = "Vui lòng tải lên ít nhất một hình ảnh của Giấy phép lái xe"
                     };
 
-                var entity = await CreatePendingDriverLicense(request);
+                var entity = await CreatePendingDriverLicense(request, userId);
 
                 return new ResponseDTO
                 {
@@ -66,7 +66,7 @@ namespace UserService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in AddDriverLicense for UserId {UserId}", request?.UserId);
+                _logger.LogError(ex, "Error in AddDriverLicense for UserId {UserId}", userId);
                 return new ResponseDTO { Message = $"Lỗi: {ex.Message}" };
             }
         }
@@ -97,15 +97,15 @@ namespace UserService.Services
             }
         }
 
-        public async Task UpdateDriverLicense(DriverLicenseRequest request)
+        public async Task UpdateDriverLicense(DriverLicenseRequest request, int userId)
         {
             try
             {
-                await CreatePendingDriverLicense(request);
+                await CreatePendingDriverLicense(request, userId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in UpdateDriverLicense for UserId {UserId}", request?.UserId);
+                _logger.LogError(ex, "Error in UpdateDriverLicense for UserId {UserId}", userId);
                 throw;
             }
         }
@@ -140,21 +140,21 @@ namespace UserService.Services
             }
         }
 
-        private async Task<DriverLicense> CreatePendingDriverLicense(DriverLicenseRequest request)
+        private async Task<DriverLicense> CreatePendingDriverLicense(DriverLicenseRequest request, int userId)
         {
             try
             {
                 // Lấy thông tin CitizenInfo
-                var citizenInfo = await _citizenInfoService.GetCitizenInfoByUserId(request.UserId);
+                var citizenInfo = await _citizenInfoService.GetCitizenInfoByUserId(userId);
                 if (citizenInfo == null)
                 {
-                    throw new Exception($"Không tìm thấy CitizenInfo cho UserId {request.UserId}");
+                    throw new Exception($"Không tìm thấy CitizenInfo cho UserId {userId}");
                 }
 
                 var entity = new DriverLicense
                 {
                     FullName = citizenInfo.FullName,
-                    UserId = request.UserId,
+                    UserId = userId,
                     LicenseId = request.LicenseId,
                     LicenseType = request.LicenseType,
                     RegisterDate = request.RegisterDate,

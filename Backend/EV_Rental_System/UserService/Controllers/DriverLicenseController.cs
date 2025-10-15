@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserService.DTOs;
 using UserService.Services;
@@ -7,44 +7,66 @@ namespace UserService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // ✅ yêu cầu xác thực cho tất cả endpoint
     public class DriverLicenseController : ControllerBase
     {
-        private readonly IDriverLicenseService _driverLicenseService; 
+        private readonly IDriverLicenseService _driverLicenseService;
+        private readonly IJwtService _jwtService;
 
-        public DriverLicenseController(IDriverLicenseService driverLicenseService) 
+        public DriverLicenseController(IDriverLicenseService driverLicenseService, IJwtService jwtService)
         {
             _driverLicenseService = driverLicenseService;
+            _jwtService = jwtService;
         }
 
+        private int GetUserIdFromToken()
+        {
+            var token = Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
+            if (string.IsNullOrEmpty(token))
+                throw new UnauthorizedAccessException("Token không tồn tại.");
+
+            var userId = _jwtService.GetUserIdFromToken(token);
+            if (string.IsNullOrEmpty(userId))
+                throw new UnauthorizedAccessException("Không thể trích xuất UserId từ token.");
+
+            return int.Parse(userId);
+        }
+
+        private IActionResult HandleInvalidModel()
+        {
+            var errors = ModelState
+                .Where(x => x.Value.Errors.Any())
+                .Select(x => new
+                {
+                    Field = x.Key,
+                    Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                })
+                .ToList();
+
+            return BadRequest(new ResponseDTO
+            {
+                Message = "Dữ liệu không hợp lệ",
+                Data = errors
+            });
+        }
+
+        // ✅ Member: gửi yêu cầu thêm bằng lái
+        [Authorize(Roles = "Member")]
         [HttpPost]
         public async Task<IActionResult> CreateDriverLicense([FromForm] DriverLicenseRequest request)
         {
+            if (!ModelState.IsValid)
+                return HandleInvalidModel();
+
             try
             {
-                // Kiểm tra ModelState
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState
-                        .Where(x => x.Value.Errors.Any())
-                        .Select(x => new
-                        {
-                            Field = x.Key,
-                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                        })
-                        .ToList();
-
-                    return BadRequest(new ResponseDTO
-                    {
-                        Message = "Dữ liệu không hợp lệ",
-                        Data = errors
-                    });
-                }
-
-                // Await method async và nhận ResponseDTO
-                var response = await _driverLicenseService.AddDriverLicense(request);
-
-                // Trả về Ok với dữ liệu từ service
+                var userId = GetUserIdFromToken();
+                var response = await _driverLicenseService.AddDriverLicense(request, userId);
                 return Ok(response);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message });
             }
             catch (ArgumentException ex)
             {
@@ -52,44 +74,27 @@ namespace UserService.Controllers
             }
             catch (Exception ex)
             {
-                // Có thể log ex ở đây
-                return StatusCode(500, new { error = "Internal server error occurred.", details = ex.Message });
+                return StatusCode(500, new { error = "Internal server error.", details = ex.Message });
             }
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteDriverLicense(int id)
-        {
-            await _driverLicenseService.DeleteDriverLicense(id);
-            return Ok();
-        }
-
+        // ✅ Member: cập nhật lại bằng lái của mình
+        [Authorize(Roles = "Member")]
         [HttpPut]
-        public async Task<IActionResult> UpdateDriverLicense([FromForm] DriverLicenseRequest request) 
+        public async Task<IActionResult> UpdateDriverLicense([FromForm] DriverLicenseRequest request)
         {
+            if (!ModelState.IsValid)
+                return HandleInvalidModel();
+
             try
             {
-                // Kiểm tra ModelState
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState
-                        .Where(x => x.Value.Errors.Any())
-                        .Select(x => new
-                        {
-                            Field = x.Key,
-                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                        })
-                        .ToList();
-
-                    return BadRequest(new ResponseDTO
-                    {
-                        Message = "Dữ liệu không hợp lệ",
-                        Data = errors
-                    });
-                }
-
-                await _driverLicenseService.UpdateDriverLicense(request);
-                return Ok(new { message = "Driver license update request send successfully." });
+                var userId = GetUserIdFromToken();
+                await _driverLicenseService.UpdateDriverLicense(request, userId);
+                return Ok(new { message = "Driver license update request sent successfully." });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message });
             }
             catch (Exception ex)
             {
@@ -97,6 +102,24 @@ namespace UserService.Controllers
             }
         }
 
+        // ✅ Admin + Employee: xóa hồ sơ bằng lái
+        [Authorize(Roles = "Admin,Employee")]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteDriverLicense(int id)
+        {
+            try
+            {
+                await _driverLicenseService.DeleteDriverLicense(id);
+                return Ok(new { message = "Driver license deleted successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+            }
+        }
+
+        // ✅ Admin + Employee + Member: xem hồ sơ
+        [Authorize(Roles = "Admin,Employee,Member")]
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetDriverLicenseByUserId(int userId)
         {
@@ -104,9 +127,7 @@ namespace UserService.Controllers
             {
                 var driverLicense = await _driverLicenseService.GetDriverLicenseByUserId(userId);
                 if (driverLicense == null)
-                {
                     return NotFound(new { message = "Driver license not found." });
-                }
 
                 return Ok(driverLicense);
             }
@@ -116,6 +137,8 @@ namespace UserService.Controllers
             }
         }
 
+        // ✅ Admin + Employee: duyệt hoặc từ chối hồ sơ
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPost("set-status/{userId}/{isApproved}")]
         public async Task<IActionResult> SetStatus(int userId, bool isApproved)
         {
