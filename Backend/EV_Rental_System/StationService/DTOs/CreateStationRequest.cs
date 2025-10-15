@@ -10,6 +10,6 @@ namespace StationService.DTOs
         [Required(ErrorMessage = "Vị trí trạm không được để trống.")]
         [StringLength(500, MinimumLength = 10, ErrorMessage = "Vị trí trạm phải từ 10 đến 500 ký tự.")]
         public string Location { get; set; }
-        public int? ManagerId { get; set; } // User với role là Staff
+        public int? ManagerId { get; set; } // User với role là Employee
     }
 }
