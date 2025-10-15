@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using TwoWheelVehicleService.DTOs;
 using TwoWheelVehicleService.Services;
 
@@ -6,6 +7,7 @@ namespace TwoWheelVehicleService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // 🔒 Chỉ cho phép người đăng nhập sử dụng
     public class ModelController : ControllerBase
     {
         private readonly IModelService _modelService;
@@ -15,6 +17,9 @@ namespace TwoWheelVehicleService.Controllers
             _modelService = modelService;
         }
 
+        // ============================ GET ============================
+
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> GetAllModels()
         {
@@ -29,6 +34,7 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
+        [AllowAnonymous]
         [HttpGet("active")]
         public async Task<IActionResult> GetActiveModels()
         {
@@ -43,7 +49,8 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        [HttpGet("{id}")]
+        [AllowAnonymous]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetModelById(int id)
         {
             try
@@ -60,6 +67,9 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
+        // ============================ CREATE ============================
+
+        [Authorize(Roles = "Admin,Staff")]
         [HttpPost]
         public async Task<IActionResult> CreateModel([FromForm] ModelRequest request)
         {
@@ -78,7 +88,7 @@ namespace TwoWheelVehicleService.Controllers
 
                     return BadRequest(new ResponseDTO
                     {
-                        Message = "Dữ liệu không hợp lệ",
+                        Message = "Invalid data",
                         Data = errors
                     });
                 }
@@ -92,29 +102,14 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        [HttpPut("{id}")]
+        // ============================ UPDATE ============================
+
+        [Authorize(Roles = "Admin,Staff")]
+        [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateModel(int id, [FromForm] ModelRequest request)
         {
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState
-                        .Where(x => x.Value.Errors.Any())
-                        .Select(x => new
-                        {
-                            Field = x.Key,
-                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                        })
-                        .ToList();
-
-                    return BadRequest(new ResponseDTO
-                    {
-                        Message = "Dữ liệu không hợp lệ",
-                        Data = errors
-                    });
-                }
-
                 await _modelService.UpdateModelAsync(id, request);
                 return Ok(new ResponseDTO { Message = "Model updated successfully" });
             }
@@ -128,13 +123,16 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        [HttpDelete("{id}")]
+        // ============================ DELETE ============================
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteModel(int id)
         {
             try
             {
-                var existingModel = await _modelService.GetModelByIdAsync(id);
-                if (existingModel == null)
+                var existing = await _modelService.GetModelByIdAsync(id);
+                if (existing == null)
                     return NotFound(new ResponseDTO { Message = "Model not found" });
 
                 await _modelService.DeleteModelAsync(id);
@@ -146,8 +144,11 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        [HttpPatch("{id}")]
-        public async Task<IActionResult> ChangeStatus(int id)
+        // ============================ PATCH ============================
+
+        [Authorize(Roles = "Admin,Staff")]
+        [HttpPatch("{id:int}/toggle")]
+        public async Task<IActionResult> ToggleModelStatus(int id)
         {
             try
             {

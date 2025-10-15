@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using UserService.DTOs;
@@ -22,7 +21,7 @@ namespace UserService.Controllers
             _otpService = otpService;
             _logger = logger;
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetAllUsers()
         {
@@ -38,6 +37,7 @@ namespace UserService.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserById(int userId)
         {
@@ -76,7 +76,8 @@ namespace UserService.Controllers
             }
         }
 
-        [HttpPost("register/send-otp")] // Gửi OTP khi đăng ký
+        [HttpPost("register/send-otp")]
+        [AllowAnonymous]// Gửi OTP khi đăng ký
         public async Task<IActionResult> SendRegistrationOtp([FromBody] RegisterRequestDTO registerRequest)
         {
             try
@@ -129,6 +130,7 @@ namespace UserService.Controllers
         }
 
         [HttpPost("register/verify-otp")]
+        [AllowAnonymous]
         public async Task<IActionResult> VerifyRegistrationOtp([FromBody] string email, string otp)
         {
             try
@@ -231,6 +233,7 @@ namespace UserService.Controllers
         }
 
         [HttpDelete]
+        [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> DeleteUser([FromQuery] int userId)
         {
             try
@@ -246,6 +249,7 @@ namespace UserService.Controllers
         }
 
         [HttpPatch("{userId}")]
+        [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> SetActive(int userId)
         {
             try
@@ -261,6 +265,7 @@ namespace UserService.Controllers
         }
 
         [HttpPatch("SetRole{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SetAdmin(int id)
         {
             try
@@ -276,6 +281,7 @@ namespace UserService.Controllers
         }
 
         [HttpGet("GetStaffAccounts")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetStaffAccount()
         {
             try
@@ -289,6 +295,7 @@ namespace UserService.Controllers
         }
 
         [HttpPost("AddStaffAccount")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddStaffAccount([FromBody] StaffDTO staff)
         {
             try
@@ -322,6 +329,7 @@ namespace UserService.Controllers
         }
 
         [HttpPost("ChangePassword")]
+        [Authorize(Roles = "Member")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest passwordRequest)
         {
             try
@@ -358,8 +366,8 @@ namespace UserService.Controllers
             }
         }
 
-
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] DTOs.LoginRequest loginRequest)
         {
             try
@@ -398,6 +406,7 @@ namespace UserService.Controllers
         }
 
         [HttpPost("forgot-password")]
+        [Authorize(Roles = "Member")]
         public async Task<IActionResult> ForgotPassword([FromBody] string email)
         {
             if (string.IsNullOrWhiteSpace(email))
@@ -408,6 +417,7 @@ namespace UserService.Controllers
         }
 
         [HttpPost("verify-reset-otp")]
+        [Authorize(Roles = "Member")]
         public async Task<IActionResult> VerifyResetOTP([FromBody] string otp, string email)
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(otp))
@@ -422,6 +432,7 @@ namespace UserService.Controllers
         }
 
         [HttpPost("reset-password")]
+        [Authorize(Roles = "Member")]
         public async Task<IActionResult> ResetPassword([FromBody] DTOs.ResetPasswordRequest request)
         {
             // Kiểm tra ModelState
@@ -457,6 +468,7 @@ namespace UserService.Controllers
         }
 
         [HttpGet("staff")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetStaffUsers()
         {
             try

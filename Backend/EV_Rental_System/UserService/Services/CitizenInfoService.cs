@@ -26,14 +26,14 @@ namespace UserService.Services
             _logger = logger;
         }
 
-        public async Task<ResponseDTO> AddCitizenInfo(CitizenInfoRequest request)
+        public async Task<ResponseDTO> AddCitizenInfo(CitizenInfoRequest request, int userId)
         {
             try
             {
                 if (request == null)
                     return new ResponseDTO { Message = "Dữ liệu Căn cước công dân không hợp lệ" };
 
-                var pending = await _citizenInfoRepository.GetPendingCitizenInfo(request.UserId);
+                var pending = await _citizenInfoRepository.GetPendingCitizenInfo(userId);
                 if (pending != null)
                     return new ResponseDTO
                     {
@@ -41,7 +41,7 @@ namespace UserService.Services
                         Data = pending
                     };
 
-                var existing = await _citizenInfoRepository.GetCitizenInfoByUserId(request.UserId);
+                var existing = await _citizenInfoRepository.GetCitizenInfoByUserId(userId);
                 if (existing != null)
                     return new ResponseDTO
                     {
@@ -55,7 +55,7 @@ namespace UserService.Services
                         Message = "Vui lòng tải lên ít nhất một hình ảnh của Căn cước công dân"
                     };
 
-                var entity = await CreatePendingCitizenInfo(request);
+                var entity = await CreatePendingCitizenInfo(request, userId);
 
                 return new ResponseDTO
                 {
@@ -65,7 +65,7 @@ namespace UserService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in AddCitizenInfo for UserId {UserId}", request?.UserId);
+                _logger.LogError(ex, "Error in AddCitizenInfo for UserId {UserId}", userId);
                 return new ResponseDTO { Message = $"Lỗi: {ex.Message}" };
             }
         }
@@ -99,15 +99,15 @@ namespace UserService.Services
             }
         }
 
-        public async Task UpdateCitizenInfo(CitizenInfoRequest request)
+        public async Task UpdateCitizenInfo(CitizenInfoRequest request, int userId)
         {
             try
             {
-                await CreatePendingCitizenInfo(request);
+                await CreatePendingCitizenInfo(request, userId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in UpdateCitizenInfo for UserId {UserId}", request?.UserId);
+                _logger.LogError(ex, "Error in UpdateCitizenInfo for UserId {UserId}", userId);
                 throw;
             }
         }
@@ -142,11 +142,11 @@ namespace UserService.Services
             }
         }
 
-        private async Task<CitizenInfo> CreatePendingCitizenInfo(CitizenInfoRequest request)
+        private async Task<CitizenInfo> CreatePendingCitizenInfo(CitizenInfoRequest request, int userId)
         {
             var entity = new CitizenInfo
             {
-                UserId = request.UserId,
+                UserId = userId,
                 CitizenId = request.CitizenId,
                 FullName = request.FullName,
                 DayOfBirth = request.DayOfBirth,

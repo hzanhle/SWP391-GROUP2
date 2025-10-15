@@ -1,12 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using TwoWheelVehicleService.Services;
-using TwoWheelVehicleService.Models;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using TwoWheelVehicleService.DTOs;
+using TwoWheelVehicleService.Models;
+using TwoWheelVehicleService.Services;
 
 namespace TwoWheelVehicleService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // 🔒 Yêu cầu xác thực cho tất cả endpoint
     public class VehicleController : ControllerBase
     {
         private readonly IVehicleService _vehicleService;
@@ -16,7 +18,10 @@ namespace TwoWheelVehicleService.Controllers
             _vehicleService = vehicleService;
         }
 
+        // ============================ GET ============================
+
         [HttpGet]
+        [AllowAnonymous] // 🟡 Có thể cho phép public xem danh sách xe
         public async Task<IActionResult> GetAllVehicles()
         {
             try
@@ -31,6 +36,7 @@ namespace TwoWheelVehicleService.Controllers
         }
 
         [HttpGet("active")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetActiveVehicles()
         {
             try
@@ -44,7 +50,7 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetVehicleById(int id)
         {
             try
@@ -61,8 +67,11 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
+        // ============================ CREATE ============================
+
+        [Authorize(Roles = "Admin,Staff")]
         [HttpPost]
-        public async Task<IActionResult> CreateVehicle([FromBody] VehicleRequest vehicle)
+        public async Task<IActionResult> CreateVehicle([FromBody] VehicleRequest request)
         {
             try
             {
@@ -79,12 +88,12 @@ namespace TwoWheelVehicleService.Controllers
 
                     return BadRequest(new ResponseDTO
                     {
-                        Message = "Dữ liệu không hợp lệ",
+                        Message = "Invalid data",
                         Data = errors
                     });
                 }
 
-                await _vehicleService.AddVehicleAsync(vehicle);
+                await _vehicleService.AddVehicleAsync(request);
                 return Ok(new ResponseDTO { Message = "Vehicle created successfully" });
             }
             catch (Exception ex)
@@ -93,35 +102,21 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        [HttpPut("{id}")]
+        // ============================ UPDATE ============================
+
+        [Authorize(Roles = "Admin,Staff")]
+        [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateVehicle(int id, [FromBody] Vehicle vehicle)
         {
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState
-                        .Where(x => x.Value.Errors.Any())
-                        .Select(x => new
-                        {
-                            Field = x.Key,
-                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                        })
-                        .ToList();
-
-                    return BadRequest(new ResponseDTO
-                    {
-                        Message = "Dữ liệu không hợp lệ",
-                        Data = errors
-                    });
-                }
-
-                var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
-                if (existingVehicle == null)
+                var existing = await _vehicleService.GetVehicleByIdAsync(id);
+                if (existing == null)
                     return NotFound(new ResponseDTO { Message = "Vehicle not found" });
 
                 vehicle.VehicleId = id;
                 await _vehicleService.UpdateVehicleAsync(vehicle);
+
                 return Ok(new ResponseDTO { Message = "Vehicle updated successfully" });
             }
             catch (Exception ex)
@@ -130,13 +125,16 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        [HttpDelete("{id}")]
+        // ============================ DELETE ============================
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteVehicle(int id)
         {
             try
             {
-                var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
-                if (existingVehicle == null)
+                var existing = await _vehicleService.GetVehicleByIdAsync(id);
+                if (existing == null)
                     return NotFound(new ResponseDTO { Message = "Vehicle not found" });
 
                 await _vehicleService.DeleteVehicleAsync(id);
@@ -148,7 +146,10 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        [HttpPatch("{id}/status")]
+        // ============================ PATCH ============================
+
+        [Authorize(Roles = "Admin,Staff")]
+        [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateVehicleStatus(int id, [FromBody] string status)
         {
             try
@@ -156,8 +157,8 @@ namespace TwoWheelVehicleService.Controllers
                 if (string.IsNullOrEmpty(status))
                     return BadRequest(new ResponseDTO { Message = "Status is required" });
 
-                var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
-                if (existingVehicle == null)
+                var existing = await _vehicleService.GetVehicleByIdAsync(id);
+                if (existing == null)
                     return NotFound(new ResponseDTO { Message = "Vehicle not found" });
 
                 await _vehicleService.SetVehicleStatus(id, status);
@@ -169,7 +170,8 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        [HttpPatch("{id}")]
+        [Authorize(Roles = "Admin,Staff")]
+        [HttpPatch("{id:int}/toggle")]
         public async Task<IActionResult> ToggleVehicleActiveStatus(int id)
         {
             try
@@ -183,22 +185,19 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        /// <summary>
-        /// Check vehicle availability for booking (called by BookingService)
-        /// </summary>
+        // ============================ CUSTOM API ============================
+
+        [AllowAnonymous]
         [HttpPost("check-availability")]
-        public async Task<IActionResult> CheckAvailabilityByVehicleId([FromBody] int vehicleId)
+        public async Task<IActionResult> CheckAvailability([FromBody] int vehicleId)
         {
             try
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
-
                 var vehicle = await _vehicleService.GetVehicleByIdAsync(vehicleId);
                 if (vehicle == null)
                     return NotFound(new ResponseDTO { Message = "Vehicle not found" });
 
-                bool isAvailable = vehicle.IsActive == true && vehicle.Status == "Available";
+                bool isAvailable = (vehicle.IsActive ?? false) && vehicle.Status == "Available";
 
                 return Ok(new
                 {
@@ -220,27 +219,22 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        /// <summary>
-        /// Get available vehicles by model for specific dates
-        /// </summary>
-        [HttpPost("available-by-model")]
-        public async Task<IActionResult> GetAvailableVehiclesByModel([FromBody] int modelId)
+        [AllowAnonymous]
+        [HttpGet("available-by-model/{modelId:int}")]
+        public async Task<IActionResult> GetAvailableVehiclesByModel(int modelId)
         {
             try
             {
                 var allVehicles = await _vehicleService.GetAllVehiclesAsync();
-
-                var availableVehicles = allVehicles
-                    .Where(v => v.ModelId == modelId
-                             && v.IsActive
-                             && v.Status == "Available")
+                var available = allVehicles
+                    .Where(v => v.ModelId == modelId && v.IsActive && v.Status == "Available")
                     .ToList();
 
                 return Ok(new
                 {
                     success = true,
-                    count = availableVehicles.Count,
-                    vehicles = availableVehicles
+                    count = available.Count,
+                    vehicles = available
                 });
             }
             catch (Exception ex)
