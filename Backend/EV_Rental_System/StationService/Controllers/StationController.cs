@@ -12,7 +12,7 @@ namespace StationService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")] // URL sẽ là /api/station
-    [Authorize(Roles = "Admin, Staff")]
+    [Authorize(Roles = "Admin, Employee")]
     public class StationController : ControllerBase
     {
         private readonly IStationService _stationService;
@@ -46,7 +46,7 @@ namespace StationService.Controllers
         [AllowAnonymous] // Cho phép khách vãng lai xem các trạm đang hoạt động
         public async Task<IActionResult> GetActiveStations()
         {
-            try 
+            try
             {
                 var activeStations = await _stationService.GetActiveStationsAsync();
                 return Ok(activeStations); // Trả về 200 OK và danh sách Station đang hoạt động
@@ -55,7 +55,7 @@ namespace StationService.Controllers
             {
                 _logger.LogError(ex, "Đã xảy ra lỗi khi lấy danh sách trạm đang hoạt động.");
                 return StatusCode(500, "Đã xảy ra lỗi khi xử lý yêu cầu của bạn.");
-            } 
+            }
         }
 
         // GET: /api/station/5
@@ -106,7 +106,7 @@ namespace StationService.Controllers
         }
 
         // PUT: /api/station/5
-        [HttpPut]
+        [HttpPut("{id}")]
         [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền cập nhật
         public async Task<IActionResult> UpdateStation(int id, [FromBody] UpdateStationRequest stationRequest)
         {
