@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic;
 
 namespace StationService.Models
 {
@@ -6,11 +7,12 @@ namespace StationService.Models
     {
         [Key]
         public int Id { get; set; }
-        public string Name { get; set; }
-        public string Location { get; set; }
-        public int? ManagerId { get; set; } // User với role là Staff
+        public string Name { get; set; } = null!;
+        public string Location { get; set; } = null!;
+        public int? ManagerId { get; set; } // User với role là Employee
         public bool IsActive { get; set; }
-        public ICollection<StaffShift>? StaffShifts { get; set; }
+        public ICollection<StaffShift>? StaffShifts { get; set; } = new List<StaffShift>();
+        public ICollection<Feedback>? Feedbacks { get; set; } = new List<Feedback>();
         public Station() { }
 
         public Station(int id, string name, string location, int? managerId, bool isActive)

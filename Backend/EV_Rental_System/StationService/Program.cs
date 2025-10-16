@@ -73,7 +73,11 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<IStationRepository, StationRepository>();
 builder.Services.AddScoped<IStationService, StationService.Services.StationService>();
 
-// <-- THÊM TOÀN BỘ KHỐI CẤU HÌNH JWT VÀO ĐÂY
+// Feedback
+builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+
+// CẤU HÌNH JWT
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
 
