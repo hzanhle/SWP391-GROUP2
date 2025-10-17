@@ -55,9 +55,12 @@ namespace StationService.Repositories
             }
         }
 
-        public async Task<Station> GetStationById(int id)
+        public async Task<Station?> GetStationById(int id)
         {
-            return await _context.Stations.FindAsync(id);
+            return await _context.Stations
+                         .Include(s => s.Feedbacks)
+                         .Include(s => s.StaffShifts)
+                         .FirstOrDefaultAsync(s => s.Id == id);
         }
 
         public async Task UpdateStation(Station station)

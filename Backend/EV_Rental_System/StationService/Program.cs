@@ -14,7 +14,11 @@ var builder = WebApplication.CreateBuilder(args);
 // ===================================================
 
 // Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    // Cấu hình dùng để ngắt các vòng lặp tham chiếu khi serialize JSON
+    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+});
 // Swagger (API documentation)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
