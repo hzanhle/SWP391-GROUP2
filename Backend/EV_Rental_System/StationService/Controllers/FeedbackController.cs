@@ -65,11 +65,11 @@ namespace StationService.Controllers
         // GET: /api/stations/1/feedbacks/10
         [HttpGet("{feedbackId}")]
         [AllowAnonymous] //Cho phép khách vãng lai tìm xem feedback theo id trạm
-        public async Task<IActionResult> GetFeedbackById(int stationId, int id)
+        public async Task<IActionResult> GetFeedbackById(int stationId, int feedbackId)
         {
             try
             {
-                var feedback = await _feedbackService.GetByIdAsync(id);
+                var feedback = await _feedbackService.GetByIdAsync(feedbackId);
                 if (feedback == null || feedback.StationId != stationId)
                 {
                     return NotFound();
@@ -78,7 +78,7 @@ namespace StationService.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi lấy feedback ID: {FeedbackId}", id);
+                _logger.LogError(ex, "Lỗi khi lấy feedback ID: {FeedbackId}", feedbackId);
                 return StatusCode(500, "Đã xảy ra lỗi hệ thống.");
             }
         }
@@ -86,7 +86,7 @@ namespace StationService.Controllers
         // PUT: /api/stations/1/feedbacks/10
         [HttpPut("{feedbackId}")]
         [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền sửa feedback
-        public async Task<IActionResult> UpdateFeedback(int stationId, int id, [FromBody] UpdateFeedbackRequest request)
+        public async Task<IActionResult> UpdateFeedback(int stationId, int feedbackId, [FromBody] UpdateFeedbackRequest request)
         {
             if (!ModelState.IsValid)
             {
@@ -95,7 +95,7 @@ namespace StationService.Controllers
 
             try
             {
-                await _feedbackService.UpdateAsync(id, request);
+                await _feedbackService.UpdateAsync(feedbackId, request);
                 return NoContent(); // 204 No Content - Thành công
             }
             catch (KeyNotFoundException knfex)
@@ -105,7 +105,7 @@ namespace StationService.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi cập nhật feedback ID: {FeedbackId}", id);
+                _logger.LogError(ex, "Lỗi khi cập nhật feedback ID: {FeedbackId}", feedbackId);
                 return StatusCode(500, "Đã xảy ra lỗi hệ thống.");
             }
         }
@@ -113,11 +113,11 @@ namespace StationService.Controllers
         // DELETE: /api/stations/1/feedbacks/10
         [HttpDelete("{feedbackId}")]
         [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền xóa feedback
-        public async Task<IActionResult> DeleteFeedback(int stationId, int id)
+        public async Task<IActionResult> DeleteFeedback(int stationId, int feedbackId)
         {
             try
             {
-                await _feedbackService.DeleteAsync(id);
+                await _feedbackService.DeleteAsync(feedbackId);
                 return NoContent();
             }
             catch (KeyNotFoundException knfex)
@@ -127,7 +127,7 @@ namespace StationService.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi xóa feedback ID: {FeedbackId}", id);
+                _logger.LogError(ex, "Lỗi khi xóa feedback ID: {FeedbackId}", feedbackId);
                 return StatusCode(500, "Đã xảy ra lỗi hệ thống.");
             }
         }

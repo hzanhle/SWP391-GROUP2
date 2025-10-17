@@ -8,7 +8,7 @@ namespace StationService.Repositories
     {
         Task<Station> AddStation(Station station);
         Task UpdateStation(Station station);
-        Task<Station> GetStationById(int id);
+        Task<Station?> GetStationById(int id);
         Task<List<Station>> GetAllStations();
         Task DeleteStation(int id);
         Task<List<Station>> GetActiveStations();

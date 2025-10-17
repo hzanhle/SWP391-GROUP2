@@ -3,6 +3,7 @@ using StationService.Models;
 using StationService.Repositories;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 
 
 namespace StationService.Services
@@ -47,7 +48,7 @@ namespace StationService.Services
             return await _stationRepository.GetAllStations();
         }
 
-        public async Task<StationDTO> GetStationByIdAsync(int stationId)
+        public async Task<StationDTO?> GetStationByIdAsync(int stationId)
         {
             var station = await _stationRepository.GetStationById(stationId);
             if (station == null)
@@ -62,7 +63,17 @@ namespace StationService.Services
                 Name = station.Name,
                 Location = station.Location,
                 ManagerId = station.ManagerId,
-                IsActive = station.IsActive
+                IsActive = station.IsActive,
+
+                Feedbacks = station.Feedbacks.Select(f => new FeedbackDTO
+                {
+                    FeedbackId =f.FeedbackId,
+                    StationId = f.StationId,
+                    OrderId = f.OrderId,
+                    Rate = f.Rate,
+                    Description = f.Description,
+                    CreatedDate = f.CreatedDate
+                }).ToList()
             };
             return stationDTO;
         }

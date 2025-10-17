@@ -24,7 +24,7 @@ namespace StationService.Services
         Task DeleteStationAsync(int stationId);
 
         // Trả về DTO
-        Task<StationDTO> GetStationByIdAsync(int stationId);
+        Task<StationDTO?> GetStationByIdAsync(int stationId);
 
         Task SetStatus(int stationId);
     }
