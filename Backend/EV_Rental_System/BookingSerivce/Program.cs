@@ -1,7 +1,6 @@
-﻿using BookingSerivce;
-using BookingSerivce.Models.VNPAY;
-using BookingSerivce.Repositories;
-using BookingSerivce.Services;
+﻿using BookingSerivce.Models.VNPAY;
+using BookingService;
+using BookingService.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -63,9 +62,10 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Database Context
+//// Database Context
 builder.Services.AddDbContext<MyDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
 // CORS Configuration
 builder.Services.AddCors(options =>
@@ -132,18 +132,19 @@ builder.Services.Configure<VNPaySettings>(
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 
-// Repository Registration
+//// Repository Registration
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-builder.Services.AddScoped<IContractRepository, ContractRepository>();
+builder.Services.AddScoped<IOnlineContractRepository, OnlineContractRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<ITrustScoreRepository, TrustScoreRepository>();
 
-// Service Registration
-builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<IContractService, ContractService>();
-builder.Services.AddScoped<IPaymentService, PaymentService>();
-builder.Services.AddScoped<IVNPayService, VNPayService>();
-builder.Services.AddScoped<INotificationService, NotificationService>();
+//// Service Registration
+//builder.Services.AddScoped<IOrderService, OrderService>();
+//builder.Services.AddScoped<IContractService, ContractService>();
+//builder.Services.AddScoped<IPaymentService, PaymentService>();
+//builder.Services.AddScoped<IVNPayService, VNPayService>();
+//builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // ====================== Build Application ======================
 var app = builder.Build();

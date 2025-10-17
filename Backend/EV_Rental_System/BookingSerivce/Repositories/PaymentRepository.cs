@@ -1,8 +1,7 @@
 ﻿using BookingService.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
-namespace BookingSerivce.Repositories
+namespace BookingService.Repositories
 {
     public class PaymentRepository : IPaymentRepository
     {
@@ -13,47 +12,20 @@ namespace BookingSerivce.Repositories
             _context = context;
         }
 
-        // ===== BASIC CRUD =====
+        public async Task<int> CreateAsync(Payment payment)
+        {
+            _context.Payments.Add(payment);
+            await _context.SaveChangesAsync();
+            return payment.PaymentId;
+        }
+
         public async Task<Payment?> GetByIdAsync(int paymentId)
         {
-            return await _context.Payments.FindAsync(paymentId);
+            return await _context.Payments
+                .Include(p => p.Order)
+                .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
         }
 
-        public async Task<IEnumerable<Payment>> GetAllAsync()
-        {
-            return await _context.Payments.ToListAsync();
-        }
-
-        public async Task<Payment> AddAsync(Payment payment)
-        {
-            await _context.Payments.AddAsync(payment);
-            await _context.SaveChangesAsync();
-            return payment;
-        }
-
-        public async Task UpdateAsync(Payment payment)
-        {
-            payment.UpdatedAt = DateTime.UtcNow;
-            _context.Payments.Update(payment);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task DeleteAsync(int paymentId)
-        {
-            var payment = await GetByIdAsync(paymentId);
-            if (payment != null)
-            {
-                _context.Payments.Remove(payment);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        public async Task<bool> ExistsAsync(int paymentId)
-        {
-            return await _context.Payments.AnyAsync(p => p.PaymentId == paymentId);
-        }
-
-        // ===== QUERY METHODS =====
         public async Task<Payment?> GetByOrderIdAsync(int orderId)
         {
             return await _context.Payments
@@ -61,25 +33,19 @@ namespace BookingSerivce.Repositories
                 .FirstOrDefaultAsync(p => p.OrderId == orderId);
         }
 
-        public async Task<Payment?> GetByTransactionCodeAsync(string transactionCode)
+        public async Task<Payment?> GetByTransactionIdAsync(string transactionId)
         {
             return await _context.Payments
                 .Include(p => p.Order)
-                .FirstOrDefaultAsync(p => p.TransactionCode == transactionCode);
+                .FirstOrDefaultAsync(p => p.TransactionId == transactionId);
         }
 
-        public async Task<Payment?> GetByDepositTransactionCodeAsync(string depositTransactionCode)
-        {
-            return await _context.Payments
-                .Include(p => p.Order)
-                .FirstOrDefaultAsync(p => p.DepositTransactionCode == depositTransactionCode);
-        }
-
-        public async Task<IEnumerable<Payment>> GetByStatusAsync(string status)
+        public async Task<IEnumerable<Payment>> GetByStatusAsync(PaymentStatus status)
         {
             return await _context.Payments
                 .Include(p => p.Order)
                 .Where(p => p.Status == status)
+                .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
         }
 
@@ -88,6 +54,7 @@ namespace BookingSerivce.Repositories
             return await _context.Payments
                 .Include(p => p.Order)
                 .Where(p => p.PaymentMethod == paymentMethod)
+                .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
         }
 
@@ -95,118 +62,41 @@ namespace BookingSerivce.Repositories
         {
             return await _context.Payments
                 .Include(p => p.Order)
-                .Where(p => p.Status == "Pending" || p.Status == "PendingDeposit" || p.Status == "PendingFullPayment")
+                .Where(p => p.Status == PaymentStatus.Pending)
+                .OrderBy(p => p.CreatedAt)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Payment>> GetDepositedPaymentsAsync()
+        public async Task<bool> UpdateAsync(Payment payment)
         {
-            return await _context.Payments
-                .Include(p => p.Order)
-                .Where(p => p.IsDeposited && !p.IsFullyPaid)
-                .ToListAsync();
+            var existingPayment = await _context.Payments.FindAsync(payment.PaymentId);
+            if (existingPayment == null) return false;
+
+            existingPayment.Amount = payment.Amount;
+            existingPayment.PaymentMethod = payment.PaymentMethod;
+            existingPayment.Status = payment.Status;
+            existingPayment.TransactionId = payment.TransactionId;
+            existingPayment.PaidAt = payment.PaidAt;
+            existingPayment.PaymentGatewayResponse = payment.PaymentGatewayResponse;
+            existingPayment.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
         }
 
-        public async Task<IEnumerable<Payment>> GetFullyPaidPaymentsAsync()
+        public async Task<bool> DeleteAsync(int paymentId)
         {
-            return await _context.Payments
-                .Include(p => p.Order)
-                .Where(p => p.IsFullyPaid)
-                .ToListAsync();
+            var payment = await _context.Payments.FindAsync(paymentId);
+            if (payment == null) return false;
+
+            _context.Payments.Remove(payment);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
-        // ===== ADVANCED QUERIES =====
-        public async Task<IEnumerable<Payment>> GetPaymentsByDateRangeAsync(DateTime startDate, DateTime endDate)
+        public async Task<bool> ExistsByOrderIdAsync(int orderId)
         {
-            return await _context.Payments
-                .Include(p => p.Order)
-                .Where(p => p.CreatedAt >= startDate && p.CreatedAt <= endDate)
-                .OrderByDescending(p => p.CreatedAt)
-                .ToListAsync();
-        }
-
-        public async Task<IEnumerable<Payment>> GetPaymentsWithOrdersAsync()
-        {
-            return await _context.Payments
-                .Include(p => p.Order)
-                .ToListAsync();
-        }
-
-        public async Task<Payment?> GetPaymentWithOrderByIdAsync(int paymentId)
-        {
-            return await _context.Payments
-                .Include(p => p.Order)
-                .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
-        }
-
-        public async Task<IEnumerable<Payment>> FindAsync(Expression<Func<Payment, bool>> predicate)
-        {
-            return await _context.Payments
-                .Include(p => p.Order)
-                .Where(predicate)
-                .ToListAsync();
-        }
-
-        // ===== STATISTICS =====
-        public async Task<decimal> GetTotalPaidAmountAsync()
-        {
-            return await _context.Payments
-                .Where(p => p.IsFullyPaid)
-                .SumAsync(p => p.PaidAmount);
-        }
-
-        public async Task<decimal> GetTotalPaidAmountByDateRangeAsync(DateTime startDate, DateTime endDate)
-        {
-            return await _context.Payments
-                .Where(p => p.FullPaymentDate >= startDate && p.FullPaymentDate <= endDate)
-                .SumAsync(p => p.PaidAmount);
-        }
-
-        public async Task<int> GetPaymentCountByStatusAsync(string status)
-        {
-            return await _context.Payments
-                .CountAsync(p => p.Status == status);
-        }
-
-        public async Task<Dictionary<string, int>> GetPaymentCountByMethodAsync()
-        {
-            return await _context.Payments
-                .GroupBy(p => p.PaymentMethod)
-                .Select(g => new { Method = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.Method, x => x.Count);
-        }
-
-        // ===== BUSINESS LOGIC HELPERS =====
-        public async Task<bool> HasDepositedAsync(int orderId)
-        {
-            var payment = await GetByOrderIdAsync(orderId);
-            return payment?.IsDeposited ?? false;
-        }
-
-        public async Task<bool> IsFullyPaidAsync(int orderId)
-        {
-            var payment = await GetByOrderIdAsync(orderId);
-            return payment?.IsFullyPaid ?? false;
-        }
-
-        public async Task<decimal> GetTotalPaidForOrderAsync(int orderId)
-        {
-            var payment = await GetByOrderIdAsync(orderId);
-            return payment?.PaidAmount ?? 0;
-        }
-
-        public async Task<decimal> GetDepositedAmountForOrderAsync(int orderId)
-        {
-            var payment = await GetByOrderIdAsync(orderId);
-            return payment?.DepositedAmount ?? 0;
+            return await _context.Payments.AnyAsync(p => p.OrderId == orderId);
         }
     }
 }
-
-// 3. Program.cs - Register repository
-/*
-
-*/
-
-// 4. Cách sử dụng trong PaymentService
-

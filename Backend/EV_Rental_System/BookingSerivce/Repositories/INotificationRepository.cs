@@ -1,14 +1,16 @@
-﻿using BookingSerivce.Models;
-using BookingService.Models;
+﻿using BookingService.Models;
 
-namespace BookingSerivce.Repositories
+namespace BookingService.Repositories
 {
     public interface INotificationRepository
     {
-        Task AddNotification(Notification notification);
-        Task<List<Notification>> GetAllNotifications();
-        Task<List<Notification>> GetNotificationsByUserId(int userId);
-        Task DeleteNotification(int userId);
-        Task UpdateNotification(Notification notification);
+        Task<int> CreateAsync(Notification notification);
+        Task<Notification?> GetByIdAsync(int id);
+        Task<IEnumerable<Notification>> GetByUserIdAsync(int userId);
+        Task<bool> UpdateAsync(Notification notification);
+        Task<bool> DeleteAsync(int id);
+        Task<bool> DeleteByUserIdAsync(int userId);
+        Task<IEnumerable<Notification>> GetByDataTypeAsync(string dataType);
+        Task<IEnumerable<Notification>> GetByStaffIdAsync(int staffId);
     }
 }

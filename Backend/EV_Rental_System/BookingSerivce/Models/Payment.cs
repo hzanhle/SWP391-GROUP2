@@ -1,113 +1,77 @@
-﻿namespace BookingService.Models
+﻿using System.Text.Json.Serialization;
+
+namespace BookingService.Models
 {
+    public enum PaymentStatus
+    {
+        Pending,      // Chờ thanh toán
+        Completed,    // Thanh toán thành công
+        Failed,       // Thanh toán thất bại
+        Refunded      // Đã hoàn tiền (nếu cancel)
+    }
+
     public class Payment
     {
         public int PaymentId { get; set; }
 
-        // Foreign key đến Order - quan hệ 1-1
+        // Foreign key
         public int OrderId { get; set; }
         public Order? Order { get; set; }
 
-        // Phương thức thanh toán (VNPay, Momo, BankTransfer, Cash, etc.)
-        public string PaymentMethod { get; set; } = string.Empty;
+        // Payment details
+        public decimal Amount { get; set; }            // Tổng tiền phải trả (Deposit + ServiceFee nếu new user)
+        public string PaymentMethod { get; set; } = string.Empty; // VNPay, Momo, Cash, etc.
 
-        // Trạng thái thanh toán tổng thể
-        // "Pending" - Chờ thanh toán
-        // "PartiallyPaid" - Đã cọc
-        // "FullyPaid" - Đã thanh toán đủ
-        // "Refunded" - Đã hoàn tiền
-        // "Failed" - Thanh toán thất bại
-        public string Status { get; set; } = "Pending";
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 
-        // Thông tin cọc (Deposit)
-        public bool IsDeposited { get; set; } = false;
-        public decimal DepositedAmount { get; set; } = 0;
-        public DateTime? DepositDate { get; set; }
-        public string? DepositTransactionCode { get; set; }
+        // Transaction info từ payment gateway
+        public string? TransactionId { get; set; }     // Mã giao dịch từ gateway
+        public DateTime? PaidAt { get; set; }          // Thời điểm thanh toán thành công
 
-        // Thông tin thanh toán đầy đủ (Full Payment)
-        public bool IsFullyPaid { get; set; } = false;
-        public decimal PaidAmount { get; set; } = 0; // Tổng số tiền đã thanh toán
-        public DateTime? FullPaymentDate { get; set; }
-        public string? TransactionCode { get; set; }
+        // Metadata
+        public string? PaymentGatewayResponse { get; set; }  // Raw response từ gateway (JSON)
 
-        // Thông tin bổ sung
-        public string? Notes { get; set; }
-
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
         // Constructors
-        public Payment()
-        {
-            CreatedAt = DateTime.UtcNow;
-            Status = "Pending";
-            IsDeposited = false;
-            IsFullyPaid = false;
-            DepositedAmount = 0;
-            PaidAmount = 0;
-        }
+        public Payment() { }
 
-        public Payment(int orderId, string paymentMethod)
+        public Payment(int orderId, decimal amount, string paymentMethod)
         {
             OrderId = orderId;
+            Amount = amount;
             PaymentMethod = paymentMethod;
-            Status = "Pending";
-            IsDeposited = false;
-            IsFullyPaid = false;
-            DepositedAmount = 0;
-            PaidAmount = 0;
-            CreatedAt = DateTime.UtcNow;
-        }
-
-        public Payment(int orderId, string paymentMethod, string notes)
-        {
-            OrderId = orderId;
-            PaymentMethod = paymentMethod;
-            Notes = notes;
-            Status = "Pending";
-            IsDeposited = false;
-            IsFullyPaid = false;
-            DepositedAmount = 0;
-            PaidAmount = 0;
+            Status = PaymentStatus.Pending;
             CreatedAt = DateTime.UtcNow;
         }
 
         // Methods
-        public void RecordDeposit(decimal amount, string transactionCode)
+        public void MarkAsCompleted(string transactionId, string? gatewayResponse = null)
         {
-            if (IsDeposited)
+            if (Status == PaymentStatus.Completed)
             {
-                throw new InvalidOperationException("Deposit has already been recorded");
+                throw new InvalidOperationException("Payment already completed");
             }
 
-            DepositedAmount = amount;
-            DepositDate = DateTime.UtcNow;
-            DepositTransactionCode = transactionCode;
-            IsDeposited = true;
-            PaidAmount += amount;
-            Status = "PartiallyPaid";
+            Status = PaymentStatus.Completed;
+            TransactionId = transactionId;
+            PaidAt = DateTime.UtcNow;
+            PaymentGatewayResponse = gatewayResponse;
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public void RecordFullPayment(decimal amount, string transactionCode)
+        public void MarkAsFailed(string? gatewayResponse = null)
         {
-            if (IsFullyPaid)
-            {
-                throw new InvalidOperationException("Payment has already been completed");
-            }
-
-            PaidAmount += amount;
-            FullPaymentDate = DateTime.UtcNow;
-            TransactionCode = transactionCode;
-            IsFullyPaid = true;
-            Status = "FullyPaid";
+            Status = PaymentStatus.Failed;
+            PaymentGatewayResponse = gatewayResponse;
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public decimal GetRemainingAmount(decimal totalCost)
+        public bool IsCompleted()
         {
-            return totalCost - PaidAmount;
+            return Status == PaymentStatus.Completed;
         }
     }
 }

@@ -1,54 +1,40 @@
-using BookingSerivce.Models;
-using BookingService.Models;
-using System.Linq.Expressions;
+﻿using BookingService.Models;
 
-namespace BookingSerivce.Repositories
+namespace BookingService.Repositories
 {
     public interface IOrderRepository
     {
-        // ===== BASIC CRUD =====
+        // === CREATE ===
+        Task<Order> CreateAsync(Order order);
+
+        // === READ ===
         Task<Order?> GetByIdAsync(int orderId);
-        Task<IEnumerable<Order>> GetAllAsync();
-        Task<Order> AddAsync(Order order);
+        Task<Order?> GetByIdWithDetailsAsync(int orderId); // Include Payment & Contract
+        Task<List<Order>> GetByUserIdAsync(int userId);
+        Task<List<Order>> GetByVehicleIdAsync(int vehicleId);
+        Task<List<Order>> GetByStatusAsync(OrderStatus status);
+        Task<List<Order>> GetAllAsync();
+
+        // === UPDATE ===
         Task<Order> UpdateAsync(Order order);
+
+        // === DELETE ===
         Task DeleteAsync(int orderId);
-        Task<bool> ExistsAsync(int orderId);
 
-        // ===== QUERY METHODS =====
-        Task<IEnumerable<Order>> GetByUserIdAsync(int userId);
-        Task<IEnumerable<Order>> GetByVehicleIdAsync(int vehicleId);
-        Task<IEnumerable<Order>> GetByStatusAsync(string status);
-        Task<IEnumerable<Order>> GetPendingOrdersAsync();
-        Task<IEnumerable<Order>> GetConfirmedOrdersAsync();
-        Task<IEnumerable<Order>> GetCompletedOrdersAsync();
+        // === AVAILABILITY CHECK ===
+        Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime fromDate, DateTime toDate, int? excludeOrderId = null);
+        Task<List<Order>> GetConflictingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate);
 
-        // ===== ADVANCED QUERIES =====
-        Task<IEnumerable<Order>> GetOrdersByDateRangeAsync(DateTime startDate, DateTime endDate);
-        Task<IEnumerable<Order>> GetOrdersWithPaymentAsync();
-        Task<Order?> GetOrderWithPaymentAsync(int orderId);
-        Task<Order?> GetOrderWithContractAsync(int orderId);
-        Task<IEnumerable<Order>> GetActiveOrdersAsync();
-        Task<IEnumerable<Order>> GetUpcomingOrdersAsync();
-        Task<IEnumerable<Order>> FindAsync(Expression<Func<Order, bool>> predicate);
-
-        // ===== USER SPECIFIC QUERIES =====
-        Task<IEnumerable<Order>> GetUserOrderHistoryAsync(int userId);
-        Task<IEnumerable<Order>> GetUserActiveOrdersAsync(int userId);
-        Task<Order?> GetUserLatestOrderAsync(int userId);
-
-        // ===== VEHICLE SPECIFIC QUERIES =====
-        Task<IEnumerable<Order>> GetOrdersByVehicleAsync(int vehicleId);
-        Task<IEnumerable<Order>> GetVehicleBookingHistoryAsync(int vehicleId);
-        Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime fromDate, DateTime toDate);
-        Task<IEnumerable<Order>> GetVehicleBookingsInRangeAsync(int vehicleId, DateTime fromDate, DateTime toDate);
-        Task<IEnumerable<Order>> GetOverlappingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate);
-
-        // ===== STATISTICS =====
-        Task<int> GetTotalOrdersCountAsync();
-        Task<int> GetOrderCountByStatusAsync(string status);
-        Task<decimal> GetTotalRevenueAsync();
-        Task<decimal> GetRevenueByDateRangeAsync(DateTime startDate, DateTime endDate);
-        Task<Dictionary<string, int>> GetOrderCountByStatusGroupAsync();
-        Task<int> GetUserOrderCountAsync(int userId);
+        // === BUSINESS QUERIES ===
+        Task<List<Order>> GetPendingOrdersAsync(); // Orders chưa thanh toán
+        Task<List<Order>> GetExpiredPendingOrdersAsync(int minutesThreshold); // Orders pending quá lâu
+        Task<int> GetUserCompletedOrdersCountAsync(int userId); // Đếm số orders completed của user
+        Task<bool> HasCompletedOrderAsync(int userId);
+        Task<IEnumerable<Order>> GetByUserIdAndStatusAsync(int userId, OrderStatus status);
+        Task<IEnumerable<Order>> GetOverlappingOrdersAsync(
+            int vehicleId,
+            DateTime fromDate,
+            DateTime toDate,
+            OrderStatus[] statuses);
     }
 }
