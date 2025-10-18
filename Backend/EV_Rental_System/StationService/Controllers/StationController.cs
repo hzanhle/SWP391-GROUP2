@@ -59,13 +59,13 @@ namespace StationService.Controllers
         }
 
         // GET: /api/station/5
-        [HttpGet("{id}")]
+        [HttpGet("{stationId}")]
         [AllowAnonymous] // Cho phép khách vãng lai xem chi tiết thông tin trạm
-        public async Task<IActionResult> GetStationById(int id)
+        public async Task<IActionResult> GetStationById(int stationId)
         {
             try
             {
-                var stationDto = await _stationService.GetStationByIdAsync(id);
+                var stationDto = await _stationService.GetStationByIdAsync(stationId);
                 if (stationDto == null)
                 {
                     return NotFound(); // Trả về 404 Not Found
@@ -74,7 +74,7 @@ namespace StationService.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Đã xảy ra lỗi khi lấy thông tin trạm với ID: {StationId}", id);
+                _logger.LogError(ex, "Đã xảy ra lỗi khi lấy thông tin trạm với ID: {StationId}", stationId);
                 return StatusCode(500, "Đã xảy ra lỗi khi xử lý yêu cầu của bạn.");
 
             }
@@ -96,7 +96,7 @@ namespace StationService.Controllers
                 var newStation = await _stationService.AddStationAsync(stationRequest);
 
                 // Trả về 201 Created cùng với link đến tài nguyên mới tạo
-                return CreatedAtAction(nameof(GetStationById), new { id = newStation.Id }, newStation);
+                return CreatedAtAction(nameof(GetStationById), new { stationId = newStation.Id }, newStation);
             }
             catch (Exception ex)
             {
