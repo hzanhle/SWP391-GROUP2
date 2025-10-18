@@ -53,7 +53,7 @@ namespace StationService.Controllers
             {
                 var newFeedback = await _feedbackService.CreateAsync(stationId, request);
                 //Trả về 201 Created và thông tin feedback vừa tạo
-                return CreatedAtAction(nameof(GetFeedbackById), new { stationId = stationId, id = newFeedback.FeedbackId }, newFeedback);
+                return CreatedAtRoute("GetFeedbackByIdRoute", new { stationId = stationId, feedbackId = newFeedback.FeedbackId }, newFeedback);
             }
             catch (Exception ex)
             {
@@ -63,7 +63,7 @@ namespace StationService.Controllers
         }
 
         // GET: /api/stations/1/feedbacks/10
-        [HttpGet("{feedbackId}")]
+        [HttpGet("{feedbackId}", Name = "GetFeedbackByIdRoute")]
         [AllowAnonymous] //Cho phép khách vãng lai tìm xem feedback theo id trạm
         public async Task<IActionResult> GetFeedbackById(int stationId, int feedbackId)
         {
