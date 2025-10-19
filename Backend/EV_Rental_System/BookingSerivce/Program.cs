@@ -1,6 +1,8 @@
 ﻿using BookingSerivce.Models.VNPAY;
 using BookingService;
+using BookingService.Models;
 using BookingService.Repositories;
+using BookingService.Services.SignalR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -61,6 +63,11 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
+
+
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
+
 
 //// Database Context
 builder.Services.AddDbContext<MyDbContext>(options =>
@@ -169,6 +176,8 @@ app.UseCors();
 // Authentication & Authorization (thứ tự quan trọng!)
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapHub<OrderTimerHub>("/orderTimerHub"); // SignalR Hub
 
 // Controllers
 app.MapControllers();
