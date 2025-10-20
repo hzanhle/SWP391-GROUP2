@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TwoWheelVehicleService")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+667edc95e849159c0b5cfdfa52a8644e94cde271")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a831e4189ab45885467bdad305812383cee04a73")]
 [assembly: System.Reflection.AssemblyProductAttribute("TwoWheelVehicleService")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TwoWheelVehicleService")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

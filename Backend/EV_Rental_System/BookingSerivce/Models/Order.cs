@@ -19,12 +19,19 @@ namespace BookingService.Models
         public decimal DepositAmount { get; set; } // Tiền cọc yêu cầu (thường 30-50% TotalCost)
 
         // Trạng thái đơn hàng
-        // "Pending" → "AwaitingContract" → "ContractSent" → "ContractSigned" 
-        // → "AwaitingDeposit" → "Deposited" → "Confirmed" → "InProgress" → "Completed" → "Cancelled"
+        // "Pending" → "PaymentInitiated" → "AwaitingContract" → "ContractSent" → "ContractSigned"
+        // → "AwaitingDeposit" → "Deposited" → "Confirmed" → "InProgress" → "Completed" → "Cancelled" → "Expired"
         public string Status { get; set; } = "Pending";
 
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public DateTime? ExpiresAt { get; set; } // Order expires if payment not initiated within time limit (5 minutes)
+
+        // Stage 1 Enhancement Fields
+        public Guid? PreviewToken { get; set; } // Links to SoftLock that was consumed to create this order
+        public int TrustScoreAtBooking { get; set; } // User's trust score at the time of booking (for audit trail)
+        public decimal DepositPercentage { get; set; } // Actual deposit percentage used (0.30, 0.40, or 0.50)
+        public string? CancellationReason { get; set; } // Why the order was cancelled or expired
 
         // Relationships - Quan hệ 1-1 với Payment và OnlineContract
         public Payment? Payment { get; set; }
