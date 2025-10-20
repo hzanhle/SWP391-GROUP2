@@ -117,7 +117,23 @@ namespace StationService.Controllers
         {
             try
             {
+                var feedbackToDelete = await _feedbackService.GetByIdAsync(feedbackId);
+                if (feedbackToDelete == null)
+                {
+                    _logger.LogWarning("Không tìm thấy Feedback Id: {feedbackId} để xóa.", feedbackId);
+                    return NotFound($"Không tìm thấy feedback với ID: {feedbackId}.");
+                }
+
+                //Kiểm tra feedback có thuộc đúng station không
+                if(feedbackToDelete.StationId != stationId)
+                {
+                    _logger.LogWarning("Cố gắng xóa FeedbackId: {FeedbackId} (thuộc StationId: {ActualStationId}) thông qua URL của StationId: {RequestStationId}",
+                                        feedbackId, feedbackToDelete.StationId, stationId);
+                    return Forbid();
+                }
+
                 await _feedbackService.DeleteAsync(feedbackId);
+                _logger.LogInformation("Đã xóa thành công FeedbackId: {FeedbackId} thuộc StationId: {StationId}.", feedbackId, stationId);
                 return NoContent();
             }
             catch (KeyNotFoundException knfex)
@@ -127,7 +143,7 @@ namespace StationService.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi xóa feedback ID: {FeedbackId}", feedbackId);
+                _logger.LogError(ex, "Lỗi khi xóa feedback ID: {FeedbackId} cho StationId: {StaionId}", feedbackId, stationId);
                 return StatusCode(500, "Đã xảy ra lỗi hệ thống.");
             }
         }
