@@ -158,7 +158,8 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero, // Không cho phép độ lệch thời gian
 
-        RequireExpirationTime = true
+        RequireExpirationTime = true,
+        RoleClaimType = "roleName"
     };
 
     // Event handlers for better error handling
