@@ -25,5 +25,28 @@ namespace BookingSerivce.Services
         /// Validates soft lock, recalculates costs, and creates order.
         /// </summary>
         Task<OrderResponse> ConfirmOrderAsync(ConfirmOrderRequest request);
+
+        // Stage 2 Enhancement - Payment confirmation and contract generation
+        /// <summary>
+        /// Confirms payment and automatically generates contract.
+        /// Called by VNPay webhook after successful payment.
+        /// </summary>
+        Task<OrderPaymentConfirmationResponse> ConfirmPaymentAsync(int orderId);
+
+        // Stage 3 Enhancement - Pickup and Return Management
+        /// <summary>
+        /// Confirms vehicle pickup by staff. Updates status to InProgress.
+        /// </summary>
+        Task<Order> ConfirmPickupAsync(ConfirmPickupRequest request);
+
+        /// <summary>
+        /// Confirms vehicle return by staff. Updates status to Returned.
+        /// </summary>
+        Task<Order> ConfirmReturnAsync(ConfirmReturnRequest request);
+
+        /// <summary>
+        /// Gets order status with role-based display information.
+        /// </summary>
+        Task<OrderStatusResponse> GetOrderStatusAsync(int orderId, string userRole, int requestingUserId);
     }
 }

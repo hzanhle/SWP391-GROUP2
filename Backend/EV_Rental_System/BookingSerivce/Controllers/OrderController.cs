@@ -2,6 +2,7 @@ using BookingSerivce.DTOs;
 using BookingSerivce.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace BookingSerivce.Controllers
 {
@@ -47,7 +48,7 @@ namespace BookingSerivce.Controllers
         }
 
         /// <summary>
-        /// Get order by ID
+        /// Get order by ID with role-based status display (Stage 3 Enhancement)
         /// </summary>
         [HttpGet("{orderId}")]
         [Authorize]
@@ -55,18 +56,38 @@ namespace BookingSerivce.Controllers
         {
             try
             {
-                var order = await _orderService.GetOrderByIdAsync(orderId);
-                if (order == null)
-                    return NotFound(new
+                // Extract user role and userId from JWT claims
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Customer";
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!int.TryParse(userIdClaim, out int requestingUserId))
+                {
+                    return Unauthorized(new
                     {
                         success = false,
-                        message = "Order not found"
+                        message = "Invalid user token"
                     });
+                }
+
+                // Get role-based order status response
+                var orderStatus = await _orderService.GetOrderStatusAsync(orderId, userRole, requestingUserId);
 
                 return Ok(new
                 {
                     success = true,
-                    data = order
+                    data = orderStatus
+                });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = ex.Message
                 });
             }
             catch (Exception ex)
@@ -203,9 +224,10 @@ namespace BookingSerivce.Controllers
         /// <summary>
         /// Confirm an order using a preview token.
         /// Validates soft lock and creates the actual order.
+        /// No authentication required - users can confirm orders before logging in.
+        /// Authentication required at payment stage.
         /// </summary>
         [HttpPost("confirm")]
-        [Authorize]
         public async Task<IActionResult> ConfirmOrder([FromBody] ConfirmOrderRequest request)
         {
             try
@@ -228,6 +250,115 @@ namespace BookingSerivce.Controllers
                 {
                     success = false,
                     message = ex.Message
+                });
+            }
+        }
+
+        // ========== Stage 3 Enhancement Endpoints ==========
+
+        /// <summary>
+        /// Confirm vehicle pickup by admin/staff.
+        /// Updates order status from ContractGenerated to InProgress.
+        /// Records vehicle condition (odometer, battery level) and staff information.
+        /// Sends real-time SignalR notification to customer.
+        /// </summary>
+        [HttpPost("confirm-pickup")]
+        [Authorize(Policy = "AdminOrStaff")]
+        public async Task<IActionResult> ConfirmPickup([FromBody] ConfirmPickupRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var order = await _orderService.ConfirmPickupAsync(request);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Vehicle pickup confirmed successfully. Customer has been notified.",
+                    data = new
+                    {
+                        orderId = order.OrderId,
+                        status = order.Status,
+                        actualPickupTime = order.ActualPickupTime,
+                        odometerReading = order.PickupOdometerReading,
+                        batteryLevel = order.PickupBatteryLevel,
+                        staffId = order.HandedOverByStaffId
+                    }
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An error occurred while confirming pickup",
+                    error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Confirm vehicle return by admin/staff.
+        /// Updates order status from InProgress to Returned.
+        /// Records vehicle condition, calculates late fees if applicable.
+        /// Sends real-time SignalR notification to customer.
+        /// </summary>
+        [HttpPost("confirm-return")]
+        [Authorize(Policy = "AdminOrStaff")]
+        public async Task<IActionResult> ConfirmReturn([FromBody] ConfirmReturnRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var order = await _orderService.ConfirmReturnAsync(request);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = order.IsLateReturn
+                        ? $"Vehicle return confirmed. Late return detected - {order.LateReturnHours} hours late. Late fee: {order.LateFee:N0} VND"
+                        : "Vehicle return confirmed successfully. Vehicle is ready for inspection.",
+                    data = new
+                    {
+                        orderId = order.OrderId,
+                        status = order.Status,
+                        actualReturnTime = order.ActualReturnTime,
+                        odometerReading = order.ReturnOdometerReading,
+                        batteryLevel = order.ReturnBatteryLevel,
+                        staffId = order.ReceivedByStaffId,
+                        isLateReturn = order.IsLateReturn,
+                        lateReturnHours = order.LateReturnHours,
+                        lateFee = order.LateFee
+                    }
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An error occurred while confirming return",
+                    error = ex.Message
                 });
             }
         }

@@ -53,7 +53,19 @@ if (!string.IsNullOrEmpty(secretKey) && secretKey.Length >= 32)
                 ClockSkew = TimeSpan.Zero
             };
         });
-    builder.Services.AddAuthorization();
+
+    // Authorization Policies - Stage 3 Enhancement (Role-based access)
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("CustomerOnly", policy =>
+            policy.RequireRole("Customer"));
+
+        options.AddPolicy("AdminOrStaff", policy =>
+            policy.RequireRole("Admin", "Staff"));
+
+        options.AddPolicy("AdminOnly", policy =>
+            policy.RequireRole("Admin"));
+    });
 }
 
 // VNPay Settings
@@ -77,6 +89,13 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ITrustScoreService, TrustScoreService>(); // Stage 1 Enhancement
+
+// Stage 2 Enhancement - PDF and Storage Services
+builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
+builder.Services.AddScoped<IStorageService, LocalStorageService>();
+
+// Stage 3 Enhancement - Order Status Mapping
+builder.Services.AddScoped<IOrderStatusMapper, OrderStatusMapper>();
 
 // Background Jobs (Stage 1 Enhancement)
 builder.Services.AddScoped<OrderExpirationJob>();

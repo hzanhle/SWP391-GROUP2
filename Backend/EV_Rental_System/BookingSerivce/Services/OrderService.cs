@@ -1,7 +1,9 @@
 using BookingSerivce.DTOs;
+using BookingSerivce.Hubs;
 using BookingSerivce.Models;
 using BookingSerivce.Repositories;
 using BookingService.Models;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace BookingSerivce.Services
@@ -12,20 +14,35 @@ namespace BookingSerivce.Services
         private readonly IPaymentRepository _paymentRepo;
         private readonly ISoftLockRepository _softLockRepo;
         private readonly ITrustScoreService _trustScoreService;
+        private readonly IContractService _contractService;
+        private readonly INotificationService _notificationService;
+        private readonly IOrderStatusMapper _statusMapper;
+        private readonly IHubContext<OrderHub> _hubContext;
         private readonly MyDbContext _context;
+        private readonly ILogger<OrderService> _logger;
 
         public OrderService(
             IOrderRepository orderRepo,
             IPaymentRepository paymentRepo,
             ISoftLockRepository softLockRepo,
             ITrustScoreService trustScoreService,
-            MyDbContext context)
+            IContractService contractService,
+            INotificationService notificationService,
+            IOrderStatusMapper statusMapper,
+            IHubContext<OrderHub> hubContext,
+            MyDbContext context,
+            ILogger<OrderService> logger)
         {
             _orderRepo = orderRepo;
             _paymentRepo = paymentRepo;
             _softLockRepo = softLockRepo;
             _trustScoreService = trustScoreService;
+            _contractService = contractService;
+            _notificationService = notificationService;
+            _statusMapper = statusMapper;
+            _hubContext = hubContext;
             _context = context;
+            _logger = logger;
         }
 
         public async Task<Order> CreateOrderAsync(OrderRequest request)
@@ -254,7 +271,7 @@ namespace BookingSerivce.Services
                     OrderId = createdOrder.OrderId,
                     TotalCost = createdOrder.TotalCost,
                     DepositAmount = createdOrder.DepositAmount,
-                    ExpiresAt = createdOrder.ExpiresAt.Value,
+                    ExpiresAt = createdOrder.ExpiresAt ?? DateTime.UtcNow.AddMinutes(5),
                     Status = createdOrder.Status,
                     TrustScore = trustScore,
                     DepositPercentage = depositPercentage
@@ -265,6 +282,260 @@ namespace BookingSerivce.Services
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+
+        // ===== Stage 2 Enhancement Methods =====
+
+        /// <summary>
+        /// Confirms payment and automatically generates contract.
+        /// This is called after VNPay webhook confirms successful payment.
+        /// </summary>
+        public async Task<OrderPaymentConfirmationResponse> ConfirmPaymentAsync(int orderId)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Get and validate order
+                var order = await _orderRepo.GetByIdAsync(orderId);
+                if (order == null)
+                    throw new InvalidOperationException($"Order {orderId} not found");
+
+                // 2. Get and validate payment
+                var payment = await _paymentRepo.GetByOrderIdAsync(orderId);
+                if (payment == null)
+                    throw new InvalidOperationException($"Payment not found for order {orderId}");
+
+                if (payment.Status != "Completed")
+                    throw new InvalidOperationException($"Payment status is {payment.Status}, expected Completed");
+
+                // 3. Update order status to Confirmed
+                order.Status = "Confirmed";
+                order.ConfirmedAt = DateTime.UtcNow;
+                order.UpdatedAt = DateTime.UtcNow;
+                await _orderRepo.UpdateAsync(order);
+
+                _logger.LogInformation("Order {OrderId} confirmed after payment", orderId);
+
+                // 4. Automatically generate contract with PDF
+                var contract = await _contractService.GenerateContractWithPdfAsync(orderId);
+
+                _logger.LogInformation("Contract {ContractId} generated for Order {OrderId}",
+                    contract.ContractId, orderId);
+
+                // 5. Update order with contract info
+                order.ContractId = contract.ContractId;
+                order.ContractGeneratedAt = DateTime.UtcNow;
+                order.Status = "ContractGenerated";
+                await _orderRepo.UpdateAsync(order);
+
+                // 6. Update trust score (if first order)
+                var userOrders = await _orderRepo.GetUserOrderHistoryAsync(order.UserId);
+                if (userOrders.Count() == 1) // This is first completed order
+                {
+                    await _trustScoreService.GetUserTrustScoreAsync(order.UserId); // Trigger recalculation
+                }
+
+                // 7. Send notification
+                await _notificationService.AddNotification(new NotificationRequest
+                {
+                    UserId = order.UserId,
+                    Title = "Payment Successful!",
+                    Description = $"Your payment has been confirmed. Contract {contract.ContractNumber} has been generated.",
+                    DataType = "Order",
+                    DataId = orderId
+                });
+
+                await transaction.CommitAsync();
+
+                // 8. Return response
+                return new OrderPaymentConfirmationResponse
+                {
+                    Success = true,
+                    OrderId = orderId,
+                    PaymentId = payment.PaymentId,
+                    ContractId = contract.ContractId,
+                    ContractNumber = contract.ContractNumber,
+                    ContractPdfUrl = contract.PdfFilePath ?? string.Empty,
+                    Message = "Payment confirmed and contract generated successfully",
+                    ConfirmedAt = DateTime.UtcNow
+                };
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Failed to confirm payment for Order {OrderId}", orderId);
+                throw;
+            }
+        }
+
+        // ===== Stage 3 Enhancement Methods =====
+
+        /// <summary>
+        /// Confirms vehicle pickup by staff. Changes status from ContractGenerated to InProgress.
+        /// </summary>
+        public async Task<Order> ConfirmPickupAsync(ConfirmPickupRequest request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var order = await _orderRepo.GetByIdAsync(request.OrderId);
+                if (order == null)
+                    throw new InvalidOperationException($"Order {request.OrderId} not found");
+
+                // Validate status transition
+                if (!_statusMapper.IsValidStatusTransition(order.Status, "InProgress"))
+                    throw new InvalidOperationException($"Cannot confirm pickup for order with status {order.Status}");
+
+                // Update order with pickup information
+                order.Status = "InProgress";
+                order.ActualPickupTime = request.ActualPickupTime;
+                order.PickupOdometerReading = request.OdometerReading;
+                order.PickupBatteryLevel = request.BatteryLevel;
+                order.PickupNotes = request.Notes;
+                order.HandedOverByStaffId = request.StaffId;
+                order.UpdatedAt = DateTime.UtcNow;
+
+                await _orderRepo.UpdateAsync(order);
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Pickup confirmed for Order {OrderId} by Staff {StaffId}",
+                    request.OrderId, request.StaffId);
+
+                // Send SignalR notification to customer
+                await _hubContext.Clients.Group($"user_{order.UserId}")
+                    .SendAsync("PickupConfirmed", new
+                    {
+                        OrderId = order.OrderId,
+                        Message = $"Your vehicle is ready! Vehicle has been prepared for you.",
+                        PickupTime = request.ActualPickupTime,
+                        Timestamp = DateTime.UtcNow
+                    });
+
+                return order;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Failed to confirm pickup for Order {OrderId}", request.OrderId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Confirms vehicle return by staff. Changes status from InProgress to Returned.
+        /// </summary>
+        public async Task<Order> ConfirmReturnAsync(ConfirmReturnRequest request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var order = await _orderRepo.GetByIdAsync(request.OrderId);
+                if (order == null)
+                    throw new InvalidOperationException($"Order {request.OrderId} not found");
+
+                // Validate status transition
+                if (!_statusMapper.IsValidStatusTransition(order.Status, "Returned"))
+                    throw new InvalidOperationException($"Cannot confirm return for order with status {order.Status}");
+
+                // Update order with return information
+                order.Status = "Returned";
+                order.ActualReturnTime = request.ActualReturnTime;
+                order.ReturnOdometerReading = request.OdometerReading;
+                order.ReturnBatteryLevel = request.BatteryLevel;
+                order.ReturnNotes = request.Notes;
+                order.ReceivedByStaffId = request.StaffId;
+                order.UpdatedAt = DateTime.UtcNow;
+
+                // Check if return is late
+                if (request.ActualReturnTime > order.ToDate)
+                {
+                    order.IsLateReturn = true;
+                    var lateDuration = request.ActualReturnTime - order.ToDate;
+                    order.LateReturnHours = (int)Math.Ceiling(lateDuration.TotalHours);
+                    // Calculate late fee (assuming hourly rate from order)
+                    order.LateFee = order.LateReturnHours.Value * order.ModelPrice;
+                }
+
+                await _orderRepo.UpdateAsync(order);
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Return confirmed for Order {OrderId} by Staff {StaffId}. Late: {IsLate}",
+                    request.OrderId, request.StaffId, order.IsLateReturn);
+
+                // Send SignalR notification to customer
+                await _hubContext.Clients.Group($"user_{order.UserId}")
+                    .SendAsync("ReturnConfirmed", new
+                    {
+                        OrderId = order.OrderId,
+                        Message = "Vehicle return confirmed. Inspection will begin shortly.",
+                        ReturnTime = request.ActualReturnTime,
+                        IsLateReturn = order.IsLateReturn,
+                        LateFee = order.LateFee,
+                        Timestamp = DateTime.UtcNow
+                    });
+
+                return order;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Failed to confirm return for Order {OrderId}", request.OrderId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets order status with role-based display information.
+        /// </summary>
+        public async Task<OrderStatusResponse> GetOrderStatusAsync(int orderId, string userRole, int requestingUserId)
+        {
+            var order = await _orderRepo.GetByIdAsync(orderId);
+            if (order == null)
+                throw new InvalidOperationException($"Order {orderId} not found");
+
+            // Verify user has permission to view this order
+            var isAdmin = userRole == "Admin" || userRole == "Staff";
+            if (!isAdmin && order.UserId != requestingUserId)
+                throw new UnauthorizedAccessException("You do not have permission to view this order");
+
+            var response = new OrderStatusResponse
+            {
+                OrderId = order.OrderId,
+                InternalStatus = order.Status,
+                DisplayStatus = isAdmin
+                    ? _statusMapper.GetAdminDisplayStatus(order.Status)
+                    : _statusMapper.GetCustomerDisplayStatus(order.Status),
+                CanModifyStatus = isAdmin,
+                AvailableActions = isAdmin
+                    ? _statusMapper.GetAvailableActions(order.Status).ToList()
+                    : new List<string>(),
+
+                // Scheduled times
+                ScheduledPickupTime = order.FromDate,
+                ScheduledReturnTime = order.ToDate,
+
+                // Late return info (visible to both)
+                IsLateReturn = order.IsLateReturn,
+                LateReturnHours = order.LateReturnHours,
+                LateFee = order.LateFee
+            };
+
+            // Add detailed tracking info for admin/staff only
+            if (isAdmin)
+            {
+                response.ActualPickupTime = order.ActualPickupTime;
+                response.ActualReturnTime = order.ActualReturnTime;
+                response.PickupOdometerReading = order.PickupOdometerReading;
+                response.ReturnOdometerReading = order.ReturnOdometerReading;
+                response.PickupBatteryLevel = order.PickupBatteryLevel;
+                response.ReturnBatteryLevel = order.ReturnBatteryLevel;
+                response.HandedOverByStaffId = order.HandedOverByStaffId;
+                response.ReceivedByStaffId = order.ReceivedByStaffId;
+                response.HasDamage = order.HasDamage;
+                response.DamageCharge = order.DamageCharge;
+            }
+
+            return response;
         }
     }
 }

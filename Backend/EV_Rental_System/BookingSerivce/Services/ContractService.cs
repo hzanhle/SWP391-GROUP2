@@ -1,3 +1,4 @@
+using BookingSerivce.DTOs;
 using BookingSerivce.Repositories;
 using BookingService.Models;
 
@@ -7,11 +8,25 @@ namespace BookingSerivce.Services
     {
         private readonly IContractRepository _contractRepo;
         private readonly IOrderRepository _orderRepo;
+        private readonly IPaymentRepository _paymentRepo;
+        private readonly IPdfGeneratorService _pdfGenerator;
+        private readonly IStorageService _storageService;
+        private readonly ILogger<ContractService> _logger;
 
-        public ContractService(IContractRepository contractRepo, IOrderRepository orderRepo)
+        public ContractService(
+            IContractRepository contractRepo,
+            IOrderRepository orderRepo,
+            IPaymentRepository paymentRepo,
+            IPdfGeneratorService pdfGenerator,
+            IStorageService storageService,
+            ILogger<ContractService> logger)
         {
             _contractRepo = contractRepo;
             _orderRepo = orderRepo;
+            _paymentRepo = paymentRepo;
+            _pdfGenerator = pdfGenerator;
+            _storageService = storageService;
+            _logger = logger;
         }
 
         public async Task<OnlineContract> GenerateContractAsync(int orderId, int templateVersion = 1)
@@ -183,6 +198,126 @@ namespace BookingSerivce.Services
 </html>";
 
             return terms;
+        }
+
+        // ===== Stage 2 Enhancement Methods =====
+
+        /// <summary>
+        /// Generates contract with PDF automatically after payment confirmation.
+        /// This is called by OrderService.ConfirmPaymentAsync.
+        /// </summary>
+        public async Task<OnlineContract> GenerateContractWithPdfAsync(int orderId)
+        {
+            try
+            {
+                // Check if contract already exists (idempotency)
+                var existingContract = await _contractRepo.GetByOrderIdAsync(orderId);
+                if (existingContract != null)
+                {
+                    _logger.LogWarning("Contract already exists for Order {OrderId}", orderId);
+                    return existingContract;
+                }
+
+                // Fetch all required data from database (NOT from frontend - security!)
+                var order = await _orderRepo.GetByIdAsync(orderId);
+                if (order == null)
+                    throw new InvalidOperationException($"Order {orderId} not found");
+
+                if (order.Status != "Confirmed")
+                    throw new InvalidOperationException($"Cannot generate contract for order with status: {order.Status}");
+
+                var payment = await _paymentRepo.GetByOrderIdAsync(orderId);
+                if (payment == null || payment.Status != "Completed")
+                    throw new InvalidOperationException($"Payment not completed for order {orderId}");
+
+                // Note: In production, you would fetch User and Vehicle data from their respective services
+                // For now, we'll use placeholder data - you'll need to integrate with UserService and VehicleService
+
+                // Build contract data
+                var contractData = new ContractData
+                {
+                    ContractNumber = await _contractRepo.GenerateContractNumberAsync(),
+                    ContractDate = DateTime.UtcNow,
+
+                    // TODO: Fetch from UserService
+                    UserFullName = $"User {order.UserId}",
+                    UserEmail = $"user{order.UserId}@example.com",
+                    UserPhone = "0123456789",
+                    UserIdCard = "123456789",
+                    UserAddress = "User Address",
+
+                    // TODO: Fetch from VehicleService
+                    VehicleBrand = "Tesla",
+                    VehicleModel = "Model 3",
+                    VehiclePlateNumber = $"VEH-{order.VehicleId}",
+                    VehicleColor = "White",
+                    HourlyRate = order.ModelPrice,
+
+                    // Order data
+                    FromDate = order.FromDate,
+                    ToDate = order.ToDate,
+                    TotalDays = order.TotalDays,
+                    TotalCost = order.TotalCost,
+                    DepositAmount = order.DepositAmount,
+                    DepositPercentage = order.DepositPercentage,
+
+                    // Payment data
+                    TransactionId = payment.TransactionId ?? "N/A",
+                    PaidAmount = payment.Amount ?? order.DepositAmount,
+                    PaymentMethod = payment.Method ?? "VNPay",
+                    PaidAt = payment.CompletedAt ?? payment.CreatedAt
+                };
+
+                // Generate PDF
+                var pdfBytes = await _pdfGenerator.GenerateContractPdfAsync(contractData);
+
+                // Upload PDF to storage
+                var pdfFileName = $"{contractData.ContractNumber}.pdf";
+                var pdfUrl = await _storageService.UploadContractAsync(pdfFileName, pdfBytes);
+
+                // Generate HTML terms
+                var terms = await GetContractTermsAsync(orderId);
+
+                // Create contract record
+                var contract = new OnlineContract
+                {
+                    OrderId = orderId,
+                    ContractNumber = contractData.ContractNumber,
+                    Terms = terms,
+                    PdfFilePath = pdfUrl,
+                    TemplateVersion = 1,
+                    Status = "Generated",
+                    CreatedAt = DateTime.UtcNow,
+                    ExpiresAt = DateTime.UtcNow.AddDays(30) // 30 days validity
+                };
+
+                var createdContract = await _contractRepo.AddAsync(contract);
+
+                _logger.LogInformation("Contract {ContractNumber} generated for Order {OrderId}",
+                    contractData.ContractNumber, orderId);
+
+                return createdContract;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate contract with PDF for Order {OrderId}", orderId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the PDF bytes for a contract.
+        /// </summary>
+        public async Task<byte[]> GetContractPdfAsync(int contractId)
+        {
+            var contract = await _contractRepo.GetByIdAsync(contractId);
+            if (contract == null)
+                throw new InvalidOperationException($"Contract {contractId} not found");
+
+            if (string.IsNullOrEmpty(contract.PdfFilePath))
+                throw new InvalidOperationException($"Contract {contractId} does not have a PDF file");
+
+            return await _storageService.DownloadContractAsync(contract.PdfFilePath);
         }
     }
 }

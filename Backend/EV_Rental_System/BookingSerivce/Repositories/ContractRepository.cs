@@ -75,5 +75,29 @@ namespace BookingSerivce.Repositories
 
             return $"{prefix}{nextNumber:D5}";
         }
+
+        // ===== Stage 2 Enhancement Methods =====
+
+        public async Task<bool> ContractExistsForOrderAsync(int orderId)
+        {
+            return await _context.OnlineContracts
+                .AnyAsync(c => c.OrderId == orderId);
+        }
+
+        public async Task<OnlineContract?> GetByContractNumberAsync(string contractNumber)
+        {
+            return await _context.OnlineContracts
+                .Include(c => c.Order)
+                .FirstOrDefaultAsync(c => c.ContractNumber == contractNumber);
+        }
+
+        public async Task<IEnumerable<OnlineContract>> GetByStatusAsync(string status)
+        {
+            return await _context.OnlineContracts
+                .Include(c => c.Order)
+                .Where(c => c.Status == status)
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
+        }
     }
 }

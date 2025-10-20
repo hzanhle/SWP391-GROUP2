@@ -37,6 +37,12 @@
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
+        // Stage 2 Enhancement Fields - Single-step payment (deposit only)
+        public decimal? Amount { get; set; } // Amount for this payment (deposit amount)
+        public string? Method { get; set; } // Payment method used
+        public string? TransactionId { get; set; } // Transaction ID from payment gateway
+        public DateTime? CompletedAt { get; set; } // When payment was completed
+
         // Constructors
         public Payment()
         {
