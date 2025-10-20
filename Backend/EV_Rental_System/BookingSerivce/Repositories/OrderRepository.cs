@@ -297,5 +297,16 @@ namespace BookingSerivce.Repositories
                     ))
                 .ToListAsync();
         }
+
+        // Stage 1 Enhancement - Order expiration
+        public async Task<IEnumerable<Order>> GetExpiredOrdersAsync()
+        {
+            var now = DateTime.UtcNow;
+            return await _context.Orders
+                .Where(o => o.Status == "Pending"
+                    && o.ExpiresAt.HasValue
+                    && o.ExpiresAt.Value <= now)
+                .ToListAsync();
+        }
     }
 }

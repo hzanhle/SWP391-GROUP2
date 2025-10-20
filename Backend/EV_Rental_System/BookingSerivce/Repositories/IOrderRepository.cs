@@ -53,5 +53,8 @@ namespace BookingSerivce.Repositories
         Task<Order?> GetOrderWithPaymentAsync(int orderId);
         Task<Order?> GetOrderWithContractAsync(int orderId);
         Task<IEnumerable<Order>> GetOverlappingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate);
+
+        // Stage 1 Enhancement - Order expiration
+        Task<IEnumerable<Order>> GetExpiredOrdersAsync();
     }
 }
