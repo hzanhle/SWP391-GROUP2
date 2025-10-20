@@ -50,5 +50,8 @@ namespace BookingSerivce.Repositories
         Task<decimal> GetRevenueByDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<Dictionary<string, int>> GetOrderCountByStatusGroupAsync();
         Task<int> GetUserOrderCountAsync(int userId);
+
+        // Stage 1 Enhancement - Order expiration
+        Task<IEnumerable<Order>> GetExpiredOrdersAsync();
     }
 }

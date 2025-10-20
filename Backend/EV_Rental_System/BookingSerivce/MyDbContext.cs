@@ -1,4 +1,5 @@
 ﻿using BookingService.Models;
+using BookingSerivce.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace BookingSerivce
@@ -13,6 +14,7 @@ namespace BookingSerivce
         public DbSet<InspectionDetail> InspectionDetails { get; set; }
         public DbSet<InspectionImage> InspectionImages { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<SoftLock> SoftLocks { get; set; } // Stage 1 Enhancement
 
         public MyDbContext(DbContextOptions<MyDbContext> options) : base(options)
         {
@@ -233,6 +235,27 @@ namespace BookingSerivce
 
                 // Index thường dùng cho notification
                 entity.HasIndex(n => n.Created);
+            });
+
+            // ============================================
+            // SOFTLOCK CONFIGURATION (Stage 1 Enhancement)
+            // ============================================
+            modelBuilder.Entity<SoftLock>(entity =>
+            {
+                entity.HasKey(sl => sl.LockToken);
+
+                entity.Property(sl => sl.Status)
+                    .HasMaxLength(20)
+                    .IsRequired();
+
+                // Indexes for performance
+                entity.HasIndex(sl => sl.VehicleId);
+                entity.HasIndex(sl => sl.UserId);
+                entity.HasIndex(sl => sl.Status);
+                entity.HasIndex(sl => sl.ExpiresAt);
+
+                // Compound index for availability checks
+                entity.HasIndex(sl => new { sl.VehicleId, sl.Status, sl.ExpiresAt });
             });
         }
     }

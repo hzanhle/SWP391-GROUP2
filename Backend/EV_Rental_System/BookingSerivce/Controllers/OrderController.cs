@@ -166,6 +166,71 @@ namespace BookingSerivce.Controllers
                 });
             }
         }
+
+        // ========== Stage 1 Enhancement Endpoints ==========
+
+        /// <summary>
+        /// Preview an order with calculated costs and trust-score adjusted deposit.
+        /// Creates a 5-minute soft lock on the vehicle.
+        /// </summary>
+        [HttpPost("preview")]
+        public async Task<IActionResult> PreviewOrder([FromBody] OrderPreviewRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var preview = await _orderService.PreviewOrderAsync(request);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Order preview created successfully. Valid for 5 minutes.",
+                    data = preview
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Confirm an order using a preview token.
+        /// Validates soft lock and creates the actual order.
+        /// </summary>
+        [HttpPost("confirm")]
+        [Authorize]
+        public async Task<IActionResult> ConfirmOrder([FromBody] ConfirmOrderRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var orderResponse = await _orderService.ConfirmOrderAsync(request);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Order confirmed successfully. Please proceed to payment within 5 minutes.",
+                    data = orderResponse
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
     }
 
     public class UpdateOrderStatusRequest
