@@ -1,6 +1,5 @@
-﻿// File: AdminDashboardService/Program.cs
-
-using AdminDashboardService.Data;
+﻿using AdminDashboardService.Data;
+using AdminDashboardService.ExternalDbContexts;
 using AdminDashboardService.Repositories;
 using AdminDashboardService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -10,6 +9,27 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// AdminDashboard's own database
+builder.Services.AddDbContext<MyDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("AdminDashboardConnection")));
+
+// External Service Databases (READ-ONLY)
+builder.Services.AddDbContext<UserServiceDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("UserServiceConnection"))
+           .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)); // Read-only optimization
+
+builder.Services.AddDbContext<StationServiceDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("StationServiceConnection"))
+           .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+
+builder.Services.AddDbContext<TwoWheelVehicleServiceDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("TwoWheelVehicleServiceConnection"))
+           .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+
+builder.Services.AddDbContext<BookingServiceDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("BookingServiceConnection"))
+           .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 
 // ===================================================
 // 1️⃣ Configure Services
@@ -98,7 +118,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidAudience = jwtSettings["Audience"],
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.Zero,
+            RoleClaimType = "roleName"
         };
     });
 
