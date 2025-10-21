@@ -25,6 +25,7 @@ namespace BookingService.Services
         //Task<bool> CancelOrderAsync(int orderId, int userId);
         Task<bool> StartRentalAsync(int orderId);
         Task<bool> CompleteRentalAsync(int orderId);
+
         //Task<bool> CheckVehicleAvailabilityAsync(int vehicleId, DateTime fromDate, DateTime toDate);
     }
 }

@@ -1,6 +1,7 @@
-﻿namespace BookingService.Services
+﻿using BookingService.Models;
+namespace BookingService.Services
 {
-    using BookingService.Models;
+   
 
     public interface INotificationService
     {

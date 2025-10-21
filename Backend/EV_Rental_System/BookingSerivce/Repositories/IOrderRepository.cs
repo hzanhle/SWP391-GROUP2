@@ -4,16 +4,28 @@ namespace BookingService.Repositories
 {
     public interface IOrderRepository
     {
-        Task<Order?> GetByIdAsync(int orderId);
-        Task<IEnumerable<Order>> GetByUserIdAsync(int userId);
+        // === CRUD ===
         Task<Order> CreateAsync(Order order);
+        Task<Order?> GetByIdAsync(int orderId);
+        Task<Order?> GetByIdWithDetailsAsync(int orderId);
+        Task<IEnumerable<Order>> GetAllAsync();
         Task<bool> UpdateAsync(Order order);
-        Task<bool> HasCompletedOrderAsync(int userId);
+        Task<bool> DeleteAsync(int orderId);
+
+        // === QUERIES ===
+        Task<IEnumerable<Order>> GetByUserIdAsync(int userId);
+        Task<IEnumerable<Order>> GetByVehicleIdAsync(int vehicleId);
+        Task<IEnumerable<Order>> GetByStatusAsync(OrderStatus status);
+        Task<IEnumerable<Order>> GetByUserIdAndStatusAsync(int userId, OrderStatus status);
+
+        // === AVAILABILITY ===
+        Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime fromDate, DateTime toDate, int? excludeOrderId = null);
         Task<IEnumerable<Order>> GetOverlappingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate, OrderStatus[] statuses);
 
-        /// <summary>
-        /// (MỚI) Lấy các order Pending đã hết hạn (ExpiresAt < now).
-        /// </summary>
-        Task<IEnumerable<Order>> GetExpiredPendingOrdersAsync();
+        // === BUSINESS QUERIES ===
+        Task<IEnumerable<Order>> GetPendingOrdersAsync();
+        Task<IEnumerable<Order>> GetExpiredPendingOrdersAsync(); // ExpiresAt < now
+        Task<int> GetUserCompletedOrdersCountAsync(int userId);
+        Task<bool> HasCompletedOrderAsync(int userId);
     }
 }

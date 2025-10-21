@@ -1,441 +1,669 @@
 ﻿using BookingService.DTOs;
-using BookingService.Models;        // Only for Order model
-using BookingService.Repositories;    // Only for IOrderRepository
+using BookingService.Models;
+using BookingService.Repositories;
 using BookingService.Services.SignalR;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 
 namespace BookingService.Services
 {
     public class OrderService : IOrderService
     {
-        // --- Only Order Repository ---
         private readonly IOrderRepository _orderRepo;
-
-        // --- Injected Services (as per your examples) ---
-        private readonly IOnlineContractService _contractService;
-        private readonly IPaymentService _paymentService;             // Service Layer
-        private readonly INotificationService _notificationService;   // Service Layer
-        private readonly ITrustScoreService _trustScoreService;       // Service Layer
-
-        // --- SignalR & Logging ---
+        private readonly IPaymentService _paymentService;
+        private readonly INotificationService _notificationService;
+        private readonly ITrustScoreService _trustScoreService;
         private readonly IHubContext<OrderTimerHub> _hubContext;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<OrderService> _logger;
+        private readonly OrderSettings _orderSettings;
 
-        // --- Constants ---
-        private const decimal FirstTimeUserFee = 50000m; // Example
-        private const int OrderExpirationMinutes = 30;
+        // ⚠️ ĐÃ XÓA: IOnlineContractService - Không còn tự động tạo contract nữa!
 
         public OrderService(
-            IOrderRepository orderRepo, // Own Repo
-            IOnlineContractService contractService,
-            IPaymentService paymentService,             // Inject Service
-            INotificationService notificationService,   // Inject Service
-            ITrustScoreService trustScoreService,       // Inject Service
+            IOrderRepository orderRepo,
+            IPaymentService paymentService,
+            INotificationService notificationService,
+            ITrustScoreService trustScoreService,
             IHubContext<OrderTimerHub> hubContext,
-            ILogger<OrderService> logger)
+            IUnitOfWork unitOfWork,
+            ILogger<OrderService> logger,
+            IOptions<OrderSettings> orderSettings)
         {
-            _orderRepo = orderRepo;
-            _contractService = contractService;
-            _paymentService = paymentService;
-            _notificationService = notificationService;
-            _trustScoreService = trustScoreService;
-            _hubContext = hubContext;
-            _logger = logger;
+            _orderRepo = orderRepo ?? throw new ArgumentNullException(nameof(orderRepo));
+            _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
+            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            _trustScoreService = trustScoreService ?? throw new ArgumentNullException(nameof(trustScoreService));
+            _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _orderSettings = orderSettings?.Value ?? throw new ArgumentNullException(nameof(orderSettings));
         }
 
-        // --- 1. GET ORDER PREVIEW ---
-        // (No changes needed, this logic is self-contained or uses OrderRepo correctly)
+        #region Order Preview
+
+        /// <summary>
+        /// Xem trước thông tin đơn hàng trước khi tạo
+        /// </summary>
         public async Task<OrderPreviewResponse> GetOrderPreviewAsync(OrderRequest request)
         {
-            _logger.LogInformation("Getting order preview for User {UserId}, Vehicle {VehicleId}", request.UserId, request.VehicleId);
-            if (request.FromDate >= request.ToDate) throw new ArgumentException("FromDate must be before ToDate");
-            if (request.FromDate < DateTime.UtcNow) throw new ArgumentException("Cannot book in the past");
+            _logger.LogInformation(
+                "Getting order preview for User {UserId}, Vehicle {VehicleId}, from {FromDate} to {ToDate}",
+                request.UserId, request.VehicleId, request.FromDate, request.ToDate);
 
-            var isOverlapping = await CheckForOverlappingOrdersAsync(request.VehicleId, request.FromDate, request.ToDate);
+            // 1. Validate thời gian
+            var validationResult = ValidateDateRange(request.FromDate, request.ToDate);
+            if (!validationResult.IsValid)
+            {
+                return CreatePreviewResponse(request, isAvailable: false, validationResult.Message);
+            }
 
-            var hours = Math.Max(1, (decimal)(request.ToDate - request.FromDate).TotalHours); // Ensure minimum 1 hour if logic requires
-            var totalRentalCost = hours * request.RentFeeForHour;
-            var depositAmount = request.ModelPrice * 0.3m;
-            var hasCompletedOrder = await _orderRepo.HasCompletedOrderAsync(request.UserId);
-            var serviceFee = hasCompletedOrder ? 0m : FirstTimeUserFee;
-            var totalPaymentAmount = totalRentalCost + depositAmount + serviceFee;
+            // 2. Kiểm tra tính khả dụng của xe
+            var isAvailable = await CheckVehicleAvailabilityAsync(
+                request.VehicleId,
+                request.FromDate,
+                request.ToDate);
 
+            // 3. Tính toán chi phí
+            var costBreakdown = await CalculateOrderCostAsync(
+                request.UserId,
+                request.FromDate,
+                request.ToDate,
+                request.RentFeeForHour,
+                request.ModelPrice);
+
+            // 4. Trả về response
             return new OrderPreviewResponse
             {
                 UserId = request.UserId,
                 VehicleId = request.VehicleId,
                 FromDate = request.FromDate,
                 ToDate = request.ToDate,
-                TotalRentalCost = totalRentalCost,
-                DepositAmount = depositAmount,
-                ServiceFee = serviceFee,
-                TotalPaymentAmount = totalPaymentAmount,
-                IsAvailable = !isOverlapping,
-                Message = isOverlapping ? "Warning: Vehicle might be booked." : "Preview calculated."
+                TotalRentalCost = costBreakdown.RentalCost,
+                DepositAmount = costBreakdown.Deposit,
+                ServiceFee = costBreakdown.ServiceFee,
+                TotalPaymentAmount = costBreakdown.TotalAmount,
+                IsAvailable = isAvailable,
+                Message = isAvailable
+                    ? "Xe khả dụng. Vui lòng xác nhận đặt xe."
+                    : "Xe đã được đặt trong khoảng thời gian này. Vui lòng chọn thời gian khác."
             };
         }
 
-        // --- 2. CREATE ORDER (Calls Services with Parameters) ---
+        #endregion
+
+        #region Create Order
+
+        /// <summary>
+        /// Tạo đơn hàng mới với trạng thái Pending
+        /// </summary>
         public async Task<OrderResponse> CreateOrderAsync(OrderRequest request)
         {
-            _logger.LogInformation("Creating order for User {UserId}, Vehicle {VehicleId}", request.UserId, request.VehicleId);
-            // NOTE: Assumes transaction is handled OUTSIDE this method (e.g., Unit of Work)
+            _logger.LogInformation(
+                "Creating order for User {UserId}, Vehicle {VehicleId}",
+                request.UserId, request.VehicleId);
 
-            // --- Validation & Overlap Check ---
-            if (request.FromDate >= request.ToDate) throw new ArgumentException("FromDate must be before ToDate");
-            if (request.FromDate < DateTime.UtcNow) throw new ArgumentException("Cannot book start date in the past");
-            var isOverlapping = await CheckForOverlappingOrdersAsync(request.VehicleId, request.FromDate, request.ToDate);
-            if (isOverlapping) throw new InvalidOperationException("Vehicle has just been booked.");
-
-            // --- Calculate BE Financials ---
-            var hours = Math.Max(1, (decimal)(request.ToDate - request.FromDate).TotalHours);
-            var be_TotalRentalCost = hours * request.RentFeeForHour;
-            var be_DepositAmount = request.ModelPrice * 0.3m;
-            var hasCompletedOrder = await _orderRepo.HasCompletedOrderAsync(request.UserId);
-            var be_ServiceFee = hasCompletedOrder ? 0m : FirstTimeUserFee;
-            var be_TotalPaymentAmount = be_TotalRentalCost + be_DepositAmount + be_ServiceFee;
-            _logger.LogInformation("BE calculated final total payment: {Amount}", be_TotalPaymentAmount);
-
-            // --- Call TrustScore Service (to get score) ---
-            var trustScore = await _trustScoreService.GetCurrentScoreAsync(request.UserId); // Use method from your TrustScoreService
-
-            // --- Create Order (Own Repo) ---
-            var order = new Order(
-                request.UserId, request.VehicleId, request.FromDate, request.ToDate,
-                request.RentFeeForHour, be_TotalRentalCost, be_DepositAmount, trustScore
-            );
-            order.ExpiresAt = DateTime.UtcNow.AddMinutes(OrderExpirationMinutes);
-            // CreateAsync should just add to context, not save changes here
-            var createdOrder = await _orderRepo.CreateAsync(order);
-            // We might not have the ID yet if CreateAsync doesn't force save. Assuming it does for logging.
-            _logger.LogInformation("Order {OrderId} added to context, expires at {ExpiresAt}", createdOrder.OrderId, order.ExpiresAt);
-
-            // --- Call Payment Service (Create Pending) ---
-            // Assuming CreatePaymentForOrderAsync matches your PaymentService example
-            // Pass simple parameters, let PaymentService create the Payment model
-            await _paymentService.CreatePaymentForOrderAsync(
-                createdOrder.OrderId,
-                be_TotalPaymentAmount,
-                "PendingMethod" // Or get method from request if applicable
-            );
-            _logger.LogInformation("Pending payment creation requested via PaymentService for Order {OrderId}", createdOrder.OrderId);
-
-            // --- Call Notification Service (Create Notification) ---
-            // Pass parameters, let NotificationService create the Notification model
             try
             {
-                await _notificationService.CreateNotificationAsync( // Use method from your NotificationService example
+                await _unitOfWork.BeginTransactionAsync();
+
+                // 1. Validate đầu vào
+                ValidateDateRangeOrThrow(request.FromDate, request.ToDate);
+
+                // 2. Kiểm tra tính khả dụng (với locking để tránh race condition)
+                await EnsureVehicleAvailableAsync(
+                    request.VehicleId,
+                    request.FromDate,
+                    request.ToDate);
+
+                // 3. Tính toán chi phí
+                var costBreakdown = await CalculateOrderCostAsync(
+                    request.UserId,
+                    request.FromDate,
+                    request.ToDate,
+                    request.RentFeeForHour,
+                    request.ModelPrice);
+
+                // 4. Lấy Trust Score
+                var trustScore = await _trustScoreService.GetCurrentScoreAsync(request.UserId);
+
+                // 5. Tạo Order entity
+                var order = CreateOrderEntity(
+                    request,
+                    costBreakdown,
+                    trustScore);
+
+                // 6. Lưu Order
+                var createdOrder = await _orderRepo.CreateAsync(order);
+
+                _logger.LogInformation("Order {OrderId} created successfully", createdOrder.OrderId);
+
+                // 7. Tạo Payment record
+                await _paymentService.CreatePaymentForOrderAsync(
+                    orderId: createdOrder.OrderId,
+                    amount: costBreakdown.TotalAmount,
+                    paymentMethod: request.PaymentMethod ?? "VNPay");
+
+                // 8. Tạo Notification record
+                await _notificationService.CreateNotificationAsync(
                     userId: request.UserId,
-                    title: "Order Created",
-                    description: $"Your booking #{createdOrder.OrderId} created. Please pay {be_TotalPaymentAmount:N0} VND before {order.ExpiresAt:HH:mm dd/MM/yyyy}.",
+                    title: "Đơn hàng đã tạo",
+                    description: $"Đơn hàng #{createdOrder.OrderId} đã được tạo. Vui lòng thanh toán trong {_orderSettings.ExpiryMinutes} phút.",
                     dataType: "OrderCreated",
                     dataId: createdOrder.OrderId,
-                    staffId: null
-                );
-                _logger.LogInformation("Notification request sent via NotificationService for Order {OrderId} creation.", createdOrder.OrderId);
-            }
-            catch (Exception nex) { _logger.LogError(nex, "Failed to send notification via NotificationService during Order {OrderId} creation.", createdOrder.OrderId); }
+                    staffId: null);
 
-            // --- Return Response ---
-            // IMPORTANT: If CreateAsync doesn't save, createdOrder.OrderId might be 0 here.
-            // The actual save/commit needs to happen *after* this method returns successfully.
-            return new OrderResponse
+                // 9. Commit transaction (tất cả changes được save cùng lúc)
+                await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation(
+                    "Order {OrderId} transaction committed successfully",
+                    createdOrder.OrderId);
+
+                // 10. Trả về response
+                return new OrderResponse
+                {
+                    OrderId = createdOrder.OrderId,
+                    Status = OrderStatus.Pending.ToString(),
+                    TotalAmount = costBreakdown.TotalAmount,
+                    ExpiresAt = createdOrder.ExpiresAt,
+                    Message = $"Đơn hàng đã được tạo. Vui lòng thanh toán trong {_orderSettings.ExpiryMinutes} phút."
+                };
+            }
+            catch (Exception ex)
             {
-                OrderId = createdOrder.OrderId, // Relies on ID being set (might need adjustment based on UoW)
-                Status = createdOrder.Status.ToString(),
-                TotalAmount = be_TotalPaymentAmount,
-                ExpiresAt = order.ExpiresAt,
-                Message = "Order created successfully. Please complete payment."
-            };
-            // The caller (e.g., Controller with UoW) would call SaveChanges here
+                _logger.LogError(ex, "Error creating order for User {UserId}", request.UserId);
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
-        // --- 3. CONFIRM PAYMENT (Calls Services) ---
-        public async Task<bool> ConfirmPaymentAsync(int orderId, string transactionId, string? gatewayResponse = null)
+        #endregion
+
+        #region Confirm Payment
+
+        /// <summary>
+        /// ⭐ QUAN TRỌNG - ĐÃ FIX:
+        /// 1. Xóa auto contract generation
+        /// 2. Thêm TransactionId vào SignalR event
+        /// 3. Tách SignalR ra ngoài transaction
+        /// </summary>
+        public async Task<bool> ConfirmPaymentAsync(
+            int orderId,
+            string transactionId,
+            string? gatewayResponse = null)
         {
-            _logger.LogInformation("Confirming payment for Order {OrderId}", orderId);
-            // NOTE: Assumes transaction is handled OUTSIDE this method
+            _logger.LogInformation(
+                "Confirming payment for Order {OrderId}, TransactionId: {TransactionId}",
+                orderId, transactionId);
 
-            // --- Get and Update Order (Own Repo) ---
-            var order = await _orderRepo.GetByIdAsync(orderId);
-            if (order == null) throw new ArgumentException("Order not found");
-            if (order.Status != OrderStatus.Pending)
-            {
-                if (order.Status == OrderStatus.Confirmed) return true; // Idempotent
-                throw new InvalidOperationException($"Cannot confirm payment for order with status: {order.Status}");
-            }
-            order.Confirm(); // Update local entity status
-            // UpdateAsync should just mark entity as modified in context
-            await _orderRepo.UpdateAsync(order);
-            _logger.LogInformation("Local Order {OrderId} status updated to Confirmed in context.", orderId);
-
-            // --- Call Payment Service (Mark Completed) ---
-            // Use method from your PaymentService example
-            // This service will fetch Payment, call payment.MarkAsCompleted, and call repo.UpdateAsync
-            var paymentSuccess = await _paymentService.MarkPaymentCompletedAsync(orderId, transactionId, gatewayResponse);
-            if (!paymentSuccess)
-            {
-                _logger.LogError("PaymentService failed to mark payment as completed for Order {OrderId}. Transaction might need rollback.", orderId);
-                // If this fails, the transaction should ideally rollback the order status change too.
-                throw new InvalidOperationException($"Payment service failed for Order {orderId}");
-            }
-            _logger.LogInformation("Payment completion requested via PaymentService for Order {OrderId}.", orderId);
-
-            // Retrieve the completed payment details if needed by other services (like contract)
-            var completedPayment = await _paymentService.GetPaymentByOrderIdAsync(orderId); // Use method from your PaymentService
-            if (completedPayment == null || completedPayment.Status != PaymentStatus.Completed)
-            {
-                _logger.LogCritical("CRITICAL: Payment marked completed by service, but GetPaymentByOrderIdAsync returned invalid state for Order {OrderId}.", orderId);
-                // Cannot proceed reliably to contract generation
-                throw new Exception($"Inconsistent payment state after confirmation for Order {orderId}");
-            }
-
-
-            // --- Call Contract Service ---
             try
             {
-                // Pass necessary IDs and the confirmed Payment object/DTO
-                await _contractService.GenerateAndSendContractAsync(
-                    order.OrderId, order.UserId, order.VehicleId, completedPayment);
-                _logger.LogInformation("Contract generation request sent via OnlineContractService for Order {OrderId}.", orderId);
-            }
-            catch (Exception contractEx) { _logger.LogCritical(contractEx, "CRITICAL: Payment {OrderId} SUCCESS, but FAILED contract generation.", orderId); }
+                await _unitOfWork.BeginTransactionAsync();
 
-            // --- Call TrustScore Service ---
-            try
-            {
-                // Use method from your TrustScoreService example
+                // 1. Lấy và validate Order
+                var order = await GetOrderOrThrowAsync(orderId);
+                ValidateOrderStatusForPayment(order);
+
+                // 2. Cập nhật Order status
+                order.Confirm();
+                await _orderRepo.UpdateAsync(order);
+
+                _logger.LogInformation("Order {OrderId} status updated to Confirmed", orderId);
+
+                // 3. Cập nhật Payment status
+                var paymentUpdated = await _paymentService.MarkPaymentCompletedAsync(
+                    orderId,
+                    transactionId,
+                    gatewayResponse);
+
+                if (!paymentUpdated)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to update payment status for Order {orderId}");
+                }
+
+                // ✅ ĐÃ XÓA PHẦN TẠO CONTRACT TỰ ĐỘNG:
+                // ❌ TRƯỚC ĐÂY:
+                // await _contractService.GenerateAndSendContractAsync(
+                //     orderId, order.UserId, order.VehicleId);
+                //
+                // ✅ GIẢI THÍCH:
+                // - Frontend sẽ tự gọi API tạo contract sau khi nhận SignalR event
+                // - Frontend có đầy đủ data (UserDto, VehicleDto, OrderPreview, TransactionId)
+                // - Không cần Backend tự động tạo nữa
+
+                // 4. Cập nhật Trust Score
                 await _trustScoreService.UpdateScoreOnFirstPaymentAsync(order.UserId, orderId);
-                _logger.LogInformation("Trust score update requested for first payment via TrustScoreService for User {UserId}, Order {OrderId}.", order.UserId, orderId);
-            }
-            catch (Exception tsEx) { _logger.LogError(tsEx, "Failed to update trust score via TrustScoreService for User {UserId}, Order {OrderId}.", order.UserId, orderId); }
 
-
-            // --- Call Notification Service ---
-            Notification createdNotification = null;
-            try
-            {
-                // Use method from your NotificationService example
-                createdNotification = await _notificationService.CreateNotificationAsync(
+                // 5. Tạo Notification record
+                await _notificationService.CreateNotificationAsync(
                     userId: order.UserId,
-                    title: "Payment Successful",
-                    description: $"Payment for booking #{orderId} confirmed. Contract sent to your email.",
+                    title: "Thanh toán thành công",
+                    description: $"Thanh toán cho đơn hàng #{orderId} thành công. Hợp đồng sẽ được tạo ngay.",
                     dataType: "PaymentSuccess",
                     dataId: orderId,
-                    staffId: null
-                );
-                _logger.LogInformation("Payment success notification request sent via NotificationService for Order {OrderId}.", orderId);
+                    staffId: null);
 
-                // --- Send SignalR ---
-                if (createdNotification != null) // Check if notification was created successfully
+                // 6. Commit transaction
+                await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation(
+                    "Payment confirmed successfully for Order {OrderId}",
+                    orderId);
+
+                // ✅ ĐÃ FIX: Gửi SignalR event SAU KHI COMMIT
+                // ✅ ĐÃ FIX: Thêm TransactionId vào event payload
+                try
                 {
-                    await _hubContext.Clients
-                        .Group($"order_{order.OrderId}")
-                        .SendAsync("PaymentSuccess", order.OrderId, createdNotification); // Send Model
-                    _logger.LogInformation("SignalR notification 'PaymentSuccess' sent for Order {OrderId}", orderId);
+                    await NotifyPaymentSuccessViaSignalR(orderId, order.UserId, transactionId);
                 }
-            }
-            catch (Exception nex) { _logger.LogError(nex, "Failed to send payment success notification/SignalR for Order {OrderId}.", orderId); }
+                catch (Exception ex)
+                {
+                    // SignalR fail không ảnh hưởng logic chính
+                    _logger.LogError(ex,
+                        "Failed to send SignalR notification for Order {OrderId}", orderId);
+                }
 
-            // The caller (e.g., Webhook Handler with UoW) would call SaveChanges here
-            return true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error confirming payment for Order {OrderId}", orderId);
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
-        // --- 4. JOB CHECK EXPIRED ORDERS (Calls Notification Service) ---
+        #endregion
+
+        #region Background Job - Check Expired Orders
+
+        /// <summary>
+        /// Background job: Kiểm tra và hủy các đơn hàng Pending đã hết hạn
+        /// </summary>
         public async Task<int> CheckExpiredOrdersAsync()
         {
-            _logger.LogDebug("Background Job starting: Checking expired orders...");
-            int count = 0;
-            // This job might run outside the request transaction scope.
-            // It might need its own Unit of Work or handle saving changes itself.
+            _logger.LogInformation("Starting expired orders check");
+
             try
             {
-                var expiredOrders = await _orderRepo.GetExpiredPendingOrdersAsync(); // Use own repo
-                if (!expiredOrders.Any()) return 0;
+                await _unitOfWork.BeginTransactionAsync();
 
-                _logger.LogInformation("Background Job: Found {Count} expired orders.", expiredOrders.Count());
+                var expiredOrders = await _orderRepo.GetExpiredPendingOrdersAsync();
+                int processedCount = 0;
+
                 foreach (var order in expiredOrders)
                 {
-                    // Update Order status locally
-                    order.Cancel();
-                    await _orderRepo.UpdateAsync(order); // Mark modified
-
-                    // --- Call Notification Service ---
-                    Notification createdNotification = null;
                     try
                     {
-                        createdNotification = await _notificationService.CreateNotificationAsync( // Use method from example
-                           userId: order.UserId,
-                           title: "Order Expired",
-                           description: $"Your booking #{order.OrderId} has expired due to non-payment.",
-                           dataType: "OrderExpired",
-                           dataId: order.OrderId,
-                           staffId: null
-                       );
-
-                        // --- Send SignalR ---
-                        if (createdNotification != null)
-                        {
-                            await _hubContext.Clients
-                                .Group($"order_{order.OrderId}")
-                                .SendAsync("OrderExpired", order.OrderId, createdNotification); // Send Model
-                        }
-                        _logger.LogInformation("Order {OrderId} auto-cancelled. Notifications sent.", order.OrderId);
+                        await ProcessExpiredOrderAsync(order);
+                        processedCount++;
                     }
-                    catch (Exception nex) { _logger.LogError(nex, "Failed to send expiration notification/SignalR for Order {OrderId}.", order.OrderId); }
-                    count++;
-
-                    // TODO: Decide on SaveChanges strategy for background jobs.
-                    // Maybe save after each order or after the loop? Requires UoW pattern or similar.
-                    // For simplicity here, assume SaveChanges is handled elsewhere or implicitly.
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            ex,
+                            "Error processing expired Order {OrderId}",
+                            order.OrderId);
+                        // Continue with other orders
+                    }
                 }
-                _logger.LogInformation("Background Job finished: Processed {Count} expired orders.", count);
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                // ✅ FIX: Gửi SignalR SAU KHI COMMIT
+                foreach (var order in expiredOrders)
+                {
+                    try
+                    {
+                        await _hubContext.Clients.User(order.UserId.ToString())
+                            .SendAsync("OrderExpired", new
+                            {
+                                OrderId = order.OrderId,
+                                Message = "Đơn hàng đã hết hạn!"
+                            });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex,
+                            "Failed to send SignalR for expired Order {OrderId}", order.OrderId);
+                    }
+                }
+
+                _logger.LogInformation(
+                    "Expired orders check completed. Processed: {Count}",
+                    processedCount);
+
+                return processedCount;
             }
-            catch (Exception ex) { _logger.LogError(ex, "Error in CheckExpiredOrdersAsync job"); }
-            return count;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during expired orders check");
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
-        // --- 5. OTHER METHODS (Orchestrating Services) ---
+        private async Task ProcessExpiredOrderAsync(Order order)
+        {
+            _logger.LogInformation("Processing expired Order {OrderId}", order.OrderId);
 
-        //public async Task<bool> CancelOrderAsync(int orderId, int userId)
-        //{
-        //    _logger.LogInformation("User {UserId} attempting to cancel Order {OrderId}", userId, orderId);
-        //    // Assume transaction handled outside
+            // Cancel order
+            order.Cancel();
+            await _orderRepo.UpdateAsync(order);
 
-        //    // Use OrderRepo
-        //    var order = await _orderRepo.GetByIdAsync(orderId);
-        //    if (order == null) throw new ArgumentException("Order not found");
-        //    if (order.UserId != userId) throw new UnauthorizedAccessException("User does not own this order.");
-        //    if (order.Status != OrderStatus.Pending && order.Status != OrderStatus.Confirmed) throw new InvalidOperationException($"Cannot cancel order with status: {order.Status}");
+            // Send notification (insert record vào DB)
+            await _notificationService.CreateNotificationAsync(
+                userId: order.UserId,
+                title: "Đơn hàng hết hạn",
+                description: $"Đơn hàng #{order.OrderId} đã hết hạn do chưa thanh toán.",
+                dataType: "OrderExpired",
+                dataId: order.OrderId,
+                staffId: null);
 
-        //    var originalStatus = order.Status;
-        //    order.Cancel();
-        //    await _orderRepo.UpdateAsync(order); // Mark modified
+            _logger.LogInformation("Order {OrderId} marked as expired", order.OrderId);
+        }
 
-        //    // Call Payment Service for Refund
-        //    if (originalStatus == OrderStatus.Confirmed)
-        //    {
-        //        // Assuming Payment Service has a method to handle this logic
-        //        var refundSuccess = await _paymentService.RequestRefundForOrderAsync(orderId);
-        //        _logger.LogInformation("Refund requested via PaymentService for Order {OrderId}. Success: {Status}", orderId, refundSuccess);
-        //    }
+        #endregion
 
-        //    // Call Notification Service
-        //    Notification createdNotification = null;
-        //    try
-        //    {
-        //        createdNotification = await _notificationService.CreateNotificationAsync( // Use method from example
-        //           userId: userId,
-        //           title: "Order Cancelled",
-        //           description: $"Your booking #{orderId} has been cancelled.",
-        //           dataType: "OrderCancelled",
-        //           dataId: orderId,
-        //           staffId: null // User initiated
-        //       );
+        #region Start & Complete Rental
 
-        //        // Send SignalR
-        //        if (createdNotification != null)
-        //        {
-        //            await _hubContext.Clients.Group($"order_{order.OrderId}").SendAsync("OrderCancelled", order.OrderId, createdNotification); // Send Model
-        //        }
-        //        _logger.LogInformation("Cancellation notifications sent for Order {OrderId}", orderId);
-        //    }
-        //    catch (Exception nex) { _logger.LogError(nex, "Failed to send cancellation notification/SignalR for Order {OrderId}.", orderId); }
-
-        //    // Caller handles SaveChanges
-        //    return true;
-        //}
-
+        /// <summary>
+        /// Bắt đầu chuyến thuê xe
+        /// </summary>
         public async Task<bool> StartRentalAsync(int orderId)
         {
-            _logger.LogInformation("Attempting to start rental for Order {OrderId}", orderId);
-            // Assume transaction handled outside
+            _logger.LogInformation("Starting rental for Order {OrderId}", orderId);
 
-            // Use OrderRepo
-            var order = await _orderRepo.GetByIdAsync(orderId);
-            if (order == null) throw new ArgumentException("Order not found");
-            if (order.Status != OrderStatus.Confirmed) throw new InvalidOperationException($"Cannot start rental for order with status: {order.Status}");
-            if (DateTime.UtcNow < order.FromDate) throw new InvalidOperationException("Rental period has not started yet.");
-
-            order.StartRental();
-            await _orderRepo.UpdateAsync(order); // Mark modified
-
-            // Call Notification Service
             try
             {
-                await _notificationService.CreateNotificationAsync( // Use method from example
+                await _unitOfWork.BeginTransactionAsync();
+
+                var order = await GetOrderOrThrowAsync(orderId);
+
+                if (order.Status != OrderStatus.Confirmed)
+                {
+                    throw new InvalidOperationException(
+                        $"Order {orderId} must be in Confirmed status to start rental. Current status: {order.Status}");
+                }
+
+                order.StartRental();
+                await _orderRepo.UpdateAsync(order);
+
+                await _notificationService.CreateNotificationAsync(
                     userId: order.UserId,
-                    title: "Rental Started",
-                    description: $"Your rental for booking #{orderId} has started. Enjoy your trip!",
+                    title: "Chuyến thuê đã bắt đầu",
+                    description: $"Chuyến thuê xe #{orderId} đã bắt đầu.",
                     dataType: "RentalStarted",
                     dataId: orderId,
-                    staffId: null // System event
-                );
-                _logger.LogInformation("Rental started notification sent for Order {OrderId}", orderId);
-            }
-            catch (Exception nex) { _logger.LogError(nex, "Failed to send rental started notification for Order {OrderId}.", orderId); }
+                    staffId: null);
 
-            // Caller handles SaveChanges
-            return true;
+                await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation("Rental started successfully for Order {OrderId}", orderId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error starting rental for Order {OrderId}", orderId);
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
+        /// <summary>
+        /// Hoàn thành chuyến thuê xe
+        /// </summary>
         public async Task<bool> CompleteRentalAsync(int orderId)
         {
-            _logger.LogInformation("Attempting to complete rental for Order {OrderId}", orderId);
-            // Assume transaction handled outside
+            _logger.LogInformation("Completing rental for Order {OrderId}", orderId);
 
-            // Use OrderRepo
-            var order = await _orderRepo.GetByIdAsync(orderId);
-            if (order == null) throw new ArgumentException("Order not found");
-            if (order.Status != OrderStatus.InProgress) throw new InvalidOperationException($"Cannot complete order with status: {order.Status}");
-
-            order.Complete();
-            await _orderRepo.UpdateAsync(order); // Mark modified
-
-            // Call TrustScore Service
             try
             {
-                // Use method from your TrustScoreService example
+                await _unitOfWork.BeginTransactionAsync();
+
+                var order = await GetOrderOrThrowAsync(orderId);
+
+                if (order.Status != OrderStatus.InProgress)
+                {
+                    throw new InvalidOperationException(
+                        $"Order {orderId} must be in InProgress status to complete. Current status: {order.Status}");
+                }
+
+                order.Complete();
+                await _orderRepo.UpdateAsync(order);
+
+                // Update Trust Score
                 await _trustScoreService.UpdateScoreOnRentalCompletionAsync(order.UserId, orderId);
-                _logger.LogInformation("Trust score update requested on completion via TrustScoreService for User {UserId}, Order {OrderId}.", order.UserId, orderId);
-            }
-            catch (Exception tsEx) { _logger.LogError(tsEx, "Failed to update trust score on completion for User {UserId}, Order {OrderId}.", order.UserId, orderId); }
 
-
-            // Call Notification Service
-            try
-            {
-                await _notificationService.CreateNotificationAsync( // Use method from example
+                await _notificationService.CreateNotificationAsync(
                     userId: order.UserId,
-                    title: "Rental Completed",
-                    description: $"Your rental for booking #{orderId} has completed. Thank you! Please consider leaving a review.",
+                    title: "Chuyến thuê hoàn thành",
+                    description: $"Chuyến thuê xe #{orderId} đã hoàn thành. Cảm ơn bạn đã sử dụng dịch vụ!",
                     dataType: "RentalCompleted",
                     dataId: orderId,
-                    staffId: null // System event
-                );
-                _logger.LogInformation("Rental completed notification sent for Order {OrderId}", orderId);
+                    staffId: null);
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation("Rental completed successfully for Order {OrderId}", orderId);
+                return true;
             }
-            catch (Exception nex) { _logger.LogError(nex, "Failed to send rental completed notification for Order {OrderId}.", orderId); }
-
-            // Caller handles SaveChanges
-            return true;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error completing rental for Order {OrderId}", orderId);
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
-        // --- Internal Helper for Overlap Check ---
-        private async Task<bool> CheckForOverlappingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate)
+        #endregion
+
+        #region Query Methods
+
+        public async Task<Order?> GetOrderByIdAsync(int orderId)
         {
-            _logger.LogDebug("Checking overlap for Vehicle {VId} ({Start} - {End})", vehicleId, fromDate, toDate);
-            var overlappingOrders = await _orderRepo.GetOverlappingOrdersAsync(
-                vehicleId, fromDate, toDate,
-                new[] { OrderStatus.Confirmed, OrderStatus.InProgress }
-            );
-            bool overlaps = overlappingOrders.Any();
-            if (overlaps) _logger.LogWarning("Overlap DETECTED for Vehicle {VId}", vehicleId);
-            return overlaps;
+            return await _orderRepo.GetByIdAsync(orderId);
         }
 
-        // --- Get Methods ---
-        public async Task<Order?> GetOrderByIdAsync(int orderId) => await _orderRepo.GetByIdAsync(orderId);
-        public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(int userId) => await _orderRepo.GetByUserIdAsync(userId);
+        public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(int userId)
+        {
+            return await _orderRepo.GetByUserIdAsync(userId);
+        }
+
+        #endregion
+
+        #region Private Helper Methods
+
+        // ===== Validation =====
+
+        private (bool IsValid, string Message) ValidateDateRange(DateTime fromDate, DateTime toDate)
+        {
+            if (fromDate >= toDate)
+            {
+                return (false, "Thời gian thuê không hợp lệ. FromDate phải nhỏ hơn ToDate.");
+            }
+
+            if (fromDate < DateTime.UtcNow)
+            {
+                return (false, "Không thể đặt xe trong quá khứ.");
+            }
+
+            return (true, string.Empty);
+        }
+
+        private void ValidateDateRangeOrThrow(DateTime fromDate, DateTime toDate)
+        {
+            var result = ValidateDateRange(fromDate, toDate);
+            if (!result.IsValid)
+            {
+                throw new InvalidOperationException(result.Message);
+            }
+        }
+
+        private void ValidateOrderStatusForPayment(Order order)
+        {
+            if (order.Status != OrderStatus.Pending)
+            {
+                throw new InvalidOperationException(
+                    $"Order {order.OrderId} is not in Pending status. Current status: {order.Status}");
+            }
+        }
+
+        // ===== Availability Checks =====
+
+        private async Task<bool> CheckVehicleAvailabilityAsync(
+            int vehicleId,
+            DateTime fromDate,
+            DateTime toDate)
+        {
+            var statuses = new[] { OrderStatus.Confirmed, OrderStatus.InProgress, OrderStatus.Pending };
+            var overlappingOrders = await _orderRepo.GetOverlappingOrdersAsync(
+                vehicleId,
+                fromDate,
+                toDate,
+                statuses);
+
+            return !overlappingOrders.Any();
+        }
+
+        private async Task EnsureVehicleAvailableAsync(
+            int vehicleId,
+            DateTime fromDate,
+            DateTime toDate)
+        {
+            var isAvailable = await _orderRepo.IsVehicleAvailableAsync(
+                vehicleId,
+                fromDate,
+                toDate);
+
+            if (!isAvailable)
+            {
+                throw new InvalidOperationException(
+                    $"Vehicle {vehicleId} is not available from {fromDate:yyyy-MM-dd HH:mm} to {toDate:yyyy-MM-dd HH:mm}");
+            }
+        }
+
+        // ===== Cost Calculation =====
+
+        private async Task<OrderCostBreakdown> CalculateOrderCostAsync(
+            int userId,
+            DateTime fromDate,
+            DateTime toDate,
+            decimal hourlyRate,
+            decimal vehiclePrice)
+        {
+            var totalHours = (decimal)(toDate - fromDate).TotalHours;
+            var rentalCost = totalHours * hourlyRate;
+            var deposit = vehiclePrice * _orderSettings.DepositPercentage;
+
+            // Check if user has completed orders (waive service fee)
+            var hasCompletedOrder = await _orderRepo.HasCompletedOrderAsync(userId);
+            var serviceFee = hasCompletedOrder ? 0m : _orderSettings.ServiceFee;
+
+            var totalAmount = rentalCost + deposit + serviceFee;
+
+            return new OrderCostBreakdown
+            {
+                RentalCost = rentalCost,
+                Deposit = deposit,
+                ServiceFee = serviceFee,
+                TotalAmount = totalAmount
+            };
+        }
+
+        // ===== Entity Creation =====
+
+        private Order CreateOrderEntity(
+            OrderRequest request,
+            OrderCostBreakdown costBreakdown,
+            int trustScore)
+        {
+            return new Order(
+                userId: request.UserId,
+                vehicleId: request.VehicleId,
+                fromDate: request.FromDate,
+                toDate: request.ToDate,
+                hourlyRate: request.RentFeeForHour,
+                totalCost: costBreakdown.TotalAmount,
+                depositAmount: costBreakdown.Deposit,
+                trustScore: trustScore,
+                expiresAt: DateTime.UtcNow.AddMinutes(_orderSettings.ExpiryMinutes));
+        }
+
+        // ===== Repository Helpers =====
+
+        private async Task<Order> GetOrderOrThrowAsync(int orderId)
+        {
+            var order = await _orderRepo.GetByIdAsync(orderId);
+            if (order == null)
+            {
+                throw new InvalidOperationException($"Order {orderId} not found");
+            }
+            return order;
+        }
+
+        // ===== Response Creation =====
+
+        private OrderPreviewResponse CreatePreviewResponse(
+            OrderRequest request,
+            bool isAvailable,
+            string message)
+        {
+            return new OrderPreviewResponse
+            {
+                UserId = request.UserId,
+                VehicleId = request.VehicleId,
+                FromDate = request.FromDate,
+                ToDate = request.ToDate,
+                IsAvailable = isAvailable,
+                Message = message
+            };
+        }
+
+        // ===== SignalR =====
+
+        /// <summary>
+        /// ✅ ĐÃ FIX: Thêm TransactionId vào event
+        /// </summary>
+        private async Task NotifyPaymentSuccessViaSignalR(
+            int orderId,
+            int userId,
+            string transactionId)
+        {
+            await _hubContext.Clients.User(userId.ToString())
+                .SendAsync("PaymentSuccess", new
+                {
+                    OrderId = orderId,
+                    TransactionId = transactionId, // ✅ THÊM FIELD NÀY!
+                    Message = "Thanh toán thành công!"
+                });
+
+            _logger.LogInformation(
+                "SignalR PaymentSuccess sent to User {UserId} for Order {OrderId}, TransactionId: {TransactionId}",
+                userId, orderId, transactionId);
+        }
+
+        #endregion
+    }
+
+    // ===== Helper Classes =====
+
+    internal class OrderCostBreakdown
+    {
+        public decimal RentalCost { get; set; }
+        public decimal Deposit { get; set; }
+        public decimal ServiceFee { get; set; }
+        public decimal TotalAmount { get; set; }
+    }
+
+    // ===== Settings Class (nên định nghĩa riêng file) =====
+
+    public class OrderSettings
+    {
+        public decimal DepositPercentage { get; set; } = 0.3m; // 30%
+        public decimal ServiceFee { get; set; } = 50000m;
+        public int ExpiryMinutes { get; set; } = 30;
     }
 }

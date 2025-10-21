@@ -20,5 +20,7 @@ namespace BookingService.DTOs
         [Required]
         [Range(1, double.MaxValue, ErrorMessage = "Model price must be positive.")]
         public decimal ModelPrice { get; set; } // Needed to calculate deposit
-    }
+
+        public string PaymentMethod { get; set; }
+        }
 }

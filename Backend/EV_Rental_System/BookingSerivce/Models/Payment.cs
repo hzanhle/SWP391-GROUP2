@@ -14,32 +14,40 @@ namespace BookingService.Models
     {
         public int PaymentId { get; set; }
 
-        // Foreign key
+        // === Foreign Key đến Order ===
         public int OrderId { get; set; }
         public Order? Order { get; set; }
 
-        // Payment details
-        public decimal Amount { get; set; }            // Tổng tiền phải trả (Deposit + ServiceFee nếu new user)
+        // === Payment details ===
+        public decimal Amount { get; set; }
         public string PaymentMethod { get; set; } = string.Empty; // VNPay, Momo, Cash, etc.
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 
-        // Transaction info từ payment gateway
-        public string? TransactionId { get; set; }     // Mã giao dịch từ gateway
-        public DateTime? PaidAt { get; set; }          // Thời điểm thanh toán thành công
-
-        // Metadata
-        public string? PaymentGatewayResponse { get; set; }  // Raw response từ gateway (JSON)
+        // === Transaction info ===
+        public string? TransactionId { get; set; }
+        public DateTime? PaidAt { get; set; }
+        public string? PaymentGatewayResponse { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        // Constructors
+        // === Constructors ===
         public Payment() { }
 
+        // Constructor chính - Nhận đầy đủ thông tin cần thiết
         public Payment(int orderId, decimal amount, string paymentMethod)
         {
+            if (orderId <= 0)
+                throw new ArgumentException("OrderId must be greater than 0", nameof(orderId));
+
+            if (amount <= 0)
+                throw new ArgumentException("Amount must be greater than 0", nameof(amount));
+
+            if (string.IsNullOrWhiteSpace(paymentMethod))
+                throw new ArgumentException("PaymentMethod cannot be empty", nameof(paymentMethod));
+
             OrderId = orderId;
             Amount = amount;
             PaymentMethod = paymentMethod;
@@ -47,13 +55,14 @@ namespace BookingService.Models
             CreatedAt = DateTime.UtcNow;
         }
 
-        // Methods
+        // === Domain Methods ===
         public void MarkAsCompleted(string transactionId, string? gatewayResponse = null)
         {
             if (Status == PaymentStatus.Completed)
-            {
-                throw new InvalidOperationException("Payment already completed");
-            }
+                throw new InvalidOperationException($"Payment {PaymentId} is already completed.");
+
+            if (string.IsNullOrWhiteSpace(transactionId))
+                throw new ArgumentException("TransactionId cannot be empty", nameof(transactionId));
 
             Status = PaymentStatus.Completed;
             TransactionId = transactionId;
@@ -64,14 +73,29 @@ namespace BookingService.Models
 
         public void MarkAsFailed(string? gatewayResponse = null)
         {
+            if (Status == PaymentStatus.Completed)
+                throw new InvalidOperationException($"Cannot mark completed payment {PaymentId} as failed.");
+
             Status = PaymentStatus.Failed;
             PaymentGatewayResponse = gatewayResponse;
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public bool IsCompleted()
+        public void MarkAsRefunded(string? reason = null)
         {
-            return Status == PaymentStatus.Completed;
+            if (Status != PaymentStatus.Completed)
+                throw new InvalidOperationException($"Cannot refund payment {PaymentId} that is not completed.");
+
+            Status = PaymentStatus.Refunded;
+            PaymentGatewayResponse = reason;
+            UpdatedAt = DateTime.UtcNow;
         }
+
+        // === Query Methods ===
+        public bool IsCompleted() => Status == PaymentStatus.Completed;
+        public bool IsPending() => Status == PaymentStatus.Pending;
+        public bool IsFailed() => Status == PaymentStatus.Failed;
+        public bool IsRefunded() => Status == PaymentStatus.Refunded;
+        public bool CanBeRefunded() => Status == PaymentStatus.Completed;
     }
 }

@@ -1,0 +1,6 @@
+{
+  "EmailSettings": {
+    "SenderEmail": "your-email@gmail.com",
+    "SenderPassword": "your-gmail-app-password"
+  }
+}

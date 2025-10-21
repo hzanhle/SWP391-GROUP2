@@ -24,6 +24,7 @@ namespace BookingService.Repositories
         public async Task<Order?> GetByIdAsync(int orderId)
         {
             return await _context.Orders
+                .AsNoTracking()
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
         }
 
@@ -32,149 +33,128 @@ namespace BookingService.Repositories
             return await _context.Orders
                 .Include(o => o.Payment)
                 .Include(o => o.OnlineContract)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
         }
 
-        public async Task<List<Order>> GetByUserIdAsync(int userId)
+        public async Task<IEnumerable<Order>> GetAllAsync()
         {
             return await _context.Orders
-                .Where(o => o.UserId == userId)
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
-        }
-
-        public async Task<List<Order>> GetByVehicleIdAsync(int vehicleId)
-        {
-            return await _context.Orders
-                .Where(o => o.VehicleId == vehicleId)
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
-        }
-
-        public async Task<List<Order>> GetByStatusAsync(OrderStatus status)
-        {
-            return await _context.Orders
-                .Where(o => o.Status == status)
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
-        }
-
-        public async Task<List<Order>> GetAllAsync()
-        {
-            return await _context.Orders
+                .AsNoTracking()
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
         }
 
         // === UPDATE ===
-        public async Task<Order> UpdateAsync(Order order)
+        public async Task<bool> UpdateAsync(Order order)
         {
-            order.UpdatedAt = DateTime.UtcNow;
             _context.Orders.Update(order);
-            await _context.SaveChangesAsync();
-            return order;
+            return await _context.SaveChangesAsync() > 0;
         }
 
         // === DELETE ===
-        public async Task DeleteAsync(int orderId)
+        public async Task<bool> DeleteAsync(int orderId)
         {
-            var order = await GetByIdAsync(orderId);
+            var order = await _context.Orders.FindAsync(orderId);
             if (order == null)
-            {
-                throw new KeyNotFoundException($"Order with ID {orderId} not found");
-            }
+                return false;
 
             _context.Orders.Remove(order);
-            await _context.SaveChangesAsync();
+            return await _context.SaveChangesAsync() > 0;
         }
 
-        // === AVAILABILITY CHECK ===
-        public async Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime fromDate, DateTime toDate, int? excludeOrderId = null)
-        {
-            var conflictingOrders = await GetConflictingOrdersAsync(vehicleId, fromDate, toDate);
-
-            // Nếu có excludeOrderId (dùng cho update), bỏ qua order đó
-            if (excludeOrderId.HasValue)
-            {
-                conflictingOrders = conflictingOrders
-                    .Where(o => o.OrderId != excludeOrderId.Value)
-                    .ToList();
-            }
-
-            return conflictingOrders.Count == 0;
-        }
-
-        public async Task<List<Order>> GetConflictingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate)
+        // === FILTER QUERIES ===
+        public async Task<IEnumerable<Order>> GetByUserIdAsync(int userId)
         {
             return await _context.Orders
-                .Where(o => o.VehicleId == vehicleId)
-                .Where(o => o.Status != OrderStatus.Cancelled && o.Status != OrderStatus.Completed)
-                .Where(o =>
-                    // Check overlap:
-                    // Case 1: Order bắt đầu trong khoảng cần check
-                    (o.FromDate < toDate && o.ToDate > fromDate)
-                )
-                .ToListAsync();
-        }
-
-        // === BUSINESS QUERIES ===
-        public async Task<List<Order>> GetPendingOrdersAsync()
-        {
-            return await _context.Orders
-                .Where(o => o.Status == OrderStatus.Pending)
-                .Include(o => o.Payment)
-                .Include(o => o.OnlineContract)
-                .OrderBy(o => o.CreatedAt)
-                .ToListAsync();
-        }
-
-        public async Task<List<Order>> GetExpiredPendingOrdersAsync(int minutesThreshold)
-        {
-            var cutoffTime = DateTime.UtcNow.AddMinutes(-minutesThreshold);
-
-            return await _context.Orders
-                .Where(o => o.Status == OrderStatus.Pending)
-                .Where(o => o.CreatedAt < cutoffTime)
-                .Include(o => o.Payment)
-                .Include(o => o.OnlineContract)
-                .ToListAsync();
-        }
-
-        public async Task<int> GetUserCompletedOrdersCountAsync(int userId)
-        {
-            return await _context.Orders
+                .AsNoTracking()
                 .Where(o => o.UserId == userId)
-                .Where(o => o.Status == OrderStatus.Completed)
-                .CountAsync();
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
         }
 
-        public async Task<bool> HasCompletedOrderAsync(int userId)
+        public async Task<IEnumerable<Order>> GetByVehicleIdAsync(int vehicleId)
         {
             return await _context.Orders
-                .AnyAsync(o => o.UserId == userId && o.Status == OrderStatus.Completed);
+                .AsNoTracking()
+                .Where(o => o.VehicleId == vehicleId)
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Order>> GetByStatusAsync(OrderStatus status)
+        {
+            return await _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == status)
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
         }
 
         public async Task<IEnumerable<Order>> GetByUserIdAndStatusAsync(int userId, OrderStatus status)
         {
             return await _context.Orders
+                .AsNoTracking()
                 .Where(o => o.UserId == userId && o.Status == status)
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Order>> GetOverlappingOrdersAsync(
-            int vehicleId,
-            DateTime fromDate,
-            DateTime toDate,
-            OrderStatus[] statuses)
+        // === AVAILABILITY CHECK ===
+        public async Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime fromDate, DateTime toDate, int? excludeOrderId = null)
+        {
+            var overlapping = await GetOverlappingOrdersAsync(
+                vehicleId, fromDate, toDate,
+                new[] { OrderStatus.Pending, OrderStatus.Confirmed, OrderStatus.InProgress }
+            );
+
+            if (excludeOrderId.HasValue)
+                overlapping = overlapping.Where(o => o.OrderId != excludeOrderId.Value);
+
+            return !overlapping.Any();
+        }
+
+        public async Task<IEnumerable<Order>> GetOverlappingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate, OrderStatus[] statuses)
         {
             return await _context.Orders
+                .AsNoTracking()
                 .Where(o => o.VehicleId == vehicleId &&
                             statuses.Contains(o.Status) &&
                             o.FromDate < toDate &&
                             o.ToDate > fromDate)
                 .ToListAsync();
         }
-        
+
+        // === BUSINESS QUERIES ===
+        public async Task<IEnumerable<Order>> GetPendingOrdersAsync()
+        {
+            return await _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Pending)
+                .OrderBy(o => o.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Order>> GetExpiredPendingOrdersAsync()
+        {
+            return await _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Pending && o.ExpiresAt != null && o.ExpiresAt < DateTime.UtcNow)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetUserCompletedOrdersCountAsync(int userId)
+        {
+            return await _context.Orders
+                .AsNoTracking()
+                .CountAsync(o => o.UserId == userId && o.Status == OrderStatus.Completed);
+        }
+
+        public async Task<bool> HasCompletedOrderAsync(int userId)
+        {
+            return await _context.Orders
+                .AsNoTracking()
+                .AnyAsync(o => o.UserId == userId && o.Status == OrderStatus.Completed);
+        }
     }
 }
