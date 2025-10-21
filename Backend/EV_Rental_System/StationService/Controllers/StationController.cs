@@ -5,6 +5,8 @@ using StationService.DTOs;
 using StationService.Models;
 using StationService.Services;
 using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using static System.Collections.Specialized.BitVector32;
 
@@ -160,6 +162,26 @@ namespace StationService.Controllers
                 _logger.LogError(ex, "Đã xảy ra lỗi khi thay đổi trạng thái trạm với ID: {StationId}", id);
                 return StatusCode(500, "Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.");
             }
+        }
+
+                // GET: /api/station/within?neLat=..&neLng=..&swLat=..&swLng=..
+        [HttpGet("within")]
+        [AllowAnonymous] // nếu bạn muốn FE public gọi không cần token
+        public async Task<IActionResult> GetWithin([FromQuery] double neLat, [FromQuery] double neLng,
+                                                   [FromQuery] double swLat, [FromQuery] double swLng)
+        {
+            var list = await _stationService.GetStationsWithinBounds(neLat, neLng, swLat, swLng);
+            return Ok(list);
+        }
+
+        // GET: /api/station/near?lat=..&lng=..&radiusKm=2
+        [HttpGet("near")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetNear([FromQuery] double lat, [FromQuery] double lng,
+                                                 [FromQuery] double radiusKm = 2)
+        {
+            var list = await _stationService.GetStationsNearby(lat, lng, Math.Max(0.1, radiusKm));
+            return Ok(list);
         }
     }
 }

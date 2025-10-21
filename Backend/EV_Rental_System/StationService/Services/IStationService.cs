@@ -27,6 +27,10 @@ namespace StationService.Services
         Task<StationDTO?> GetStationByIdAsync(int stationId);
 
         Task SetStatus(int stationId);
+
+                // Map helpers (trả về DTO để FE dùng trực tiếp)
+        Task<List<StationDTO>> GetStationsWithinBounds(double neLat, double neLng, double swLat, double swLng);
+        Task<List<StationDTO>> GetStationsNearby(double lat, double lng, double radiusKm);
     }
     
 }

@@ -2,6 +2,7 @@
 using StationService.Models;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace StationService.Repositories
@@ -68,5 +69,48 @@ namespace StationService.Repositories
             _context.Entry(station).State = EntityState.Modified;
             await _context.SaveChangesAsync();
         }
+
+                // ---- Map queries ----
+        public async Task<List<Station>> GetWithinBounds(double neLat, double neLng, double swLat, double swLng)
+        {
+            // Không wrap kinh độ
+            if (neLng >= swLng)
+                return await _context.Stations.AsNoTracking()
+                    .Where(s => s.Lat <= neLat && s.Lat >= swLat && s.Lng <= neLng && s.Lng >= swLng)
+                    .ToListAsync();
+
+            // Trường hợp map wrap qua kinh tuyến 180°
+            return await _context.Stations.AsNoTracking()
+                .Where(s => s.Lat <= neLat && s.Lat >= swLat && (s.Lng <= neLng || s.Lng >= swLng))
+                .ToListAsync();
+        }
+
+        public async Task<List<Station>> GetNearby(double lat, double lng, double radiusKm)
+        {
+            const double KM_PER_DEG_LAT = 110.574;
+            double kmPerDegLng = 111.320 * Math.Cos(lat * Math.PI / 180.0);
+            double dLat = radiusKm / KM_PER_DEG_LAT;
+            double dLng = radiusKm / kmPerDegLng;
+
+            double minLat = lat - dLat, maxLat = lat + dLat;
+            double minLng = lng - dLng, maxLng = lng + dLng;
+
+            var pre = await _context.Stations.AsNoTracking()
+                .Where(s => s.Lat >= minLat && s.Lat <= maxLat && s.Lng >= minLng && s.Lng <= maxLng)
+                .ToListAsync();
+
+            static double Haversine(double lat1, double lon1, double lat2, double lon2)
+    {
+                        const double R = 6371;
+        double dLat = (lat2 - lat1) * Math.PI / 180.0;
+        double dLon = (lon2 - lon1) * Math.PI / 180.0;
+        double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+        Math.Cos(lat1 * Math.PI / 180.0) * Math.Cos(lat2 * Math.PI / 180.0) *
+        Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+                        return R * c;
+                    }
+            return pre.Where(s => Haversine(lat, lng, s.Lat, s.Lng) <= radiusKm).ToList();
+       }
     }
 }

@@ -1,5 +1,6 @@
 import React from 'react'
 import CTA from './CTA'
+import StationMap from './StationMap'
 
 export default function SearchBar() {
   return (
@@ -51,7 +52,7 @@ export default function SearchBar() {
           <CTA as="button" aria-label="Apply filters">Apply filters</CTA>
         </div>
 
-        <div className="map-card" role="img" aria-label="Map preview" data-figma-layer="Map" data-tailwind='class: "min-h-[260px] rounded-lg border border-slate-200 bg-[repeating-linear-gradient(45deg,#f8fafc,#f8fafc_10px,#eef2f7_10px,#eef2f7_20px)] shadow-sm"'></div>
+        <StationMap />
       </div>
     </section>
   )

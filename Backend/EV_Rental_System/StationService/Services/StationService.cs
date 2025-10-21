@@ -2,8 +2,9 @@
 using StationService.Models;
 using StationService.Repositories;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 
 namespace StationService.Services
@@ -19,13 +20,16 @@ namespace StationService.Services
 
         public async Task<Station> AddStationAsync(CreateStationRequest stationRequest)
         {
+            ValidateLatLng(stationRequest.Lat, stationRequest.Lng);
             // Chuyển từ Request DTO sang Model
             var newStation = new Station
             {
                 Name = stationRequest.Name,
                 Location = stationRequest.Location,
                 ManagerId = stationRequest.ManagerId,
-                IsActive = true // Mặc định là active khi tạo mới
+                IsActive = true, // Mặc định là active khi tạo mới
+                Lat = stationRequest.Lat,
+                Lng = stationRequest.Lng
             };
             var createdStation = await _stationRepository.AddStation(newStation);   
             return createdStation;
@@ -114,6 +118,29 @@ namespace StationService.Services
                 await _stationRepository.UpdateStation(station);
             }
         }
+
+                // ---- Map helpers ----
+        private static StationDTO ToDto(Station s) => new StationDTO(
+s.Id, s.Name, s.Location, s.ManagerId, s.IsActive, s.Lat, s.Lng);
+
+        private static void ValidateLatLng(double lat, double lng)
+        {
+            if (lat< -90 || lat> 90) throw new ArgumentException("Invalid latitude.");
+            if (lng< -180 || lng> 180) throw new ArgumentException("Invalid longitude.");
+        }
+
+        public async Task<List<StationDTO>> GetStationsWithinBounds(double neLat, double neLng, double swLat, double swLng)
+        {
+            var list = await _stationRepository.GetWithinBounds(neLat, neLng, swLat, swLng);
+            return list.Select(ToDto).ToList();
+        }
+
+        public async Task<List<StationDTO>> GetStationsNearby(double lat, double lng, double radiusKm)
+        {
+    ValidateLatLng(lat, lng);
+    var list = await _stationRepository.GetNearby(lat, lng, radiusKm);
+                return list.Select(ToDto).ToList();
+            }
 
     }
 }

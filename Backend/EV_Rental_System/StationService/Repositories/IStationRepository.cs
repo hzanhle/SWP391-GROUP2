@@ -14,5 +14,8 @@ namespace StationService.Repositories
         Task<List<Station>> GetActiveStations();
         Task<List<Station>> GetInactiveStations();
         Task<List<Station>> GetStationsByManagerId(int managerId);
+        Task<List<Station>> GetWithinBounds(double neLat, double neLng, double swLat, double swLng);
+        Task<List<Station>> GetNearby(double lat, double lng, double radiusKm);
+
     }
 }

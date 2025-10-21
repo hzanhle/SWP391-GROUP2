@@ -14,7 +14,13 @@ namespace StationService
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
+            modelBuilder.Entity<Station>(e =>
+    {
+                e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+                e.Property(x => x.Location).HasMaxLength(500).IsRequired();
+                e.Property(x => x.Lat).IsRequired();
+                e.Property(x => x.Lng).IsRequired();
+                    });
             ConfigureStation(modelBuilder);
             ConfigureStaffShift(modelBuilder);
             ConfigureFeedback(modelBuilder);
