@@ -81,12 +81,36 @@ namespace UserService.Controllers
             try
             {
                 await _userService.AddUserAsync(user);
-                return Ok(new { message = "User registered successfully" });
+                return Ok(new {
+                    success = true,
+                    message = "Đăng ký thành công"
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                // Validation errors (username empty, password empty, etc.)
+                _logger.LogWarning(ex, "Validation error during registration");
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // System errors (missing roles, etc.)
+                _logger.LogError(ex, "System error during registration");
+                return StatusCode(500, new {
+                    success = false,
+                    message = ex.Message
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error registering user");
-                return StatusCode(500, "Internal server error");
+                _logger.LogError(ex, "Unexpected error during registration");
+                return StatusCode(500, new {
+                    success = false,
+                    message = "Đã xảy ra lỗi không mong đợi. Vui lòng thử lại sau."
+                });
             }
         }
 
@@ -141,12 +165,36 @@ namespace UserService.Controllers
             try
             {
                 await _userService.AddStaffAsync(user);
-                return Ok(new { message = "Staff account created successfully" });
+                return Ok(new {
+                    success = true,
+                    message = "Tạo tài khoản nhân viên thành công"
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                // Validation errors (username empty, password empty, etc.)
+                _logger.LogWarning(ex, "Validation error during staff registration");
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // System errors (missing roles, etc.)
+                _logger.LogError(ex, "System error during staff registration");
+                return StatusCode(500, new {
+                    success = false,
+                    message = ex.Message
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding staff account");
-                return StatusCode(500, "Internal server error");
+                _logger.LogError(ex, "Unexpected error during staff registration");
+                return StatusCode(500, new {
+                    success = false,
+                    message = "Đã xảy ra lỗi không mong đợi. Vui lòng thử lại sau."
+                });
             }
         }
 

@@ -50,7 +50,6 @@ namespace UserService.Services
 
                 // Get user by username only (fixed - only pass username)
                 var user = await _userRepository.GetUserAsync(loginRequest.UserName);
-                var role = await _roleRepository.GetRoleByIdAsync(user.RoleId);
 
                 if (user == null)
                 {
@@ -61,6 +60,8 @@ namespace UserService.Services
                         Message = "Tên đăng nhập hoặc mật khẩu không đúng"
                     };
                 }
+
+                var role = await _roleRepository.GetRoleByIdAsync(user.RoleId);
 
                 // Verify password using BCrypt
                 if (!BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.Password))
@@ -129,18 +130,44 @@ namespace UserService.Services
         {
             try
             {
+                // Validate input fields
+                if (string.IsNullOrWhiteSpace(user.UserName))
+                {
+                    _logger.LogWarning("Registration failed - username is empty");
+                    throw new ArgumentException("Tên đăng nhập không được để trống");
+                }
+
+                if (string.IsNullOrWhiteSpace(user.Email))
+                {
+                    _logger.LogWarning("Registration failed - email is empty");
+                    throw new ArgumentException("Email không được để trống");
+                }
+
+                if (string.IsNullOrWhiteSpace(user.Password))
+                {
+                    _logger.LogWarning("Registration failed - password is empty");
+                    throw new ArgumentException("Mật khẩu không được để trống");
+                }
+
+                // Check if username already exists
                 var existingUser = await _userRepository.GetUserAsync(user.UserName);
                 if (existingUser != null)
                 {
                     _logger.LogWarning("Attempted to add user with existing username: {UserName}", user.UserName);
                     throw new ArgumentException("Tên đăng nhập đã tồn tại");
                 }
+
                 // Hash password before saving
-                if (!string.IsNullOrEmpty(user.Password))
+                user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
+                // Get default role with null check
+                var role = await _roleRepository.GetRoleByNameAsync("Member");
+                if (role == null)
                 {
-                    user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+                    _logger.LogError("Member role not found in database. Please run setup-roles.sql script.");
+                    throw new InvalidOperationException("Lỗi hệ thống: Không tìm thấy vai trò 'Member'. Vui lòng liên hệ quản trị viên.");
                 }
-                var role = await _roleRepository.GetRoleByNameAsync("Member"); // Default role to "Member"
+
                 user.CreatedAt = DateTime.UtcNow;
                 user.IsActive = true; // Set default active status
                 user.RoleId = role.RoleId;
@@ -160,18 +187,44 @@ namespace UserService.Services
         {
             try
             {
+                // Validate input fields
+                if (string.IsNullOrWhiteSpace(user.UserName))
+                {
+                    _logger.LogWarning("Staff registration failed - username is empty");
+                    throw new ArgumentException("Tên đăng nhập không được để trống");
+                }
+
+                if (string.IsNullOrWhiteSpace(user.Email))
+                {
+                    _logger.LogWarning("Staff registration failed - email is empty");
+                    throw new ArgumentException("Email không được để trống");
+                }
+
+                if (string.IsNullOrWhiteSpace(user.Password))
+                {
+                    _logger.LogWarning("Staff registration failed - password is empty");
+                    throw new ArgumentException("Mật khẩu không được để trống");
+                }
+
+                // Check if username already exists
                 var existingUser = await _userRepository.GetUserAsync(user.UserName);
                 if (existingUser != null)
                 {
                     _logger.LogWarning("Attempted to add staff with existing username: {UserName}", user.UserName);
                     throw new ArgumentException("Tên đăng nhập đã tồn tại");
                 }
+
                 // Hash password before saving
-                if (!string.IsNullOrEmpty(user.Password))
+                user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
+                // Get Employee role with null check
+                var role = await _roleRepository.GetRoleByNameAsync("Employee");
+                if (role == null)
                 {
-                    user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+                    _logger.LogError("Employee role not found in database. Please run setup-roles.sql script.");
+                    throw new InvalidOperationException("Lỗi hệ thống: Không tìm thấy vai trò 'Employee'. Vui lòng liên hệ quản trị viên.");
                 }
-                var role = await _roleRepository.GetRoleByNameAsync("Employee"); // Default role to "Employee" for staff
+
                 user.CreatedAt = DateTime.UtcNow;
                 user.IsActive = true; // Set default active status
                 user.RoleId = role.RoleId;
