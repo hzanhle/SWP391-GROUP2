@@ -1,4 +1,5 @@
-﻿using UserService.DTOs;
+﻿using BCrypt.Net;
+using UserService.DTOs;
 using UserService.Models;
 using UserService.Repositories;
 
@@ -8,7 +9,8 @@ namespace UserService.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleRepository;
-        private readonly ICitizenInfoRepository _citizenInfoRepository;
+        private readonly ICitizenInfoService _citizenInfoService;
+        private readonly IDriverLicenseService _driverLicenseService;
         private readonly ILogger<UserService> _logger;
         private readonly IJwtService _jwtService;
         private readonly IConfiguration _configuration;
@@ -18,14 +20,16 @@ namespace UserService.Services
         public UserService(
             IRoleRepository roleRepository,
             IUserRepository userRepository,
-            ICitizenInfoRepository citizenInfoRepository,
+            ICitizenInfoService citizenInfoService,
+            IDriverLicenseService driverLicenseService,
             ILogger<UserService> logger,
             IJwtService jwtService,
             IConfiguration configuration,
             IOtpService otpService)
         {
             _userRepository = userRepository;
-            _citizenInfoRepository = citizenInfoRepository;
+            _citizenInfoService = citizenInfoService;
+            _driverLicenseService = driverLicenseService;
             _logger = logger;
             _jwtService = jwtService;
             _configuration = configuration;
@@ -50,6 +54,7 @@ namespace UserService.Services
 
                 // Get user by username only (fixed - only pass username)
                 var user = await _userRepository.GetUserAsync(loginRequest.UserName);
+                var role = await _roleRepository.GetRoleByIdAsync(user.RoleId);
 
                 if (user == null)
                 {
@@ -60,8 +65,6 @@ namespace UserService.Services
                         Message = "Tên đăng nhập hoặc mật khẩu không đúng"
                     };
                 }
-
-                var role = await _roleRepository.GetRoleByIdAsync(user.RoleId);
 
                 // Verify password using BCrypt
                 if (!BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.Password))
@@ -91,7 +94,7 @@ namespace UserService.Services
                 _logger.LogInformation("User logged in successfully: {UserId}", user.Id);
 
                 // Get citizen info safely
-                var citizenInfo = await _citizenInfoRepository.GetCitizenInfoByUserId(user.Id);
+                var citizenInfo = await _citizenInfoService.GetCitizenInfoByUserId(user.Id);
 
                 return new LoginResponse
                 {
@@ -100,7 +103,7 @@ namespace UserService.Services
                     Token = token,
                     TokenType = "Bearer",
                     ExpiresIn = _configuration.GetSection("JwtSettings").GetValue<int>("ExpiresInMinutes") * 60,
-                    User = new UserDTO
+                    User = new StaffDTO
                     {
                         Id = user.Id,
                         UserName = user.UserName,
@@ -123,132 +126,116 @@ namespace UserService.Services
                 };
             }
         }
-
-        // Removed duplicate GenerateJwtToken method since using IJwtService
-
-        public async Task AddUserAsync(User user)
+        public async Task<User> CreateUserFromRegistrationAsync(RegisterRequestDTO registerData)
         {
             try
             {
-                // Validate input fields
-                if (string.IsNullOrWhiteSpace(user.UserName))
-                {
-                    _logger.LogWarning("Registration failed - username is empty");
-                    throw new ArgumentException("Tên đăng nhập không được để trống");
-                }
-
-                if (string.IsNullOrWhiteSpace(user.Email))
-                {
-                    _logger.LogWarning("Registration failed - email is empty");
-                    throw new ArgumentException("Email không được để trống");
-                }
-
-                if (string.IsNullOrWhiteSpace(user.Password))
-                {
-                    _logger.LogWarning("Registration failed - password is empty");
-                    throw new ArgumentException("Mật khẩu không được để trống");
-                }
-
-                // Check if username already exists
-                var existingUser = await _userRepository.GetUserAsync(user.UserName);
+                // Kiểm tra lại username (double check)
+                var existingUser = await _userRepository.GetUserAsync(registerData.UserName);
                 if (existingUser != null)
                 {
-                    _logger.LogWarning("Attempted to add user with existing username: {UserName}", user.UserName);
+                    _logger.LogWarning("Attempted to create user with existing username: {UserName}", registerData.UserName);
                     throw new ArgumentException("Tên đăng nhập đã tồn tại");
                 }
 
-                // Hash password before saving
-                user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+                // Kiểm tra lại email (double check)
+                var existingEmail = await _userRepository.GetUserByEmailAsync(registerData.Email);
+                if (existingEmail != null)
+                {
+                    _logger.LogWarning("Attempted to create user with existing email: {Email}", registerData.Email);
+                    throw new ArgumentException("Email đã được sử dụng");
+                }
 
-                // Get default role with null check
+                // Lấy role mặc định
                 var role = await _roleRepository.GetRoleByNameAsync("Member");
                 if (role == null)
                 {
-                    _logger.LogError("Member role not found in database. Please run setup-roles.sql script.");
-                    throw new InvalidOperationException("Lỗi hệ thống: Không tìm thấy vai trò 'Member'. Vui lòng liên hệ quản trị viên.");
+                    _logger.LogError("Role 'Member' not found in database");
+                    throw new InvalidOperationException("Không tìm thấy role mặc định");
                 }
 
-                user.CreatedAt = DateTime.UtcNow;
-                user.IsActive = true; // Set default active status
-                user.RoleId = role.RoleId;
-                user.Role = role;
+                // Tạo user mới
+                var user = new User
+                {
+                    UserName = registerData.UserName,
+                    Email = registerData.Email,
+                    PhoneNumber = registerData.PhoneNumber,
+                    Password = BCrypt.Net.BCrypt.HashPassword(registerData.Password), // Hash password
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    RoleId = role.RoleId,
+                    Role = role
+                };
 
                 await _userRepository.AddUserAsync(user);
-                _logger.LogInformation("User added successfully: {UserId}", user.Id);
+
+                _logger.LogInformation("User registered successfully: {UserId}, Username: {UserName}",
+                    user.Id, user.UserName);
+
+                return user;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding user: {UserName}", user.UserName);
+                _logger.LogError(ex, "Error creating user from registration: {UserName}", registerData.UserName);
                 throw;
             }
         }
-
-        public async Task AddStaffAsync(User user)
+        public async Task AddStaffAsync(StaffDTO staffRequest)
         {
             try
             {
-                // Validate input fields
-                if (string.IsNullOrWhiteSpace(user.UserName))
-                {
-                    _logger.LogWarning("Staff registration failed - username is empty");
-                    throw new ArgumentException("Tên đăng nhập không được để trống");
-                }
-
-                if (string.IsNullOrWhiteSpace(user.Email))
-                {
-                    _logger.LogWarning("Staff registration failed - email is empty");
-                    throw new ArgumentException("Email không được để trống");
-                }
-
-                if (string.IsNullOrWhiteSpace(user.Password))
-                {
-                    _logger.LogWarning("Staff registration failed - password is empty");
-                    throw new ArgumentException("Mật khẩu không được để trống");
-                }
-
-                // Check if username already exists
-                var existingUser = await _userRepository.GetUserAsync(user.UserName);
+                // Kiểm tra username đã tồn tại
+                var existingUser = await _userRepository.GetUserAsync(staffRequest.UserName);
                 if (existingUser != null)
                 {
-                    _logger.LogWarning("Attempted to add staff with existing username: {UserName}", user.UserName);
+                    _logger.LogWarning("Attempted to add staff with existing username: {UserName}", staffRequest.UserName);
                     throw new ArgumentException("Tên đăng nhập đã tồn tại");
                 }
 
-                // Hash password before saving
-                user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
-
-                // Get Employee role with null check
+                // Lấy role Employee mặc định cho staff
                 var role = await _roleRepository.GetRoleByNameAsync("Employee");
                 if (role == null)
                 {
-                    _logger.LogError("Employee role not found in database. Please run setup-roles.sql script.");
-                    throw new InvalidOperationException("Lỗi hệ thống: Không tìm thấy vai trò 'Employee'. Vui lòng liên hệ quản trị viên.");
+                    _logger.LogWarning("Employee role not found");
+                    throw new InvalidOperationException("Vai trò Employee không tồn tại trong hệ thống");
                 }
 
-                user.CreatedAt = DateTime.UtcNow;
-                user.IsActive = true; // Set default active status
-                user.RoleId = role.RoleId;
-                user.Role = role;
-                await _userRepository.AddUserAsync(user);
-                _logger.LogInformation("Staff user added successfully: {UserId}", user.Id);
+                // Tạo đối tượng User mới
+                var staff = new User
+                {
+                    UserName = staffRequest.UserName,
+                    FullName = staffRequest.FullName,
+                    Email = staffRequest.Email,
+                    PhoneNumber = staffRequest.PhoneNumber,
+                    StationId = staffRequest.StationId,
+                    Password = BCrypt.Net.BCrypt.HashPassword(staffRequest.Password),
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    RoleId = role.RoleId,
+                    Role = role
+                };
+
+                // Thêm user vào database
+                await _userRepository.AddUserAsync(staff);
+
+                _logger.LogInformation("Staff user added successfully: {UserId} - {UserName}", staff.Id, staff.UserName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding staff user: {UserName}", user.UserName);
+                _logger.LogError(ex, "Error adding staff user: {UserName}", staffRequest.UserName);
                 throw;
             }
         }
-
-        public async Task DeleteUserAsync(int userId)
+        public async Task SetStatus(int userId)
         {
             try
             {
                 var user = await _userRepository.GetUserByIdAsync(userId);
                 if (user != null)
                 {
-                    user.IsActive = false;
+                    user.IsActive = !user.IsActive;
                     await _userRepository.UpdateUserAsync(user);
-                    _logger.LogInformation("User deactivated: {UserId}", userId);
+                    _logger.LogInformation("User change status: {UserId}", userId);
                 }
                 else
                 {
@@ -257,16 +244,32 @@ namespace UserService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting user: {UserId}", userId);
+                _logger.LogError(ex, "Error deactive user: {UserId}", userId);
                 throw;
             }
         }
+        public async Task DeleteUserAsync(int userId)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                if (user != null)
+                {
+                    await _userRepository.DeleteUserAsync(user);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user: {UserId}", userId);
 
+            }
+        }
         public async Task<List<User>> GetAllUsersAsync()
         {
             try
             {
-                return await _userRepository.GetAllUsersAsync();
+                var result = await _userRepository.GetAllUsersAsync();
+                return result;
             }
             catch (Exception ex)
             {
@@ -274,8 +277,6 @@ namespace UserService.Services
                 throw;
             }
         }
-
-
         public async Task<User?> GetUserAsync(string userName)
         {
             try
@@ -291,7 +292,6 @@ namespace UserService.Services
                 throw;
             }
         }
-
         public async Task<User?> GetUserByIdAsync(int userId)
         {
             try
@@ -304,12 +304,34 @@ namespace UserService.Services
                 throw;
             }
         }
-
-        public async Task<User?> GetUserDetailByIdAsync(int userId)
+        public async Task<UserDetailDTO> GetUserDetailByIdAsync(int userId)
         {
             try
             {
-                return await _userRepository.GetUserDetailByIdAsync(userId);
+                // Query User TRƯỚC
+                var user = await _userRepository.GetUserDetailByIdAsync(userId);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User not found with ID: {UserId}", userId);
+                    return null;
+                }
+
+                // Sau đó mới query các thông tin liên quan
+                var citizenInfo = await _citizenInfoService.GetCitizenInfoByUserId(userId);
+                var driverLicense = await _driverLicenseService.GetDriverLicenseByUserId(userId);
+
+                var dto = new UserDetailDTO
+                {
+                    UserId = user.Id,
+                    PhoneNumber = user.PhoneNumber ?? string.Empty, // Thêm null check
+                    Email = user.Email ?? string.Empty,
+                    UserName = user.UserName ?? string.Empty,
+                    CitizenInfo = citizenInfo,
+                    DriverLicense = driverLicense
+                };
+
+                return dto;
             }
             catch (Exception ex)
             {
@@ -317,7 +339,6 @@ namespace UserService.Services
                 throw;
             }
         }
-
         public async Task<List<User>?> SearchUserAsync(string searchValue)
         {
             try
@@ -334,7 +355,6 @@ namespace UserService.Services
                 throw;
             }
         }
-
         public async Task UpdateUserAsync(User user)
         {
             try
@@ -366,24 +386,34 @@ namespace UserService.Services
                 throw;
             }
         }
-
         public async Task SetAdmin(int userId)
         {
-            var user = _userRepository.GetUserByIdAsync(userId).Result;
-            if (user != null)
+            var user = await _userRepository.GetUserByIdAsync(userId);
+            if (user == null)
             {
-                if (user.RoleId == 2)
-                {
-                    user.RoleId = 3; // Change from Employee to Admin
-                }
-                else if (user.RoleId == 3)
-                {
-                    user.RoleId = 2; // Change from Admin to Employee
-                }
-                _userRepository.UpdateUserAsync(user);
+                _logger.LogWarning("User with ID {UserId} not found.", userId);
+                return;
             }
-        }
 
+            // Chuyển đổi RoleId
+            if (user.RoleId == 2)
+            {
+                user.RoleId = 3; // Employee -> Admin
+            }
+            else if (user.RoleId == 3)
+            {
+                user.RoleId = 2; // Admin -> Employee
+            }
+            else
+            {
+                _logger.LogWarning("User {UserId} has unsupported RoleId {RoleId}.", user.Id, user.RoleId);
+                return;
+            }
+
+            await _userRepository.UpdateUserAsync(user);
+
+            _logger.LogInformation("User role changed successfully: {UserId} to RoleId: {RoleId}", user.Id, user.RoleId);
+        }
         public async Task<ResponseDTO> ChangePassword(ChangePasswordRequest request)
         {
             if (request.NewPassword != request.ConfirmPassword)
@@ -424,7 +454,6 @@ namespace UserService.Services
                 Message = "Đổi mật khẩu thành công"
             };
         }
-
         public async Task<ResponseDTO> ResetPasswordAsync(ResetPasswordRequest request)
         {
             try
@@ -459,7 +488,7 @@ namespace UserService.Services
 
                 // ✅ Verify OTP lần nữa để đảm bảo security
                 var otpResult = await _otpService.VerifyPasswordResetOtpAsync(request.Email, request.Otp);
-                if (!otpResult.Success)
+                if (!otpResult.Success == true)
                 {
                     return new ResponseDTO
                     {
@@ -503,5 +532,36 @@ namespace UserService.Services
                 };
             }
         }
+        public async Task<List<StaffDTO?>> GetAllStaffAccount()
+        {
+            try
+            {
+                var dtoList = new List<StaffDTO>();
+                var staffList = await _userRepository.GetAllStaffAccount();
+                foreach (var staff in staffList)
+                {
+                    var dto = new StaffDTO
+                    {
+                        Email = staff.Email,
+                        PhoneNumber = staff.PhoneNumber,
+                        Password = staff.Password,
+                        RoleId = staff.RoleId,
+                        RoleName = staff.Role.RoleName,
+                        StationId = staff.StationId,
+                        FullName = staff.FullName,
+                        Id = staff.Id,
+                        UserName = staff.UserName,
+                        IsActive = staff.IsActive
+                    };
+                    dtoList.Add(dto);
+                }
+                return dtoList;
+            } catch (Exception ex)
+            {
+                throw new Exception();
+            }
+        }
     }
 }
+
+

@@ -1,87 +1,187 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using StationService.DTOs; // Sử dụng CreateStationRequest
-using StationService.Models; // Sử dụng Station model
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using StationService.DTOs;
+using StationService.Models;
 using StationService.Services;
 using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using static System.Collections.Specialized.BitVector32;
 
 namespace StationService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")] // URL sẽ là /api/station
+    [Authorize(Roles = "Admin, Employee")]
     public class StationController : ControllerBase
     {
         private readonly IStationService _stationService;
+        private readonly ILogger<StationController> _logger;
 
-        public StationController(IStationService stationService)
+        public StationController(IStationService stationService, ILogger<StationController> logger)
         {
             _stationService = stationService;
+            _logger = logger;
         }
 
         // GET: /api/station
         [HttpGet]
+        [AllowAnonymous] // Cho phép khách vãng lai truy cập công khai
         public async Task<IActionResult> GetAllStations()
         {
-            var stations = await _stationService.GetAllStationsAsync();
-            return Ok(stations); // Trả về 200 OK và danh sách Station
+            try
+            {
+                var stations = await _stationService.GetAllStationsAsync();
+                return Ok(stations); // Trả về 200 OK và danh sách Station
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Đã xảy ra lỗi khi lấy danh sách trạm.");
+                return StatusCode(500, "Đã xảy ra lỗi khi xử lý yêu cầu của bạn.");
+            }
         }
 
         // GET: /api/station/active
         [HttpGet("active")]
+        [AllowAnonymous] // Cho phép khách vãng lai xem các trạm đang hoạt động
         public async Task<IActionResult> GetActiveStations()
         {
-            var activeStations = await _stationService.GetActiveStationsAsync();
-            return Ok(activeStations); // Trả về 200 OK và danh sách Station đang hoạt động
+            try
+            {
+                var activeStations = await _stationService.GetActiveStationsAsync();
+                return Ok(activeStations); // Trả về 200 OK và danh sách Station đang hoạt động
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Đã xảy ra lỗi khi lấy danh sách trạm đang hoạt động.");
+                return StatusCode(500, "Đã xảy ra lỗi khi xử lý yêu cầu của bạn.");
+            }
         }
 
         // GET: /api/station/5
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetStationById(int id)
+        [HttpGet("{stationId}")]
+        [AllowAnonymous] // Cho phép khách vãng lai xem chi tiết thông tin trạm
+        public async Task<IActionResult> GetStationById(int stationId)
         {
-            var stationDto = await _stationService.GetStationByIdAsync(id);
-            if (stationDto == null)
+            try
             {
-                return NotFound(); // Trả về 404 Not Found
+                var stationDto = await _stationService.GetStationByIdAsync(stationId);
+                if (stationDto == null)
+                {
+                    return NotFound(); // Trả về 404 Not Found
+                }
+                return Ok(stationDto); // Trả về 200 OK và StationDTO
             }
-            return Ok(stationDto); // Trả về 200 OK và StationDTO
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Đã xảy ra lỗi khi lấy thông tin trạm với ID: {StationId}", stationId);
+                return StatusCode(500, "Đã xảy ra lỗi khi xử lý yêu cầu của bạn.");
+
+            }
         }
 
         // POST: /api/station
         [HttpPost]
+        [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền tạo
         public async Task<IActionResult> CreateStation([FromBody] CreateStationRequest stationRequest)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState); // Trả về 400 Bad Request
             }
-            await _stationService.AddStationAsync(stationRequest);
-            return StatusCode(201, "Station created successfully."); // Trả về 201 Created
+
+            try
+            {
+                // Gọi service để tạo và nhận lại station đã tạo
+                var newStation = await _stationService.AddStationAsync(stationRequest);
+
+                // Trả về 201 Created cùng với link đến tài nguyên mới tạo
+                return CreatedAtAction(nameof(GetStationById), new { stationId = newStation.Id }, newStation);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Đã xảy ra lỗi khi tạo trạm mới.");
+                return StatusCode(500, "Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.");
+            }
         }
 
         // PUT: /api/station/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateStation(int id, [FromBody] Station station)
+        [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền cập nhật
+        public async Task<IActionResult> UpdateStation(int id, [FromBody] UpdateStationRequest stationRequest)
         {
-            if (id != station.Id)
-            {
-                return BadRequest("Station ID mismatch.");
-            }
-
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            await _stationService.UpdateStationAsync(station);
-            return NoContent(); // Trả về 204 No Content (Update thành công)
+            try
+            {
+                await _stationService.UpdateStationAsync(id, stationRequest);
+                return NoContent(); // Trả về 204 No Content (Update thành công)
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Đã xảy ra lỗi khi cập nhật trạm với ID: {StationId}", id);
+                return StatusCode(500, "Đã xảy ra lỗi khi xử lý yêu cầu của bạn.");
+            }
+
         }
 
         // DELETE: /api/station/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền xóa
         public async Task<IActionResult> DeleteStation(int id)
         {
-            await _stationService.DeleteStationAsync(id);
-            return NoContent(); // Trả về 204 No Content (Delete thành công)
+            try
+            {
+                await _stationService.DeleteStationAsync(id);
+                return NoContent(); // Trả về 204 No Content (Delete thành công)
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Đã xảy ra lỗi khi xóa trạm với ID: {StationId}", id);
+                return StatusCode(500, "Đã xảy ra lỗi khi xử lý yêu cầu của bạn.");
+            }
+
+        }
+
+        // PATCH: /api/station/5/status
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> SetStatus(int id)
+        {
+            try
+            {
+                await _stationService.SetStatus(id);
+                return Ok(); // Trả về 204 No Content (Update thành công)
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Đã xảy ra lỗi khi thay đổi trạng thái trạm với ID: {StationId}", id);
+                return StatusCode(500, "Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.");
+            }
+        }
+
+                // GET: /api/station/within?neLat=..&neLng=..&swLat=..&swLng=..
+        [HttpGet("within")]
+        [AllowAnonymous] // nếu bạn muốn FE public gọi không cần token
+        public async Task<IActionResult> GetWithin([FromQuery] double neLat, [FromQuery] double neLng,
+                                                   [FromQuery] double swLat, [FromQuery] double swLng)
+        {
+            var list = await _stationService.GetStationsWithinBounds(neLat, neLng, swLat, swLng);
+            return Ok(list);
+        }
+
+        // GET: /api/station/near?lat=..&lng=..&radiusKm=2
+        [HttpGet("near")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetNear([FromQuery] double lat, [FromQuery] double lng,
+                                                 [FromQuery] double radiusKm = 2)
+        {
+            var list = await _stationService.GetStationsNearby(lat, lng, Math.Max(0.1, radiusKm));
+            return Ok(list);
         }
     }
 }

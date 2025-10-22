@@ -26,6 +26,12 @@ namespace UserService.Repositories
                 .ToListAsync();
         }
 
+        public Task<Notification> GetNotification(int notificationId)
+        {
+            return _context.Notifications
+                .FirstOrDefaultAsync(n => n.Id == notificationId);
+        }
+
         public async Task RemoveNotificationByUserId(int userId)
         { 
             var notifications = await _context.Notifications
@@ -37,6 +43,12 @@ namespace UserService.Repositories
                 _context.Notifications.RemoveRange(notifications);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task UpdateNotification(Notification notification)
+        {
+            _context.Notifications.Update(notification);
+            await _context.SaveChangesAsync();
         }
 
     }

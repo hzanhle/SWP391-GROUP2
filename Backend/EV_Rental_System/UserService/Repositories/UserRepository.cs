@@ -21,13 +21,23 @@ namespace UserService.Repositories
             return await _context.Users
                .FirstOrDefaultAsync(u => u.Id == userId);
         }
+        public async Task DeleteUserAsync(User user)
+        {
+            try
+            {
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.InnerException?.Message ?? ex.Message);
+            }
+
+        }
 
         public async Task<User?> GetUserDetailByIdAsync(int userId)
         {
             return await _context.Users
-                    .Include(u => u.CitizenInfos)
-                    .Include(u => u.DriverLicenses)
-                    .Include(u => u.Role)
                     .FirstOrDefaultAsync(u => u.Id == userId);
         }
 
@@ -57,7 +67,16 @@ namespace UserService.Repositories
 
         public async Task<User> GetUserByEmailAsync(string email)
         {
-            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);   
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
+
+        public async Task<List<User>> GetAllStaffAccount()
+        {
+            return await _context.Users
+                .Where(u => u.RoleId == 2) 
+                .Include(u => u.Role)      
+                .ToListAsync();
+        }
+
     }
 }

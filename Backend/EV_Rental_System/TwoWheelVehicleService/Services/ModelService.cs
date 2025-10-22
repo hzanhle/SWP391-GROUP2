@@ -1,184 +1,278 @@
 ﻿using TwoWheelVehicleService.DTOs;
 using TwoWheelVehicleService.Models;
 using TwoWheelVehicleService.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace TwoWheelVehicleService.Services
 {
     public class ModelService : IModelService
     {
         private readonly IModelRepository _modelRepository;
+        private readonly IVehicleService _vehicleService;
         private readonly IImageService _imageService;
+        private readonly ILogger<ModelService> _logger;
 
-        public ModelService(IModelRepository modelRepository, IImageService imageService)
+        public ModelService(
+            IModelRepository modelRepository,
+            IImageService imageService,
+            IVehicleService vehicleService,
+            ILogger<ModelService> logger)
         {
             _modelRepository = modelRepository;
             _imageService = imageService;
+            _vehicleService = vehicleService;
+            _logger = logger;
         }
 
         public async Task AddModelAsync(ModelRequest request)
         {
-            // 1. Tạo Model entity từ request
-            var model = new Model
+            try
             {
-                ModelName = request.ModelName,
-                Manufacturer = request.Manufacturer,
-                Year = request.Year,
-                MaxSpeed = request.MaxSpeed,
-                BatteryCapacity = request.BatteryCapacity,
-                ChargingTime = request.ChargingTime,
-                BatteryRange = request.BatteryRange,
-                VehicleCapacity = request.VehicleCapacity,
-                ModelCost = request.ModelCost,
-                RentFeeForHour = request.RentFeeForHour,
-                IsActive = true // Default value
-            };
+                _logger.LogInformation("Adding new model: {ModelName}", request.ModelName);
 
-            // 2. Lưu model để có ModelId
-            await _modelRepository.AddModel(model);
-
-            // 3. Xử lý hình ảnh nếu có
-            if (request.Files != null && request.Files.Count > 0)
-            {
-                var uploadedImages = await _imageService.UploadImagesAsync(request.Files, model.ModelId);
-                foreach (var image in uploadedImages)
+                var model = new Model
                 {
-                    await _imageService.AddImage(image);
+                    ModelName = request.ModelName,
+                    Manufacturer = request.Manufacturer,
+                    Year = request.Year,
+                    MaxSpeed = request.MaxSpeed,
+                    BatteryCapacity = request.BatteryCapacity,
+                    ChargingTime = request.ChargingTime,
+                    BatteryRange = request.BatteryRange,
+                    VehicleCapacity = request.VehicleCapacity,
+                    ModelCost = request.ModelCost,
+                    RentFeeForHour = request.RentFeeForHour,
+                    IsActive = true
+                };
+
+                await _modelRepository.AddModel(model);
+
+                if (request.Files != null && request.Files.Count > 0)
+                {
+                    var uploadedImages = await _imageService.UploadImagesAsync(request.Files, model.ModelId);
+                    foreach (var image in uploadedImages)
+                        await _imageService.AddImage(image);
+
+                    _logger.LogInformation("Uploaded {Count} images for model {ModelId}", request.Files.Count, model.ModelId);
                 }
+
+                _logger.LogInformation("Model created successfully: {ModelId}", model.ModelId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while adding model: {ModelName}", request.ModelName);
+                throw;
             }
         }
 
-        public async Task<ModelDTO> GetModelByIdAsync(int modelId)
+        public async Task<ModelDTO?> GetModelByIdAsync(int modelId)
         {
-            var model = await _modelRepository.GetModelById(modelId);
-            if (model == null)
-                return null;
-
-            var imageUrls = await _imageService.GetImagePathsAsync(modelId);
-
-            return new ModelDTO
+            try
             {
-                ModelId = model.ModelId,
-                ModelName = model.ModelName,
-                Manufacturer = model.Manufacturer,
-                Year = model.Year,
-                MaxSpeed = model.MaxSpeed,
-                BatteryCapacity = model.BatteryCapacity,
-                ChargingTime = model.ChargingTime,
-                BatteryRange = model.BatteryRange,
-                VehicleCapacity = model.VehicleCapacity,
-                IsActive = model.IsActive,
-                ModelCost = model.ModelCost,
-                RentFeeForHour = model.RentFeeForHour,
-                ImageUrls = imageUrls
-            };
+                var model = await _modelRepository.GetModelById(modelId);
+                if (model == null)
+                {
+                    _logger.LogWarning("Model not found with ID: {ModelId}", modelId);
+                    return null;
+                }
+
+                var imageUrls = await _imageService.GetImagePathsAsync(modelId);
+
+                return new ModelDTO
+                {
+                    ModelId = model.ModelId,
+                    ModelName = model.ModelName,
+                    Manufacturer = model.Manufacturer,
+                    Year = model.Year,
+                    MaxSpeed = model.MaxSpeed,
+                    BatteryCapacity = model.BatteryCapacity,
+                    ChargingTime = model.ChargingTime,
+                    BatteryRange = model.BatteryRange,
+                    VehicleCapacity = model.VehicleCapacity,
+                    IsActive = model.IsActive,
+                    ModelCost = model.ModelCost,
+                    RentFeeForHour = model.RentFeeForHour,
+                    ImageUrls = imageUrls
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching model with ID: {ModelId}", modelId);
+                throw;
+            }
         }
 
         public async Task<List<ModelDTO>> GetAllModelsAsync()
         {
-            var models = await _modelRepository.GetAllModels();
-            var result = new List<ModelDTO>();
-
-            foreach (var model in models)
+            try
             {
-                var imageUrls = await _imageService.GetImagePathsAsync(model.ModelId);
-                result.Add(new ModelDTO
-                {
-                    ModelId = model.ModelId,
-                    ModelName = model.ModelName,
-                    Manufacturer = model.Manufacturer,
-                    Year = model.Year,
-                    MaxSpeed = model.MaxSpeed,
-                    BatteryCapacity = model.BatteryCapacity,
-                    ChargingTime = model.ChargingTime,
-                    BatteryRange = model.BatteryRange,
-                    VehicleCapacity = model.VehicleCapacity,
-                    IsActive = model.IsActive,
-                    ModelCost = model.ModelCost,
-                    RentFeeForHour = model.RentFeeForHour,
-                    ImageUrls = imageUrls
-                });
-            }
+                _logger.LogInformation("Fetching all models...");
+                var models = await _modelRepository.GetAllModels();
+                var result = new List<ModelDTO>();
 
-            return result;
+                foreach (var model in models)
+                {
+                    var imageUrls = await _imageService.GetImagePathsAsync(model.ModelId);
+                    result.Add(new ModelDTO
+                    {
+                        ModelId = model.ModelId,
+                        ModelName = model.ModelName,
+                        Manufacturer = model.Manufacturer,
+                        Year = model.Year,
+                        MaxSpeed = model.MaxSpeed,
+                        BatteryCapacity = model.BatteryCapacity,
+                        ChargingTime = model.ChargingTime,
+                        BatteryRange = model.BatteryRange,
+                        VehicleCapacity = model.VehicleCapacity,
+                        IsActive = model.IsActive,
+                        ModelCost = model.ModelCost,
+                        RentFeeForHour = model.RentFeeForHour,
+                        ImageUrls = imageUrls
+                    });
+                }
+
+                _logger.LogInformation("Retrieved {Count} models", result.Count);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching all models");
+                throw;
+            }
         }
 
         public async Task<List<ModelDTO>> GetActiveModelsAsync()
         {
-            var models = await _modelRepository.GetActiveModels();
-            var result = new List<ModelDTO>();
-
-            foreach (var model in models)
+            try
             {
-                var imageUrls = await _imageService.GetImagePathsAsync(model.ModelId);
-                result.Add(new ModelDTO
-                {
-                    ModelId = model.ModelId,
-                    ModelName = model.ModelName,
-                    Manufacturer = model.Manufacturer,
-                    Year = model.Year,
-                    MaxSpeed = model.MaxSpeed,
-                    BatteryCapacity = model.BatteryCapacity,
-                    ChargingTime = model.ChargingTime,
-                    BatteryRange = model.BatteryRange,
-                    VehicleCapacity = model.VehicleCapacity,
-                    IsActive = model.IsActive,
-                    ModelCost = model.ModelCost,
-                    RentFeeForHour = model.RentFeeForHour,
-                    ImageUrls = imageUrls
-                });
-            }
+                _logger.LogInformation("Fetching active models...");
+                var models = await _modelRepository.GetActiveModels();
+                var result = new List<ModelDTO>();
 
-            return result;
+                foreach (var model in models)
+                {
+                    var imageUrls = await _imageService.GetImagePathsAsync(model.ModelId);
+                    result.Add(new ModelDTO
+                    {
+                        ModelId = model.ModelId,
+                        ModelName = model.ModelName,
+                        Manufacturer = model.Manufacturer,
+                        Year = model.Year,
+                        MaxSpeed = model.MaxSpeed,
+                        BatteryCapacity = model.BatteryCapacity,
+                        ChargingTime = model.ChargingTime,
+                        BatteryRange = model.BatteryRange,
+                        VehicleCapacity = model.VehicleCapacity,
+                        IsActive = model.IsActive,
+                        ModelCost = model.ModelCost,
+                        RentFeeForHour = model.RentFeeForHour,
+                        ImageUrls = imageUrls
+                    });
+                }
+
+                _logger.LogInformation("Retrieved {Count} active models", result.Count);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching active models");
+                throw;
+            }
         }
 
         public async Task UpdateModelAsync(int modelId, ModelRequest request)
         {
-            var existingModel = await _modelRepository.GetModelById(modelId);
-            if (existingModel == null)
-                throw new ArgumentException("Model not found");
-
-            // 1. Cập nhật thông tin model
-            existingModel.ModelName = request.ModelName;
-            existingModel.Manufacturer = request.Manufacturer;
-            existingModel.Year = request.Year;
-            existingModel.MaxSpeed = request.MaxSpeed;
-            existingModel.BatteryCapacity = request.BatteryCapacity;
-            existingModel.ChargingTime = request.ChargingTime;
-            existingModel.BatteryRange = request.BatteryRange;
-            existingModel.VehicleCapacity = request.VehicleCapacity;
-            existingModel.ModelCost = request.ModelCost;
-            existingModel.RentFeeForHour = request.RentFeeForHour;
-
-            await _modelRepository.UpdateModel(existingModel);
-
-            // 2. Xử lý hình ảnh nếu có hình mới
-            if (request.Files != null && request.Files.Count > 0)
+            try
             {
-                // Xóa hình cũ
-                await _imageService.DeleteImagesAsync(modelId);
+                _logger.LogInformation("Updating model ID {ModelId}", modelId);
 
-                // Upload hình mới
-                var uploadedImages = await _imageService.UploadImagesAsync(request.Files, modelId);
-                foreach (var image in uploadedImages)
+                var existingModel = await _modelRepository.GetModelById(modelId);
+                if (existingModel == null)
                 {
-                    await _imageService.AddImage(image);
+                    _logger.LogWarning("Model not found for update: ID {ModelId}", modelId);
+                    throw new ArgumentException("Model not found");
                 }
+
+                existingModel.ModelName = request.ModelName;
+                existingModel.Manufacturer = request.Manufacturer;
+                existingModel.Year = request.Year;
+                existingModel.MaxSpeed = request.MaxSpeed;
+                existingModel.BatteryCapacity = request.BatteryCapacity;
+                existingModel.ChargingTime = request.ChargingTime;
+                existingModel.BatteryRange = request.BatteryRange;
+                existingModel.VehicleCapacity = request.VehicleCapacity;
+                existingModel.ModelCost = request.ModelCost;
+                existingModel.RentFeeForHour = request.RentFeeForHour;
+
+                await _modelRepository.UpdateModel(existingModel);
+                _logger.LogInformation("Updated model successfully: {ModelId}", modelId);
+
+                if (request.Files != null && request.Files.Count > 0)
+                {
+                    await _imageService.DeleteImagesAsync(modelId);
+                    var uploadedImages = await _imageService.UploadImagesAsync(request.Files, modelId);
+                    foreach (var image in uploadedImages)
+                        await _imageService.AddImage(image);
+
+                    _logger.LogInformation("Replaced {Count} images for model {ModelId}", request.Files.Count, modelId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating model ID {ModelId}", modelId);
+                throw;
             }
         }
 
         public async Task DeleteModelAsync(int modelId)
         {
-            //  Xóa tất cả hình ảnh liên quan
-            await _imageService.DeleteImagesAsync(modelId);
+            try
+            {
+                _logger.LogInformation("Deleting model ID {ModelId}", modelId);
 
-            // Xóa model
-            await _modelRepository.DeleteModel(modelId);
+                await _imageService.DeleteImagesAsync(modelId);
+                await _modelRepository.DeleteModel(modelId);
+
+                _logger.LogInformation("Deleted model successfully: {ModelId}", modelId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting model ID {ModelId}", modelId);
+                throw;
+            }
         }
 
-        public async Task ChangeStatusAsync(int modelId)
+        public async Task ToggleStatusAsync(int modelId)
         {
-            await _modelRepository.ChangeStatus(modelId);
-        }
+            try
+            {
+                _logger.LogInformation("Toggling status for model ID {ModelId}", modelId);
 
+                var model = await _modelRepository.GetModelById(modelId);
+                if (model == null)
+                {
+                    _logger.LogWarning("Model not found while toggling status: {ModelId}", modelId);
+                    return;
+                }
+
+                model.IsActive = !model.IsActive;
+                await _modelRepository.UpdateModel(model);
+
+                var vehicles = await _vehicleService.GetAllVehiclesByModelId(modelId);
+                foreach (var vehicle in vehicles)
+                {
+                    vehicle.IsActive = model.IsActive;
+                    await _vehicleService.UpdateVehicleAsync(vehicle);
+                }
+
+                _logger.LogInformation("Model {ModelId} and {Count} vehicles toggled to IsActive={Status}",
+                    modelId, vehicles.Count, model.IsActive);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling model status for ID {ModelId}", modelId);
+                throw;
+            }
+        }
     }
 }

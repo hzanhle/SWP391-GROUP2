@@ -158,6 +158,10 @@ body {
   .search-grid { grid-template-columns: 1fr 1fr; }
 }
 
+/* Leaflet Map */
+.map-card { display: grid; grid-template-rows: 1fr; height: 100%; }
+.map-canvas { height: 100%; min-height: 260px; width: 100%; border-radius: var(--radius-lg); }
+
 /* Cards */
 .card {
   border: 1px solid var(--color-border);

@@ -9,6 +9,6 @@ namespace UserService.DTOs
         public string? Token { get; set; }
         public string? TokenType { get; set; }
         public int ExpiresIn { get; set; }
-        public UserDTO? User { get; set; }
+        public StaffDTO? User { get; set; }
     }
 }

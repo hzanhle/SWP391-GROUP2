@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using UserService.Models;
 using UserService.Repositories;
 
@@ -10,89 +11,87 @@ namespace UserService.Services
         private readonly IImageRepository _imageRepository;
         private readonly IWebHostEnvironment _env;
         private readonly string _rootFolder;
+        private readonly ILogger<ImageService> _logger;
 
-        public ImageService(IImageRepository imageRepository, IWebHostEnvironment env)
+        public ImageService(IImageRepository imageRepository, IWebHostEnvironment env, ILogger<ImageService> logger)
         {
             _imageRepository = imageRepository;
             _env = env;
+            _logger = logger;
+
             _rootFolder = Path.Combine(_env.ContentRootPath, "Data", "Account");
 
-            // ✅ Debug: In ra đường dẫn thực tế
-            Console.WriteLine($"🗂️ ContentRootPath: {_env.ContentRootPath}");
-            Console.WriteLine($"🗂️ Root Folder: {_rootFolder}");
+            _logger.LogInformation("🗂️ ContentRootPath: {ContentRootPath}", _env.ContentRootPath);
+            _logger.LogInformation("🗂️ Root Folder: {RootFolder}", _rootFolder);
         }
 
         public async Task<List<Image>> UploadImagesAsync(List<IFormFile> files, string type, int typeId)
         {
-            Console.WriteLine($"🔍 UploadImagesAsync called: files={files?.Count}, type={type}, typeId={typeId}");
+            _logger.LogInformation("🔍 UploadImagesAsync called: files={Count}, type={Type}, typeId={TypeId}",
+                files?.Count, type, typeId);
 
             if (files == null || !files.Any())
             {
-                Console.WriteLine("❌ No files to upload");
+                _logger.LogWarning("❌ No files to upload");
                 return new List<Image>();
             }
 
             var uploadedImages = new List<Image>();
             var folderPath = Path.Combine(_rootFolder, type);
 
-            // Ensure directory exists
             if (!Directory.Exists(folderPath))
             {
                 Directory.CreateDirectory(folderPath);
-                Console.WriteLine($"📁 Created directory: {folderPath}");
+                _logger.LogInformation("📁 Created directory: {FolderPath}", folderPath);
             }
 
             foreach (var file in files)
             {
                 if (file.Length == 0) continue;
 
-                // Validate file type (optional)
                 if (!IsValidImageFile(file))
-                    throw new ArgumentException($"Invalid file type: {file.FileName}");
+                {
+                    var msg = $"Invalid file type: {file.FileName}";
+                    _logger.LogWarning(msg);
+                    throw new ArgumentException(msg);
+                }
 
                 var fileName = $"{typeId}_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
                 var filePath = Path.Combine(folderPath, fileName);
 
-                // Save file to disk
                 try
                 {
                     using (var stream = new FileStream(filePath, FileMode.Create))
                     {
                         await file.CopyToAsync(stream);
                     }
-                    Console.WriteLine($"✅ Saved file successfully: {filePath}");
-                    Console.WriteLine($"📏 File size: {new FileInfo(filePath).Length} bytes");
+
+                    _logger.LogInformation("✅ Saved file successfully: {FilePath}, size={FileSize} bytes",
+                        filePath, new FileInfo(filePath).Length);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"❌ Failed to save file: {filePath}");
-                    Console.WriteLine($"❌ Error: {ex.Message}");
+                    _logger.LogError(ex, "❌ Failed to save file: {FilePath}", filePath);
                     throw;
                 }
 
-                // Create Image entity - ✅ SỬA: Dùng đúng fileName có prefix
                 var imageUrl = Path.Combine("Data", "Account", type, fileName).Replace("\\", "/");
-                var image = new Image(
-                    imageUrl,
-                    type,
-                    typeId
-                );
-                Console.WriteLine($"🏷️ Image URL: {imageUrl}, File: {fileName}");
+                var image = new Image(imageUrl, type, typeId);
+                _logger.LogInformation("🏷️ Image URL: {Url}, File: {FileName}", imageUrl, fileName);
 
                 uploadedImages.Add(image);
             }
 
-            // Save all images to database
             if (uploadedImages.Any())
             {
                 foreach (var image in uploadedImages)
                 {
                     await _imageRepository.AddImage(image);
-                    Console.WriteLine($"✅ Saved image to DB: {image.Url}");
+                    _logger.LogInformation("✅ Saved image to DB: {Url}", image.Url);
                 }
             }
 
-            Console.WriteLine($"🎉 Upload completed: {uploadedImages.Count} images");
+            _logger.LogInformation("🎉 Upload completed: {Count} images", uploadedImages.Count);
             return uploadedImages;
         }
 
@@ -104,10 +103,9 @@ namespace UserService.Services
 
         public async Task DeleteImagesAsync(string type, int typeId)
         {
-            // Lấy tất cả ảnh từ DB
             var images = await _imageRepository.GetImagesByTypeId(type, typeId);
 
-            if (!images.Any()) return; // Không có gì để xóa
+            if (!images.Any()) return;
 
             foreach (var img in images)
             {
@@ -115,21 +113,16 @@ namespace UserService.Services
                 {
                     var fullPath = Path.Combine(_env.ContentRootPath, img.Url.Replace("/", Path.DirectorySeparatorChar.ToString()));
                     if (File.Exists(fullPath))
-                    {
                         File.Delete(fullPath);
-                    }
                 }
                 catch (Exception ex)
                 {
-                    // Log lỗi nếu xóa file thất bại, nhưng không dừng toàn bộ
-                    Console.WriteLine($"Failed to delete file {img.Url}: {ex.Message}");
+                    _logger.LogWarning(ex, "Failed to delete file {Url}", img.Url);
                 }
             }
 
-            // Xóa record khỏi DB qua repo
             await _imageRepository.DeleteImages(type, typeId);
         }
-
 
         public async Task AddImage(Image image)
         {
@@ -142,12 +135,10 @@ namespace UserService.Services
             var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
             var isValid = allowedExtensions.Contains(extension);
 
-            Console.WriteLine($"🔍 File validation: {file.FileName}");
-            Console.WriteLine($"🔍 Extension: {extension}");
-            Console.WriteLine($"🔍 Is valid: {isValid}");
+            _logger.LogInformation("🔍 File validation: {FileName}, Extension: {Extension}, IsValid: {IsValid}",
+                file.FileName, extension, isValid);
 
             return isValid;
         }
     }
 }
-

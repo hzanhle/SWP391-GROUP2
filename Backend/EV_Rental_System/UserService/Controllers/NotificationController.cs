@@ -1,10 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using UserService.Models;
 using UserService.Services;
 
 namespace UserService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin,Employee")]
     public class NotificationController : ControllerBase
     {
         private readonly INotificationService _notificationService;
@@ -27,6 +30,17 @@ namespace UserService.Controllers
         public async Task<IActionResult> DeleteAllNotificationsByUserId(int userId)
         {
             await _notificationService.RemoveNotificationByUserId(userId);
+            return NoContent(); // 204 No Content
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> UpdateNotification([FromBody] Notification notification)
+        {
+            if (notification == null || notification.Id == 0)
+            {
+                return BadRequest("Invalid notification data.");
+            }
+            await _notificationService.UpdateNotification(notification);
             return NoContent(); // 204 No Content
         }
     }

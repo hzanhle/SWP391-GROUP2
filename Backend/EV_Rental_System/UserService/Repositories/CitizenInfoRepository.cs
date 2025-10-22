@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using UserService.Models;
+using UserService.Models.Enums;
 using UserService.Models.UserService.Models;
 
 namespace UserService.Repositories
@@ -13,6 +15,15 @@ namespace UserService.Repositories
             _context = context;
         }
 
+        // ======================= TRANSACTION =======================
+
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _context.Database.BeginTransactionAsync();
+        }
+
+        // ======================= CRUD =======================
+
         public async Task AddCitizenInfo(CitizenInfo citizenInfo)
         {
             await _context.CitizenInfos.AddAsync(citizenInfo);
@@ -25,38 +36,32 @@ namespace UserService.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<CitizenInfo> GetCitizenInfoByUserId(int userId)
+        public async Task<CitizenInfo?> GetCitizenInfoByUserId(int userId)
         {
             return await _context.CitizenInfos
                 .Include(ci => ci.Images)
                 .FirstOrDefaultAsync(ci => ci.UserId == userId);
         }
 
-        
-        /// Lấy bản CitizenInfo đang chờ xác thực (pending)
-        public async Task<CitizenInfo> GetPendingCitizenInfo(int userId)
+        public async Task<CitizenInfo?> GetPendingCitizenInfo(int userId)
         {
             return await _context.CitizenInfos
                 .Include(ci => ci.Images)
-                .Where(ci => ci.UserId == userId && ci.Status == "Chờ xác thực")
+                .Where(ci => ci.UserId == userId && ci.Status == StatusInformation.Pending)
                 .OrderByDescending(ci => ci.DayCreated)
                 .FirstOrDefaultAsync();
         }
 
-
-        /// Xóa tất cả các bản đã xác nhận cũ, giữ lại bản mới được approve
         public async Task DeleteOldApprovedRecords(int userId, int keepId)
         {
-            // Lấy tất cả bản đã xác nhận của user, ngoại trừ bản mới được xác thực
             var approvedRecords = await _context.CitizenInfos
                 .Include(ci => ci.Images)
-                .Where(ci => ci.UserId == userId && ci.Status == "Đã xác nhận" && ci.Id != keepId)
-                .OrderBy(ci => ci.DayCreated) // cũ nhất trước
+                .Where(ci => ci.UserId == userId && ci.Status == StatusInformation.Approved && ci.Id != keepId)
+                .OrderBy(ci => ci.DayCreated)
                 .ToListAsync();
 
             if (approvedRecords.Any())
             {
-                // Chỉ xóa bản cũ nhất
                 var oldestRecord = approvedRecords.First();
                 await DeleteCitizenInfo(oldestRecord.Id);
             }
@@ -73,7 +78,7 @@ namespace UserService.Repositories
                 await _context.SaveChangesAsync();
             }
         }
-
-        
     }
+
+    
 }

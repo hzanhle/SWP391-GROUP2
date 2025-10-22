@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using UserService.DTOs;
 using UserService.Models;
 using UserService.Services;
@@ -21,7 +21,7 @@ namespace UserService.Controllers
             _otpService = otpService;
             _logger = logger;
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetAllUsers()
         {
@@ -37,6 +37,7 @@ namespace UserService.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserById(int userId)
         {
@@ -75,41 +76,125 @@ namespace UserService.Controllers
             }
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Register([FromBody] User user)
+        [HttpPost("register/send-otp")]
+        [AllowAnonymous]// Gửi OTP khi đăng ký
+        public async Task<IActionResult> SendRegistrationOtp([FromBody] RegisterRequestDTO registerRequest)
         {
             try
             {
-                await _userService.AddUserAsync(user);
-                return Ok(new {
-                    success = true,
-                    message = "Đăng ký thành công"
-                });
-            }
-            catch (ArgumentException ex)
-            {
-                // Validation errors (username empty, password empty, etc.)
-                _logger.LogWarning(ex, "Validation error during registration");
-                return BadRequest(new {
-                    success = false,
-                    message = ex.Message
-                });
-            }
-            catch (InvalidOperationException ex)
-            {
-                // System errors (missing roles, etc.)
-                _logger.LogError(ex, "System error during registration");
-                return StatusCode(500, new {
-                    success = false,
-                    message = ex.Message
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
+
+                var result = await _otpService.SendRegistrationOtpAsync(
+                    registerRequest.Email,
+                    registerRequest
+                );
+
+                if (!result.Success == true)
+                {
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = result.Message
+                    });
+                }
+
+                return Ok(new ResponseDTO
+                {
+                    Message = result.Message,
+                    Data = new { email = registerRequest.Email }
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error during registration");
-                return StatusCode(500, new {
-                    success = false,
-                    message = "Đã xảy ra lỗi không mong đợi. Vui lòng thử lại sau."
+                _logger.LogError(ex, "Error sending registration OTP");
+                return StatusCode(500, new ResponseDTO
+                {
+                    Message = "Đã xảy ra lỗi khi gửi OTP"
+                });
+            }
+        }
+
+        [HttpPost("register/verify-otp")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyRegistrationOtp([FromBody] string email, string otp)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ"
+                    });
+                }
+
+                // Xác thực OTP
+                var otpResult = await _otpService.VerifyRegistrationOtpAsync(email, otp);
+
+                if (!otpResult.Success == true)
+                {
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = otpResult.Message
+                    });
+                }
+
+                // Deserialize thông tin đăng ký từ cache
+                var registerData = JsonSerializer.Deserialize<RegisterRequestDTO>(
+                    otpResult.Data,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+
+                if (registerData == null)
+                {
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Không thể lấy thông tin đăng ký"
+                    });
+                }
+
+                // Tạo user
+                var user = await _userService.CreateUserFromRegistrationAsync(registerData);
+
+                return Ok(new ResponseDTO
+                {
+                    Message = "Đăng ký tài khoản thành công",
+                    Data = new
+                    {
+                        userId = user.Id,
+                        userName = user.UserName,
+                        email = user.Email
+                    }
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new ResponseDTO
+                {
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying registration OTP");
+                return StatusCode(500, new ResponseDTO
+                {
+                    Message = "Đã xảy ra lỗi khi xác thực OTP"
                 });
             }
         }
@@ -119,6 +204,24 @@ namespace UserService.Controllers
         {
             try
             {
+                // Kiểm tra ModelState
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
                 await _userService.UpdateUserAsync(user);
                 return Ok(new { message = "User updated successfully" });
             }
@@ -130,6 +233,7 @@ namespace UserService.Controllers
         }
 
         [HttpDelete]
+        [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> DeleteUser([FromQuery] int userId)
         {
             try
@@ -144,7 +248,24 @@ namespace UserService.Controllers
             }
         }
 
-        [HttpPatch("{id}")]
+        [HttpPatch("{userId}")]
+        [Authorize(Roles = "Admin,Employee")]
+        public async Task<IActionResult> SetActive(int userId)
+        {
+            try
+            {
+                await _userService.SetStatus(userId);
+                return Ok(new { message = "User status toggled successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling status for user {UserId}", userId);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpPatch("SetRole{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SetAdmin(int id)
         {
             try
@@ -159,50 +280,78 @@ namespace UserService.Controllers
             }
         }
 
-        [HttpPost("AddStaffAccount")]
-        public async Task<IActionResult> AddStaffAccount([FromBody] User user)
+        [HttpGet("GetStaffAccounts")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetStaffAccount()
         {
             try
             {
-                await _userService.AddStaffAsync(user);
-                return Ok(new {
-                    success = true,
-                    message = "Tạo tài khoản nhân viên thành công"
-                });
-            }
-            catch (ArgumentException ex)
+                var result = await _userService.GetAllStaffAccount();
+                return Ok(result);
+            } catch (Exception ex)
             {
-                // Validation errors (username empty, password empty, etc.)
-                _logger.LogWarning(ex, "Validation error during staff registration");
-                return BadRequest(new {
-                    success = false,
-                    message = ex.Message
-                });
+                return BadRequest(ex);
             }
-            catch (InvalidOperationException ex)
+        }
+
+        [HttpPost("AddStaffAccount")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AddStaffAccount([FromBody] StaffDTO staff)
+        {
+            try
             {
-                // System errors (missing roles, etc.)
-                _logger.LogError(ex, "System error during staff registration");
-                return StatusCode(500, new {
-                    success = false,
-                    message = ex.Message
-                });
+                // Kiểm tra ModelState
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
+                await _userService.AddStaffAsync(staff);
+                return Ok(new { message = "Staff account created successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error during staff registration");
-                return StatusCode(500, new {
-                    success = false,
-                    message = "Đã xảy ra lỗi không mong đợi. Vui lòng thử lại sau."
-                });
+                _logger.LogError(ex, "Error adding staff account");
+                return StatusCode(500, "Internal server error");
             }
         }
 
         [HttpPost("ChangePassword")]
+        [Authorize(Roles = "Member")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest passwordRequest)
         {
             try
             {
+                // Kiểm tra ModelState
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        })
+                        .ToList();
+
+                    return BadRequest(new ResponseDTO
+                    {
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
+                }
                 var result = await _userService.ChangePassword(passwordRequest);
 
                 if (result.IsSuccess)
@@ -217,18 +366,15 @@ namespace UserService.Controllers
             }
         }
 
-        // ============================================
-        // AUTHENTICATION
-        // ============================================
-
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] DTOs.LoginRequest loginRequest)
         {
             try
             {
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new LoginResponse
+                    return BadRequest(new ResponseDTO
                     {
                         IsSuccess = false,
                         Message = "Dữ liệu không hợp lệ"
@@ -251,7 +397,7 @@ namespace UserService.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error during login");
-                return StatusCode(500, new LoginResponse
+                return StatusCode(500, new ResponseDTO
                 {
                     IsSuccess = false,
                     Message = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau."
@@ -259,46 +405,8 @@ namespace UserService.Controllers
             }
         }
 
-        // ============================================
-        // OTP BASIC ENDPOINTS
-        // ============================================
-
-        /// <summary>
-        /// Gửi OTP đến email
-        /// </summary>
-        [HttpPost("send-otp")]
-        public async Task<IActionResult> SendOTP([FromBody] string email)
-        {
-            var result = await _otpService.SendOtpAsync(email);
-
-            if (result.Success)
-                return Ok(result);
-
-            return BadRequest(result);
-        }
-
-        /// <summary>
-        /// Xác thực OTP
-        /// </summary>
-        [HttpPost("verify-otp")]
-        public async Task<IActionResult> VerifyOTP([FromBody] OtpAttribute request)
-        {
-            var result = await _otpService.VerifyOtpAsync(request.Email, request.Otp);
-
-            if (result.Success)
-                return Ok(result);
-
-            return BadRequest(result);
-        }
-
-        // ============================================
-        // ✨ FORGOT PASSWORD FLOW (3 STEP)
-        // ============================================
-
-        /// <summary>
-        /// STEP 1: Gửi OTP để reset password
-        /// </summary>
         [HttpPost("forgot-password")]
+        [Authorize(Roles = "Member")]
         public async Task<IActionResult> ForgotPassword([FromBody] string email)
         {
             if (string.IsNullOrWhiteSpace(email))
@@ -309,22 +417,42 @@ namespace UserService.Controllers
         }
 
         [HttpPost("verify-reset-otp")]
-        public async Task<IActionResult> VerifyResetOTP([FromBody] OtpAttribute request)
+        [Authorize(Roles = "Member")]
+        public async Task<IActionResult> VerifyResetOTP([FromBody] string otp, string email)
         {
-            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Otp))
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(otp))
                 return BadRequest(new { message = "Email và OTP không được để trống" });
 
-            var result = await _otpService.VerifyPasswordResetOtpAsync(request.Email, request.Otp);
+            var result = await _otpService.VerifyPasswordResetOtpAsync(email,otp);
 
-            if (result.Success)
+            if (result.Success == true)
                 return Ok(result);
 
             return BadRequest(result);
         }
 
         [HttpPost("reset-password")]
+        [Authorize(Roles = "Member")]
         public async Task<IActionResult> ResetPassword([FromBody] DTOs.ResetPasswordRequest request)
         {
+            // Kiểm tra ModelState
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new
+                    {
+                        Field = x.Key,
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    })
+                    .ToList();
+
+                return BadRequest(new ResponseDTO
+                {
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
             if (string.IsNullOrWhiteSpace(request.Email))
                 return BadRequest(new { message = "Email không được để trống" });
 
@@ -338,5 +466,23 @@ namespace UserService.Controllers
 
             return BadRequest(result);
         }
+
+        [HttpGet("staff")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetStaffUsers()
+        {
+            try
+            {
+                var users = await _userService.GetAllUsersAsync();
+                var staffUsers = users.Where(u => u.RoleId == 2).ToList(); // Lấy danh sách nhân viên (RoleId = 2)
+                return Ok(staffUsers);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting staff users");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
     }
 }

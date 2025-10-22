@@ -28,8 +28,13 @@ export default function Login() {
       if (token) {
         localStorage.setItem('auth.token', token)
         localStorage.setItem('auth.user', JSON.stringify(user || {}))
+        const roleId = Number((user && (user.roleId ?? user.RoleId)) ?? 0)
+        const roleName = String((user && (user.roleName ?? user.RoleName)) || '').toLowerCase()
+        const isAdmin = roleId === 3 || roleName === 'admin'
+        window.location.hash = isAdmin ? '#admin' : ''
+      } else {
+        window.location.hash = ''
       }
-      window.location.hash = ''
     } catch (err) {
       const msg = err?.data?.message || err?.message || 'Fail to login'
       setError(msg)

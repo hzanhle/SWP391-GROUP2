@@ -9,13 +9,21 @@ namespace StationService
 
         public DbSet<Station> Stations { get; set; }
         public DbSet<StaffShift> StaffShifts { get; set; }
+        public DbSet<Feedback> Feedbacks { get; set; } 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
+            modelBuilder.Entity<Station>(e =>
+    {
+                e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+                e.Property(x => x.Location).HasMaxLength(500).IsRequired();
+                e.Property(x => x.Lat).IsRequired();
+                e.Property(x => x.Lng).IsRequired();
+                    });
             ConfigureStation(modelBuilder);
             ConfigureStaffShift(modelBuilder);
+            ConfigureFeedback(modelBuilder);
             SeedData(modelBuilder);
         }
 
@@ -46,6 +54,12 @@ namespace StationService
                 entity.HasMany(s => s.StaffShifts)
                     .WithOne(ss => ss.Station)
                     .HasForeignKey(ss => ss.StationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                //
+                entity.HasMany(s => s.Feedbacks)
+                    .WithOne(f => f.Station)
+                    .HasForeignKey(f => f.StationId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }
@@ -97,6 +111,23 @@ namespace StationService
                 entity.HasIndex(e => new { e.UserId, e.StationId, e.ShiftDate, e.StartTime })
                     .IsUnique()
                     .HasDatabaseName("UQ_StaffShift_UniqueShift");
+            });
+        }
+
+        private void ConfigureFeedback(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Feedback>(entity =>
+            {
+                // Primary Key
+                entity.HasKey(e => e.FeedbackId);
+
+                // Properties
+                entity.Property(e => e.Description)
+                      .HasMaxLength(1000); // Giới hạn độ dài cho mô tả
+
+                entity.Property(e => e.CreatedDate)
+                      .IsRequired()
+                      .HasDefaultValueSql("GETDATE()"); // Tự động lấy ngày giờ hiện tại
             });
         }
 
