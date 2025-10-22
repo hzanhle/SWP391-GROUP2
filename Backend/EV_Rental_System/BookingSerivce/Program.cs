@@ -12,7 +12,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ====================== Logging Configuration ======================
+// ====================== Logging ======================
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
@@ -22,14 +22,14 @@ if (builder.Environment.IsDevelopment())
     builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Information);
 }
 
-// ====================== Configuration Validation ======================
+// ====================== Validate Config ======================
 ValidateConfiguration(builder.Configuration);
 
-// ====================== Core Services ======================
+// ====================== Controllers & JSON ======================
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.PropertyNamingPolicy = null; // PascalCase
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
         options.JsonSerializerOptions.WriteIndented = true;
         options.JsonSerializerOptions.DefaultIgnoreCondition =
             System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
@@ -39,16 +39,16 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 
-// ====================== API Documentation (Swagger) ======================
+// ====================== Swagger ======================
 ConfigureSwagger(builder.Services);
 
-// ====================== Database Configuration ======================
+// ====================== Database ======================
 ConfigureDatabase(builder.Services, builder.Configuration);
 
-// ====================== CORS Configuration ======================
+// ====================== CORS ======================
 ConfigureCors(builder.Services, builder.Environment);
 
-// ====================== Authentication & Authorization ======================
+// ====================== Authentication ======================
 ConfigureAuthentication(builder.Services, builder.Configuration);
 
 // ====================== SignalR ======================
@@ -59,24 +59,14 @@ builder.Services.AddSignalR(options =>
     options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
 });
 
-// ====================== Configuration Settings ======================
-builder.Services.Configure<EmailSettings>(
-    builder.Configuration.GetSection("EmailSettings"));
+// ====================== Settings ======================
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.Configure<VNPaySettings>(builder.Configuration.GetSection("VNPaySettings"));
+builder.Services.Configure<PdfSettings>(builder.Configuration.GetSection("PdfSettings"));
+builder.Services.Configure<ContractSettings>(builder.Configuration.GetSection("ContractSettings"));
+builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
 
-builder.Services.Configure<VNPaySettings>(
-    builder.Configuration.GetSection("VNPaySettings"));
-
-builder.Services.Configure<PdfSettings>(
-    builder.Configuration.GetSection("PdfSettings"));
-
-builder.Services.Configure<ContractSettings>(
-    builder.Configuration.GetSection("ContractSettings"));
-
-// ✅ FIX: THÊM OrderSettings (BẮT BUỘC!)
-builder.Services.Configure<OrderSettings>(
-    builder.Configuration.GetSection("OrderSettings"));
-
-// ====================== Repository Registration ======================
+// ====================== Repositories ======================
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOnlineContractRepository, OnlineContractRepository>();
@@ -84,22 +74,17 @@ builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITrustScoreRepository, TrustScoreRepository>();
 
-// ====================== Service Registration ======================
+// ====================== Services ======================
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOnlineContractService, OnlineContractService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ITrustScoreService, TrustScoreService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
-
-// ✅ FIX: PDF Service nên là Singleton (để reuse browser instance)
-// NHƯNG cần ensure nó không depend vào scoped services
+builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddSingleton<IPdfConverterService, PuppeteerPdfService>();
 
-// VNPay Service
-// builder.Services.AddScoped<IVNPayService, VNPayService>();
-
-// ====================== Build Application ======================
+// ====================== Build App ======================
 var app = builder.Build();
 
 // ====================== Global Exception Handler ======================
@@ -110,26 +95,24 @@ app.UseExceptionHandler(errorApp =>
         context.Response.StatusCode = 500;
         context.Response.ContentType = "application/json";
 
-        var exceptionHandlerPathFeature =
-            context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+        var exceptionFeature = context.Features
+            .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
 
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogError(exceptionHandlerPathFeature?.Error, "Unhandled exception occurred");
+        logger.LogError(exceptionFeature?.Error, "Unhandled exception");
 
         await context.Response.WriteAsJsonAsync(new
         {
-            Success = false,
-            Message = app.Environment.IsDevelopment()
-                ? exceptionHandlerPathFeature?.Error.Message
-                : "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.",
-            StatusCode = 500
+            success = false,
+            message = app.Environment.IsDevelopment()
+                ? exceptionFeature?.Error.Message
+                : "Lỗi hệ thống. Vui lòng thử lại sau.",
+            statusCode = 500
         });
     });
 });
 
 // ====================== Middleware Pipeline ======================
-
-// Development Tools
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -137,8 +120,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "BookingService API V1");
-        options.RoutePrefix = string.Empty; // Swagger tại root URL
-        options.DocumentTitle = "BookingService API Documentation";
+        options.RoutePrefix = string.Empty;
+        options.DocumentTitle = "BookingService API";
         options.DisplayRequestDuration();
         options.EnableTryItOutByDefault();
     });
@@ -148,98 +131,74 @@ else
     app.UseHsts();
 }
 
-// Security & Request Pipeline
 app.UseHttpsRedirection();
-app.UseStaticFiles(); // For serving PDF files
-
+app.UseStaticFiles();
 app.UseRouting();
 app.UseCors();
-
-// Authentication & Authorization (thứ tự quan trọng!)
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ====================== Request Logging Middleware (Development Only) ======================
+// ====================== Request Logging (Dev only) ======================
 if (app.Environment.IsDevelopment())
 {
     app.Use(async (context, next) =>
     {
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogInformation("Request: {Method} {Path}",
-            context.Request.Method,
-            context.Request.Path);
-
+        logger.LogInformation("→ {Method} {Path}", context.Request.Method, context.Request.Path);
         await next();
-
-        logger.LogInformation("Response: {StatusCode}",
-            context.Response.StatusCode);
+        logger.LogInformation("← {StatusCode}", context.Response.StatusCode);
     });
 }
 
-// ====================== SignalR Hubs ======================
+// ====================== SignalR & Endpoints ======================
 app.MapHub<OrderTimerHub>("/orderTimerHub");
-
-// ====================== API Controllers ======================
 app.MapControllers();
 
-// ====================== Health Check ======================
 app.MapGet("/health", () => Results.Ok(new
 {
-    Status = "Healthy",
-    Timestamp = DateTime.UtcNow,
-    Environment = app.Environment.EnvironmentName,
-    Version = "1.0.0"
+    status = "Healthy",
+    timestamp = DateTime.UtcNow,
+    environment = app.Environment.EnvironmentName
 })).AllowAnonymous();
 
-
-// ====================== Startup Message ======================
+// ====================== Startup Log ======================
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
-logger.LogInformation("=================================================");
-logger.LogInformation("BookingService API started successfully");
-logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
-logger.LogInformation("Swagger UI: {SwaggerUrl}", app.Environment.IsDevelopment() ? "http://localhost:5049" : "N/A");
-logger.LogInformation("=================================================");
+logger.LogInformation("=====================================");
+logger.LogInformation("🚀 BookingService API Started");
+logger.LogInformation("Environment: {Env}", app.Environment.EnvironmentName);
+if (app.Environment.IsDevelopment())
+{
+    logger.LogInformation("Swagger: http://localhost:5049");
+}
+logger.LogInformation("=====================================");
 
-// ====================== Run Application ======================
 app.Run();
 
 // ====================== Helper Methods ======================
 
-static void ValidateConfiguration(IConfiguration configuration)
+static void ValidateConfiguration(IConfiguration config)
 {
-    // Validate JWT Settings
-    var jwtSettings = configuration.GetSection("JwtSettings");
-    var secretKey = jwtSettings["SecretKey"];
-
-    if (string.IsNullOrEmpty(secretKey) || secretKey.Length < 32)
+    // JWT
+    var jwtSecret = config["JwtSettings:SecretKey"];
+    if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
     {
-        throw new InvalidOperationException(
-            "JWT SecretKey must be at least 32 characters long. " +
-            "Current length: " + (secretKey?.Length ?? 0));
+        throw new InvalidOperationException($"JWT SecretKey phải >= 32 ký tự. Hiện tại: {jwtSecret?.Length ?? 0}");
     }
 
-    // Validate Connection String
-    var connectionString = configuration.GetConnectionString("DefaultConnection");
-    if (string.IsNullOrEmpty(connectionString))
+    // Connection String
+    var connStr = config.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrEmpty(connStr))
     {
-        throw new InvalidOperationException("ConnectionString 'DefaultConnection' is required");
+        throw new InvalidOperationException("ConnectionString 'DefaultConnection' không tồn tại");
     }
 
-    // Validate Required Settings Sections
-    var requiredSections = new[]
+    // Required sections
+    var required = new[] { "EmailSettings", "VNPaySettings", "PdfSettings", "ContractSettings", "OrderSettings" };
+    foreach (var section in required)
     {
-        "EmailSettings",
-        "VNPaySettings",
-        "PdfSettings",
-        "ContractSettings",
-        "OrderSettings" // ✅ THÊM VÀO ĐÂY
-    };
-
-    foreach (var section in requiredSections)
-    {
-        if (!configuration.GetSection(section).Exists())
+        if (!config.GetSection(section).Exists())
         {
-            throw new InvalidOperationException($"Required configuration section '{section}' not found");
+            throw new InvalidOperationException($"Section '{section}' không tồn tại");
         }
     }
 }
@@ -252,24 +211,18 @@ static void ConfigureSwagger(IServiceCollection services)
         {
             Title = "BookingService API",
             Version = "v1",
-            Description = "API cho quản lý đặt xe, thanh toán và hợp đồng điện tử",
-            Contact = new OpenApiContact
-            {
-                Name = "BookingService Team",
-                Email = "support@bookingservice.com"
-            }
+            Description = "API quản lý đặt xe, thanh toán, hợp đồng"
         });
 
-        // JWT Authentication cho Swagger
+        // JWT Auth
         options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
+            In = ParameterLocation.Header,
+            Description = "Nhập JWT token (không cần 'Bearer')\nVí dụ: eyJhbGciOiJIUzI1NiIs...",
             Name = "Authorization",
             Type = SecuritySchemeType.Http,
-            Scheme = "Bearer",
             BearerFormat = "JWT",
-            In = ParameterLocation.Header,
-            Description = "Nhập JWT token vào ô bên dưới (không cần thêm chữ 'Bearer')\n\n" +
-                         "Example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            Scheme = "Bearer"
         });
 
         options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -277,40 +230,31 @@ static void ConfigureSwagger(IServiceCollection services)
             {
                 new OpenApiSecurityScheme
                 {
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = "Bearer"
-                    }
+                    Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
                 },
                 Array.Empty<string>()
             }
         });
 
-        // Custom schema IDs để tránh conflict
         options.CustomSchemaIds(type => type.FullName);
     });
 }
 
-static void ConfigureDatabase(IServiceCollection services, IConfiguration configuration)
+static void ConfigureDatabase(IServiceCollection services, IConfiguration config)
 {
-    var connectionString = configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException("ConnectionString 'DefaultConnection' not found");
+    var connStr = config.GetConnectionString("DefaultConnection");
 
     services.AddDbContext<MyDbContext>(options =>
     {
-        options.UseSqlServer(connectionString, sqlOptions =>
+        options.UseSqlServer(connStr, sqlOptions =>
         {
-            sqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 3,
-                maxRetryDelay: TimeSpan.FromSeconds(5),
-                errorNumbersToAdd: null);
+            // TẮT RETRY STRATEGY để tránh lỗi transaction
+            sqlOptions.EnableRetryOnFailure(0);
             sqlOptions.CommandTimeout(30);
-            sqlOptions.MigrationsHistoryTable("__EFMigrationsHistory");
         });
 
-        // Enable sensitive data logging in development
-        if (configuration.GetValue<bool>("Logging:EnableSensitiveDataLogging"))
+        // Dev only
+        if (config.GetValue<bool>("Logging:EnableSensitiveDataLogging"))
         {
             options.EnableSensitiveDataLogging();
             options.EnableDetailedErrors();
@@ -318,137 +262,91 @@ static void ConfigureDatabase(IServiceCollection services, IConfiguration config
     });
 }
 
-static void ConfigureCors(IServiceCollection services, IWebHostEnvironment environment)
+static void ConfigureCors(IServiceCollection services, IWebHostEnvironment env)
 {
     services.AddCors(options =>
     {
-        if (environment.IsDevelopment())
+        if (env.IsDevelopment())
         {
-            // Development: Allow all
             options.AddDefaultPolicy(policy =>
             {
-                policy
-                    .SetIsOriginAllowed(_ => true)
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowCredentials();
+                policy.SetIsOriginAllowed(_ => true)
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()
+                      .AllowCredentials();
             });
         }
         else
         {
-            // Production: Specific origins only
             options.AddDefaultPolicy(policy =>
             {
-                policy
-                    .WithOrigins("https://yourdomain.com", "https://www.yourdomain.com")
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowCredentials();
+                policy.WithOrigins("https://yourdomain.com")
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()
+                      .AllowCredentials();
             });
         }
     });
 }
 
-static void ConfigureAuthentication(IServiceCollection services, IConfiguration configuration)
+static void ConfigureAuthentication(IServiceCollection services, IConfiguration config)
 {
-    var jwtSettings = configuration.GetSection("JwtSettings");
-    var secretKey = jwtSettings["SecretKey"]
-        ?? throw new InvalidOperationException("JWT SecretKey not found");
+    var jwtSettings = config.GetSection("JwtSettings");
+    var secretKey = jwtSettings["SecretKey"]!;
 
-    services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.RequireHttpsMetadata = false; // Set to true in production
-        options.SaveToken = true;
-
-        options.TokenValidationParameters = new TokenValidationParameters
+    services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
         {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-            ValidateIssuer = true,
-            ValidIssuer = jwtSettings["Issuer"],
-            ValidateAudience = true,
-            ValidAudience = jwtSettings["Audience"],
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero,
-            RoleClaimType = "roleName"
-        };
-
-        // Event Handlers
-        options.Events = new JwtBearerEvents
-        {
-            OnAuthenticationFailed = context =>
+            options.TokenValidationParameters = new TokenValidationParameters
             {
-                if (context.Exception is SecurityTokenExpiredException)
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+                ValidateIssuer = true,
+                ValidIssuer = jwtSettings["Issuer"],
+                ValidateAudience = true,
+                ValidAudience = jwtSettings["Audience"],
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero,
+                RoleClaimType = "roleName" // Phải khớp với JWT token
+            };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnAuthenticationFailed = context =>
                 {
-                    context.Response.Headers.Append("Token-Expired", "true");
+                    if (context.Exception is SecurityTokenExpiredException)
+                    {
+                        context.Response.Headers.Append("Token-Expired", "true");
+                    }
+                    return Task.CompletedTask;
+                },
+                OnChallenge = context =>
+                {
+                    context.HandleResponse();
+                    context.Response.StatusCode = 401;
+                    context.Response.ContentType = "application/json";
+
+                    return context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        success = false,
+                        message = "Token không hợp lệ hoặc hết hạn",
+                        statusCode = 401
+                    }));
+                },
+                OnMessageReceived = context =>
+                {
+                    // SignalR: Token qua query string
+                    var token = context.Request.Query["access_token"];
+                    var path = context.HttpContext.Request.Path;
+
+                    if (!string.IsNullOrEmpty(token) && path.StartsWithSegments("/orderTimerHub"))
+                    {
+                        context.Token = token;
+                    }
+                    return Task.CompletedTask;
                 }
-                return Task.CompletedTask;
-            },
-            OnChallenge = context =>
-            {
-                context.HandleResponse();
-                context.Response.StatusCode = 401;
-                context.Response.ContentType = "application/json";
-
-                var response = new
-                {
-                    Success = false,
-                    Message = "Token không hợp lệ hoặc đã hết hạn",
-                    StatusCode = 401
-                };
-                return context.Response.WriteAsync(
-                    System.Text.Json.JsonSerializer.Serialize(response));
-            },
-            OnMessageReceived = context =>
-            {
-                // Allow SignalR to receive token from query string
-                var accessToken = context.Request.Query["access_token"];
-                var path = context.HttpContext.Request.Path;
-
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/orderTimerHub"))
-                {
-                    context.Token = accessToken;
-                }
-                return Task.CompletedTask;
-            }
-        };
-    });
+            };
+        });
 
     services.AddAuthorization();
 }
-
-/*
- * ===== SUMMARY CÁC THAY ĐỔI =====
- * 
- * 1. ✅ THÊM OrderSettings.Configure()
- *    - Bắt buộc cho OrderService
- * 
- * 2. ✅ THÊM Configuration Validation
- *    - Validate JWT, ConnectionString, Required sections
- *    - Fail fast nếu thiếu config
- * 
- * 3. ✅ THÊM Global Exception Handler
- *    - Catch unhandled exceptions
- *    - Return JSON response thay vì HTML error page
- * 
- * 4. ✅ THÊM Request Logging (Development)
- *    - Log mọi request/response
- *    - Giúp debug dễ hơn
- * 
- * 5. ✅ REFACTOR thành helper methods
- *    - Code clean hơn, dễ đọc hơn
- *    - Mỗi concern có method riêng
- * 
- * 6. ✅ THÊM Database health check
- *    - Log kết nối DB lúc startup
- *    - Phát hiện lỗi sớm
- * 
- * 7. ✅ CORS configuration theo environment
- *    - Development: Allow all
- *    - Production: Specific origins only
- */

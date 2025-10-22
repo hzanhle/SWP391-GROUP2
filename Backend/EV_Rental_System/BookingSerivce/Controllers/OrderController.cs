@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using BookingService.DTOs;
 using BookingService.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookingService.Controllers
 {
     [ApiController]
     [Route("api/orders")]
+    [Authorize] // Yêu cầu authentication cho tất cả endpoints
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
@@ -21,8 +23,10 @@ namespace BookingService.Controllers
 
         /// <summary>
         /// Xem trước đơn hàng: tính toán chi phí và kiểm tra lịch.
+        /// Chỉ Member mới có thể xem trước đơn hàng của mình
         /// </summary>
         [HttpPost("preview")]
+        [Authorize(Roles = "Member")]
         public async Task<IActionResult> GetOrderPreview([FromBody] OrderRequest request)
         {
             try
@@ -39,8 +43,10 @@ namespace BookingService.Controllers
 
         /// <summary>
         /// Tạo đơn hàng mới (trạng thái Pending).
+        /// Chỉ Member mới có thể tạo đơn hàng
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Member")]
         public async Task<IActionResult> CreateOrder([FromBody] OrderRequest request)
         {
             try
@@ -63,8 +69,11 @@ namespace BookingService.Controllers
         /// <summary>
         /// ⭐ ĐÃ FIX - Xác nhận thanh toán từ webhook cổng thanh toán (VNPay).
         /// QUAN TRỌNG: Endpoint này chỉ dành cho webhook từ payment gateway!
+        /// AllowAnonymous vì webhook từ bên thứ 3 không có JWT token
+        /// Nên validate bằng signature/secret key trong service layer
         /// </summary>
         [HttpPost("confirm-payment")]
+        [AllowAnonymous] // Webhook từ VNPay không có token
         public async Task<IActionResult> ConfirmPayment([FromBody] ConfirmPaymentRequest request)
         {
             try
@@ -115,8 +124,10 @@ namespace BookingService.Controllers
         /// <summary>
         /// Background job kiểm tra đơn hàng hết hạn.
         /// Thường được gọi bởi scheduler (Hangfire/Quartz), không phải từ client.
+        /// Chỉ Admin hoặc hệ thống mới có thể gọi
         /// </summary>
         [HttpPost("check-expired")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CheckExpiredOrders()
         {
             try
@@ -144,8 +155,11 @@ namespace BookingService.Controllers
 
         /// <summary>
         /// Lấy thông tin chi tiết đơn hàng
+        /// Admin, Employee có thể xem tất cả đơn
+        /// Member chỉ xem được đơn của mình (validate trong service)
         /// </summary>
         [HttpGet("{orderId}")]
+        [Authorize(Roles = "Admin,Employee,Member")]
         public async Task<IActionResult> GetOrderById(int orderId)
         {
             try
@@ -166,8 +180,11 @@ namespace BookingService.Controllers
 
         /// <summary>
         /// Lấy danh sách đơn hàng của user
+        /// Admin, Employee có thể xem đơn của bất kỳ user nào
+        /// Member chỉ xem được đơn của mình (validate trong service)
         /// </summary>
         [HttpGet("user/{userId}")]
+        [Authorize(Roles = "Admin,Employee,Member")]
         public async Task<IActionResult> GetOrdersByUserId(int userId)
         {
             try
@@ -184,8 +201,10 @@ namespace BookingService.Controllers
 
         /// <summary>
         /// Bắt đầu chuyến thuê (khi khách nhận xe)
+        /// Chủ xe (Member) hoặc Employee có thể xác nhận bắt đầu
         /// </summary>
         [HttpPost("{orderId}/start")]
+        [Authorize(Roles = "Employee,Member")]
         public async Task<IActionResult> StartRental(int orderId)
         {
             try
@@ -211,8 +230,10 @@ namespace BookingService.Controllers
 
         /// <summary>
         /// Hoàn thành chuyến thuê (khi khách trả xe)
+        /// Chủ xe (Member) hoặc Employee có thể xác nhận hoàn thành
         /// </summary>
         [HttpPost("{orderId}/complete")]
+        [Authorize(Roles = "Employee,Member")]
         public async Task<IActionResult> CompleteRental(int orderId)
         {
             try
@@ -239,24 +260,40 @@ namespace BookingService.Controllers
 }
 
 /*
- * ===== SUMMARY CÁC THAY ĐỔI =====
+ * ===== PHÂN QUYỀN CHI TIẾT =====
  * 
- * 1. ✅ XÓA tất cả duplicate service calls trong ConfirmPayment()
- *    - Không còn gọi _paymentService, _trustScoreService, _notificationService
- *    - OrderService đã xử lý tất cả rồi!
+ * 🔐 MEMBER (Khách hàng & Chủ xe):
+ *    - POST /preview: Xem trước đơn hàng
+ *    - POST /: Tạo đơn hàng mới
+ *    - GET /{orderId}: Xem chi tiết đơn của mình
+ *    - GET /user/{userId}: Xem danh sách đơn của mình
+ *    - POST /{orderId}/start: Xác nhận bắt đầu thuê (chủ xe)
+ *    - POST /{orderId}/complete: Xác nhận hoàn thành (chủ xe)
  * 
- * 2. ✅ THÊM proper error handling
- *    - InvalidOperationException → 400 Bad Request
- *    - Generic Exception → 500 Internal Server Error
- *    - Logging đầy đủ
+ * 👔 EMPLOYEE (Nhân viên):
+ *    - GET /{orderId}: Xem chi tiết bất kỳ đơn nào
+ *    - GET /user/{userId}: Xem đơn của bất kỳ user nào
+ *    - POST /{orderId}/start: Hỗ trợ xác nhận bắt đầu
+ *    - POST /{orderId}/complete: Hỗ trợ xác nhận hoàn thành
  * 
- * 3. ✅ THÊM các endpoints còn thiếu
- *    - GET /api/orders/{orderId}
- *    - GET /api/orders/user/{userId}
- *    - POST /api/orders/{orderId}/start
- *    - POST /api/orders/{orderId}/complete
+ * 👑 ADMIN (Quản trị viên):
+ *    - Tất cả quyền của Employee
+ *    - POST /check-expired: Chạy job kiểm tra đơn hết hạn
  * 
- * 4. ✅ Controller giờ chỉ lo routing và validation
- *    - Business logic hoàn toàn ở OrderService
- *    - Controller mỏng, dễ test
+ * 🌐 ALLOW ANONYMOUS:
+ *    - POST /confirm-payment: Webhook từ VNPay (validate bằng signature)
+ * 
+ * ⚠️ LƯU Ý QUAN TRỌNG:
+ * 1. Service layer PHẢI validate ownership:
+ *    - Member chỉ được xem/thao tác đơn của mình
+ *    - Kiểm tra userId từ JWT token vs userId trong đơn hàng
+ * 
+ * 2. Webhook security:
+ *    - confirm-payment dùng AllowAnonymous
+ *    - PHẢI validate signature/hash từ VNPay trong service
+ *    - Có thể thêm IP whitelist nếu cần
+ * 
+ * 3. Background jobs:
+ *    - check-expired nên được gọi từ Hangfire/Quartz
+ *    - Hoặc protect bằng API key thay vì role
  */

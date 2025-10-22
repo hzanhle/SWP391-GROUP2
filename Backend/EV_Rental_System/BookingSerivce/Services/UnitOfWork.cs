@@ -11,13 +11,15 @@ namespace BookingService.Services
 
         // Lazy initialization cho repositories
         private IOrderRepository? _orderRepository;
+        private IPaymentRepository? _paymentRepository;
+        private IOnlineContractRepository? _contractRepository;
 
         public UnitOfWork(MyDbContext context)
         {
             _context = context;
         }
 
-        // ===== REPOSITORY PROPERTIES =====
+        // ===== REPOSITORIES =====
 
         public IOrderRepository Orders
         {
@@ -28,14 +30,26 @@ namespace BookingService.Services
             }
         }
 
-        public IPaymentRepository Payments => throw new NotImplementedException();
-        public IOnlineContractRepository Contracts => throw new NotImplementedException();
+        public IPaymentRepository Payments
+        {
+            get
+            {
+                _paymentRepository ??= new PaymentRepository(_context);
+                return _paymentRepository;
+            }
+        }
 
-        // ===== TRANSACTION MANAGEMENT =====
+        public IOnlineContractRepository Contracts
+        {
+            get
+            {
+                _contractRepository ??= new OnlineContractRepository(_context);
+                return _contractRepository;
+            }
+        }
 
-        /// <summary>
-        /// Bắt đầu transaction mới
-        /// </summary>
+        // ===== TRANSACTIONS =====
+
         public async Task BeginTransactionAsync()
         {
             if (_transaction != null)
@@ -46,46 +60,35 @@ namespace BookingService.Services
             _transaction = await _context.Database.BeginTransactionAsync();
         }
 
-        /// <summary>
-        /// Commit transaction - Tự động SaveChanges và Commit
-        /// </summary>
         public async Task CommitTransactionAsync()
         {
             if (_transaction == null)
             {
-                throw new InvalidOperationException("Không có transaction nào để commit!");
+                throw new InvalidOperationException("Chưa có transaction để commit!");
             }
 
             try
             {
-                // Lưu tất cả changes vào database
                 await _context.SaveChangesAsync();
-
-                // Commit transaction
                 await _transaction.CommitAsync();
             }
             catch
             {
-                // Nếu có lỗi, tự động rollback
                 await RollbackTransactionAsync();
                 throw;
             }
             finally
             {
-                // Dispose transaction sau khi commit
                 await _transaction.DisposeAsync();
                 _transaction = null;
             }
         }
 
-        /// <summary>
-        /// Rollback transaction
-        /// </summary>
         public async Task RollbackTransactionAsync()
         {
             if (_transaction == null)
             {
-                throw new InvalidOperationException("Không có transaction nào để rollback!");
+                throw new InvalidOperationException("Chưa có transaction để rollback!");
             }
 
             try
@@ -99,42 +102,39 @@ namespace BookingService.Services
             }
         }
 
-        // ===== ⚠️ QUAN TRỌNG: XÓA METHOD SaveChangesAsync() =====
-        // Method này gây nhầm lẫn và duplicate SaveChanges
-        // Services CHỈ nên dùng:
-        // - BeginTransactionAsync()
-        // - CommitTransactionAsync() (đã có SaveChanges bên trong)
-        // - RollbackTransactionAsync()
+        public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
 
-        // ❌ ĐÃ XÓA:
-        // public async Task<int> SaveChangesAsync()
-        // {
-        //     return await _context.SaveChangesAsync();
-        // }
+        // ===== DISPOSE =====
 
-        // ===== DISPOSE PATTERN =====
-
-        protected virtual void Dispose(bool disposing)
+        public void Dispose()
         {
             if (!_disposed)
             {
-                if (disposing)
-                {
-                    // Dispose transaction nếu còn
-                    _transaction?.Dispose();
-
-                    // Dispose context
-                    _context?.Dispose();
-                }
-
+                _transaction?.Dispose();
+                _context?.Dispose();
                 _disposed = true;
             }
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            if (!_disposed)
+            {
+                if (_transaction != null)
+                {
+                    await _transaction.DisposeAsync();
+                }
+
+                if (_context != null)
+                {
+                    await _context.DisposeAsync();
+                }
+
+                _disposed = true;
+            }
         }
     }
 }

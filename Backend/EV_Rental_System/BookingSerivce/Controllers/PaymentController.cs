@@ -1,14 +1,18 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using BookingService.Services;
+﻿using BookingSerivce.Models.VNPAY;
 using BookingService.Models;
+using BookingService.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BookingService.Controllers
 {
     [ApiController]
     [Route("api/payment")]
+    [Authorize] // Yêu cầu authentication cho tất cả endpoints
     public class PaymentController : ControllerBase
     {
         private readonly IVNPayService _vnpayService;
+        private readonly VNPaySettings _vnpaySettings;
         private readonly IPaymentService _paymentService;
         private readonly ILogger<PaymentController> _logger;
 
@@ -25,8 +29,10 @@ namespace BookingService.Controllers
         /// <summary>
         /// Tạo URL thanh toán VNPay cho Order đã tồn tại
         /// GET: api/payment/vnpay-create?orderId=123
+        /// Chỉ Member (khách hàng) mới được tạo URL thanh toán
         /// </summary>
         [HttpGet("vnpay-create")]
+        [Authorize(Roles = "Member")]
         public async Task<IActionResult> CreatePaymentUrl([FromQuery] int orderId)
         {
             try
@@ -43,6 +49,10 @@ namespace BookingService.Controllers
                 {
                     return NotFound(new { message = $"Không tìm thấy payment cho Order #{orderId}" });
                 }
+
+                // TODO: Service phải validate Member chỉ tạo payment URL cho đơn hàng của mình
+                // var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                // await _paymentService.ValidateOrderOwnershipAsync(orderId, userId);
 
                 // Kiểm tra trạng thái payment
                 if (payment.IsCompleted())
@@ -89,10 +99,12 @@ namespace BookingService.Controllers
         }
 
         /// <summary>
-        /// Callback từ VNPay sau khi user thanh toán
+        /// Callback từ VNPay sau khi user thanh toán (user redirect)
         /// GET: api/payment/vnpay-deposit-callback?vnp_Amount=...&vnp_ResponseCode=...
+        /// AllowAnonymous vì đây là callback từ VNPay redirect browser
         /// </summary>
         [HttpGet("vnpay-deposit-callback")]
+        [AllowAnonymous]
         public async Task<IActionResult> VNPayCallback()
         {
             try
@@ -237,11 +249,17 @@ namespace BookingService.Controllers
             }
         }
 
+
+
+
         /// <summary>
-        /// IPN endpoint cho VNPay (webhook từ VNPay server)
+        /// IPN endpoint cho VNPay (webhook từ VNPay server-to-server)
         /// GET: api/payment/vnpay-ipn
+        /// AllowAnonymous vì webhook từ VNPay không có JWT token
+        /// CRITICAL: PHẢI validate signature để đảm bảo request từ VNPay thật
         /// </summary>
         [HttpGet("vnpay-ipn")]
+        [AllowAnonymous]
         public async Task<IActionResult> VNPayIPN()
         {
             try
@@ -251,7 +269,7 @@ namespace BookingService.Controllers
                 _logger.LogInformation("VNPay IPN received: {@Query}",
                     query.ToDictionary(k => k.Key, v => v.Value.ToString()));
 
-                // Validate signature
+                // Validate signature - CRITICAL SECURITY CHECK
                 var isValid = _vnpayService.ValidateCallback(query);
                 if (!isValid)
                 {
@@ -311,8 +329,11 @@ namespace BookingService.Controllers
         /// <summary>
         /// Query payment status
         /// GET: api/payment/status/{orderId}
+        /// Member xem status payment của đơn hàng mình
+        /// Employee/Admin xem bất kỳ payment nào
         /// </summary>
         [HttpGet("status/{orderId}")]
+        [Authorize(Roles = "Admin,Employee,Member")]
         public async Task<IActionResult> GetPaymentStatus(int orderId)
         {
             try
@@ -323,6 +344,13 @@ namespace BookingService.Controllers
                 {
                     return NotFound(new { message = $"Không tìm thấy payment cho Order #{orderId}" });
                 }
+
+                // TODO: Service phải validate Member chỉ xem payment của đơn hàng mình
+                // var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                // var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                // if (userRole == "Member") {
+                //     await _paymentService.ValidateOrderOwnershipAsync(orderId, userId);
+                // }
 
                 return Ok(new
                 {
@@ -383,3 +411,58 @@ namespace BookingService.Controllers
         }
     }
 }
+
+/*
+ * ===== PHÂN QUYỀN PAYMENT CONTROLLER =====
+ * 
+ * 🔐 MEMBER (Khách hàng):
+ *    - GET /vnpay-create?orderId=X: Tạo URL thanh toán cho đơn hàng của mình
+ *    - GET /status/{orderId}: Xem trạng thái thanh toán của đơn hàng mình
+ * 
+ * 👔 EMPLOYEE (Nhân viên):
+ *    - GET /status/{orderId}: Xem trạng thái thanh toán bất kỳ đơn nào
+ * 
+ * 👑 ADMIN (Quản trị viên):
+ *    - Tất cả quyền của Employee
+ * 
+ * 🌐 ALLOW ANONYMOUS (VNPay webhooks):
+ *    - GET /vnpay-deposit-callback: Callback sau khi user thanh toán (browser redirect)
+ *    - GET /vnpay-ipn: IPN webhook từ VNPay server (server-to-server)
+ * 
+ * ⚠️ LƯU Ý BẢO MẬT QUAN TRỌNG:
+ * 
+ * 1. Webhook Security:
+ *    - Callback và IPN endpoints dùng AllowAnonymous (VNPay không gửi JWT)
+ *    - PHẢI validate signature từ VNPay bằng secret key
+ *    - Đã có: _vnpayService.ValidateCallback(query) - CRITICAL!
+ *    - Optional: Thêm IP whitelist cho IPN (chỉ nhận từ IP VNPay)
+ * 
+ * 2. Ownership Validation:
+ *    - Member chỉ được tạo payment URL và xem status của đơn hàng mình
+ *    - Service layer PHẢI validate userId từ JWT vs Order.UserId
+ *    - Đề xuất implement:
+ *      ```csharp
+ *      var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+ *      var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+ *      if (userRole == "Member") {
+ *          await _paymentService.ValidateOrderOwnershipAsync(orderId, userId);
+ *      }
+ *      ```
+ * 
+ * 3. Idempotency:
+ *    - IPN endpoint đã xử lý idempotency (check payment.IsCompleted())
+ *    - VNPay có thể gửi IPN nhiều lần, phải tránh xử lý trùng
+ * 
+ * 4. Callback vs IPN:
+ *    - Callback: User redirect từ VNPay → Browser → Backend
+ *      → Dùng để hiển thị kết quả cho user
+ *    - IPN: VNPay server → Backend server (không qua browser)
+ *      → Dùng để xử lý business logic chính thức
+ *      → Đáng tin cậy hơn callback (user không can thiệp được)
+ * 
+ * 5. Error Handling:
+ *    - Callback: Return 200 + JSON với success/message cho frontend xử lý
+ *    - IPN: Return VNPay format { RspCode, Message } theo docs VNPay
+ *      → RspCode "00" = success
+ *      → RspCode khác = error
+ */
