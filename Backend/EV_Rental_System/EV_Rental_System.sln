@@ -15,7 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdminDashboardService", "AdminDashboardService\AdminDashboardService.csproj", "{2B65E67E-6247-A28D-752D-F43E716B766D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BookingService", "BookingService\BookingService\BookingService.csproj", "{99932ED2-ED1E-B0FF-874F-F70F4C8E4A66}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BookingService", "BookingService\BookingService.csproj", "{18E92354-872E-B68C-468F-A497238BAD6D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,10 +39,10 @@ Global
 		{2B65E67E-6247-A28D-752D-F43E716B766D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B65E67E-6247-A28D-752D-F43E716B766D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2B65E67E-6247-A28D-752D-F43E716B766D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{99932ED2-ED1E-B0FF-874F-F70F4C8E4A66}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{99932ED2-ED1E-B0FF-874F-F70F4C8E4A66}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{99932ED2-ED1E-B0FF-874F-F70F4C8E4A66}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{99932ED2-ED1E-B0FF-874F-F70F4C8E4A66}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18E92354-872E-B68C-468F-A497238BAD6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18E92354-872E-B68C-468F-A497238BAD6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18E92354-872E-B68C-468F-A497238BAD6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18E92354-872E-B68C-468F-A497238BAD6D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

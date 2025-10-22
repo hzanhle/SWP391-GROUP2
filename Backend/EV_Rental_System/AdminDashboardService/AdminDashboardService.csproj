@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BookingSerivce\BookingSerivce.csproj" />
+    <ProjectReference Include="..\BookingService\BookingService.csproj" />
     <ProjectReference Include="..\StationService\StationService.csproj" />
     <ProjectReference Include="..\TwoWheelVehicleService\TwoWheelVehicleService.csproj" />
     <ProjectReference Include="..\UserService\UserService.csproj" />
