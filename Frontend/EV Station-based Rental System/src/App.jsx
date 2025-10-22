@@ -16,6 +16,7 @@ import History from './pages/History'
 import AdminUsers from './pages/AdminUsers'
 import StaffVerification from './pages/StaffVerification'
 import AdminModels from './pages/AdminModels'
+import AdminDashboard from './pages/AdminDashboard'
 
 function getRoleId() {
   try {
@@ -28,7 +29,7 @@ function getRoleId() {
 function resolveRoute() {
   const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
   const path = typeof window !== 'undefined' ? window.location.pathname.replace(/^\//, '') : ''
-  if (!hash && path.toLowerCase() === 'admin') return 'admin-users'
+  if (!hash && path.toLowerCase() === 'admin') return 'admin'
   switch (hash) {
     case 'signup': return 'signup'
     case 'login': return 'login'
@@ -72,6 +73,9 @@ export default function App() {
   if (routeData === 'check-in') return <CheckIn />
   if (routeData === 'return') return <Return />
   if (routeData === 'history') return <History />
+  if (routeData === 'admin') {
+    return <AdminDashboard />
+  }
   if (routeData === 'admin-users') {
     return <AdminUsers />
   }
