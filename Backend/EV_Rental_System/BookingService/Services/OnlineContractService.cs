@@ -650,5 +650,123 @@ namespace BookingService.Services
         }
 
         #endregion
+
+        #region Contract Download & Retrieval
+
+        /// <summary>
+        /// Get contract file for download with security validation
+        /// </summary>
+        public async Task<(byte[] FileBytes, string FileName, string ContentType)> GetContractFileAsync(
+            string fileName, int userId, string userRole)
+        {
+            _logger.LogInformation(
+                "Contract file download requested: {FileName} by User {UserId} (Role: {UserRole})",
+                fileName, userId, userRole);
+
+            // 1. Validate file name (prevent path traversal)
+            if (string.IsNullOrWhiteSpace(fileName) ||
+                fileName.Contains("..") ||
+                fileName.Contains("/") ||
+                fileName.Contains("\\"))
+            {
+                throw new ArgumentException("Invalid file name");
+            }
+
+            // 2. Only allow PDF files
+            if (!fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Only PDF files are allowed");
+            }
+
+            // 3. Build file path
+            var contractsPath = Path.Combine(Directory.GetCurrentDirectory(), _contractSettings.StoragePath);
+            var filePath = Path.Combine(contractsPath, fileName);
+
+            // 4. Check file exists
+            if (!File.Exists(filePath))
+            {
+                _logger.LogWarning("Contract file not found: {FilePath}", filePath);
+                throw new FileNotFoundException($"Contract file not found: {fileName}");
+            }
+
+            // 5. Security check: Member can only download their own contracts
+            if (userRole == "Member")
+            {
+                // Extract contract number from filename (e.g., CT20241022000001.pdf)
+                var contractNumber = Path.GetFileNameWithoutExtension(fileName);
+                var contract = await _contractRepo.GetByContractNumberAsync(contractNumber);
+
+                if (contract == null)
+                {
+                    _logger.LogWarning("Contract not found in database: {ContractNumber}", contractNumber);
+                    throw new FileNotFoundException("Contract not found");
+                }
+
+                // Get order to verify ownership
+                var order = contract.Order;
+                if (order == null || order.UserId != userId)
+                {
+                    _logger.LogWarning(
+                        "User {UserId} attempted to download contract {ContractNumber} owned by User {OwnerId}",
+                        userId, contractNumber, order?.UserId);
+                    throw new UnauthorizedAccessException("You do not have permission to download this contract");
+                }
+            }
+            // Employee and Admin can download any contract (no additional check needed)
+
+            // 6. Read file bytes
+            var fileBytes = await File.ReadAllBytesAsync(filePath);
+
+            _logger.LogInformation(
+                "Contract file downloaded successfully: {FileName} ({FileSize} bytes)",
+                fileName, fileBytes.Length);
+
+            return (fileBytes, fileName, "application/pdf");
+        }
+
+        /// <summary>
+        /// Get contract details by OrderId with ownership validation
+        /// </summary>
+        public async Task<ContractDetailsDto> GetContractByOrderIdAsync(
+            int orderId, int userId, string userRole)
+        {
+            _logger.LogInformation(
+                "Contract requested for Order {OrderId} by User {UserId} (Role: {UserRole})",
+                orderId, userId, userRole);
+
+            // 1. Get contract from database
+            var contract = await _contractRepo.GetByOrderIdAsync(orderId);
+
+            if (contract == null)
+            {
+                _logger.LogWarning("Contract not found for Order {OrderId}", orderId);
+                throw new InvalidOperationException($"Contract not found for Order {orderId}");
+            }
+
+            // 2. Security check: Member can only view their own contracts
+            if (userRole == "Member")
+            {
+                var order = contract.Order;
+                if (order == null || order.UserId != userId)
+                {
+                    _logger.LogWarning(
+                        "User {UserId} attempted to view contract for Order {OrderId} owned by User {OwnerId}",
+                        userId, orderId, order?.UserId);
+                    throw new UnauthorizedAccessException("You do not have permission to view this contract");
+                }
+            }
+            // Employee and Admin can view any contract (no additional check needed)
+
+            // 3. Return contract details
+            var contractDto = MapToDetailsDto(contract);
+
+            _logger.LogInformation(
+                "Contract details retrieved successfully for Order {OrderId}: {ContractNumber}",
+                orderId, contractDto.ContractNumber);
+
+            return contractDto;
+        }
+
+        #endregion
     }
 }

@@ -107,14 +107,34 @@ namespace BookingService.Controllers
                     return BadRequest(new { Message = "Tên file không hợp lệ." });
                 }
 
-                // TODO: Implement file download logic
-                // - Validate file exists
-                // - Check user permission (Member chỉ tải file của mình)
-                // - Return FileStreamResult
+                // Get user info from JWT token
+                var (userId, userRole) = GetUserInfoFromToken();
 
-                _logger.LogInformation("Contract download requested: {FileName}", file);
+                // Get file from service (with security validation)
+                var (fileBytes, fileName, contentType) = await _contractService.GetContractFileAsync(
+                    file, userId, userRole);
 
-                return NotFound(new { Message = "Tính năng download đang được phát triển." });
+                _logger.LogInformation(
+                    "Contract downloaded successfully: {FileName} by User {UserId}",
+                    fileName, userId);
+
+                // Return file for download
+                return File(fileBytes, contentType, fileName);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Invalid file name: {FileName}", file);
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Contract file not found: {FileName}", file);
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized download attempt: {FileName}", file);
+                return StatusCode(403, new { Message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -134,13 +154,28 @@ namespace BookingService.Controllers
         {
             try
             {
-                // TODO: Implement get contract logic
-                // var contract = await _contractService.GetContractByOrderIdAsync(orderId);
-                // Service phải validate: Member chỉ xem được hợp đồng của đơn hàng mình
+                // Get user info from JWT token
+                var (userId, userRole) = GetUserInfoFromToken();
 
-                _logger.LogInformation("Contract requested for Order {OrderId}", orderId);
+                // Get contract from service (with ownership validation)
+                var contract = await _contractService.GetContractByOrderIdAsync(
+                    orderId, userId, userRole);
 
-                return NotFound(new { Message = "Tính năng đang được phát triển." });
+                _logger.LogInformation(
+                    "Contract retrieved successfully for Order {OrderId} by User {UserId}",
+                    orderId, userId);
+
+                return Ok(contract);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Contract not found for Order {OrderId}", orderId);
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized contract access attempt for Order {OrderId}", orderId);
+                return StatusCode(403, new { Message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -148,6 +183,31 @@ namespace BookingService.Controllers
                 return StatusCode(500, new { Message = "Lỗi hệ thống." });
             }
         }
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Extract user ID and role from JWT token
+        /// </summary>
+        private (int UserId, string UserRole) GetUserInfoFromToken()
+        {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userRoleClaim = User.FindFirst("roleName")?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                throw new UnauthorizedAccessException("Invalid user token");
+            }
+
+            if (string.IsNullOrEmpty(userRoleClaim))
+            {
+                throw new UnauthorizedAccessException("Invalid user role");
+            }
+
+            return (userId, userRoleClaim);
+        }
+
+        #endregion
     }
 }
 
