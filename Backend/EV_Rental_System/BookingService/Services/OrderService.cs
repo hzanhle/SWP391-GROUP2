@@ -648,6 +648,54 @@ namespace BookingService.Services
         #endregion
     }
 
+    /// <summary>
+    /// Get conflicting orders for a vehicle in a date range
+    /// Used by TwoWheelVehicleService for availability checking
+    /// </summary>
+    public async Task<List<ConflictingOrderDto>> GetConflictingOrdersAsync(
+        int vehicleId,
+        DateTime fromDate,
+        DateTime toDate,
+        int? excludeOrderId = null)
+    {
+        try
+        {
+            // Get all orders for the vehicle with relevant statuses
+            var relevantStatuses = new[] { OrderStatus.Pending, OrderStatus.Confirmed, OrderStatus.InProgress };
+
+            var orders = await _orderRepository.GetByVehicleIdAsync(vehicleId);
+
+            var conflictingOrders = orders
+                .Where(o => relevantStatuses.Contains(o.Status))
+                .Where(o => !excludeOrderId.HasValue || o.OrderId != excludeOrderId.Value)
+                .Where(o =>
+                    // Check for date overlap:
+                    // Order conflicts if: existing.FromDate <= requestToDate AND existing.ToDate >= requestFromDate
+                    o.FromDate <= toDate && o.ToDate >= fromDate)
+                .Select(o => new ConflictingOrderDto
+                {
+                    OrderId = o.OrderId,
+                    FromDate = o.FromDate,
+                    ToDate = o.ToDate,
+                    Status = o.Status.ToString()
+                })
+                .ToList();
+
+            _logger.LogInformation(
+                "Found {Count} conflicting orders for Vehicle {VehicleId} between {FromDate} and {ToDate}",
+                conflictingOrders.Count, vehicleId, fromDate, toDate);
+
+            return conflictingOrders;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error getting conflicting orders for Vehicle {VehicleId}",
+                vehicleId);
+            return new List<ConflictingOrderDto>();
+        }
+    }
+
     // ===== Helper Classes =====
 
     internal class OrderCostBreakdown

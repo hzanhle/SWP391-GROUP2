@@ -27,5 +27,8 @@ namespace BookingService.Services
         Task<bool> CompleteRentalAsync(int orderId);
 
         //Task<bool> CheckVehicleAvailabilityAsync(int vehicleId, DateTime fromDate, DateTime toDate);
+
+        // Availability checking for microservice communication
+        Task<List<ConflictingOrderDto>> GetConflictingOrdersAsync(int vehicleId, DateTime fromDate, DateTime toDate, int? excludeOrderId = null);
     }
 }

@@ -73,6 +73,7 @@ builder.Services.AddScoped<IOnlineContractRepository, OnlineContractRepository>(
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITrustScoreRepository, TrustScoreRepository>();
+builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
 
 // ====================== Services ======================
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -83,6 +84,7 @@ builder.Services.AddScoped<ITrustScoreService, TrustScoreService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddSingleton<IPdfConverterService, PuppeteerPdfService>();
+builder.Services.AddScoped<IInspectionService, InspectionService>();
 
 // ====================== Build App ======================
 var app = builder.Build();

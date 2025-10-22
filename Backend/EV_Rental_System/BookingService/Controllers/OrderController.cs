@@ -256,6 +256,36 @@ namespace BookingService.Controllers
                 return StatusCode(500, new { Message = "Lỗi hệ thống." });
             }
         }
+
+        /// <summary>
+        /// Check for conflicting orders for a vehicle in a date range
+        /// Used by TwoWheelVehicleService to check availability
+        /// AllowAnonymous for microservice communication
+        /// </summary>
+        [HttpGet("check-conflicts")]
+        [AllowAnonymous] // Allow calls from other services
+        public async Task<IActionResult> CheckConflicts(
+            [FromQuery] int vehicleId,
+            [FromQuery] DateTime fromDate,
+            [FromQuery] DateTime toDate,
+            [FromQuery] int? excludeOrderId = null)
+        {
+            try
+            {
+                var conflicts = await _orderService.GetConflictingOrdersAsync(
+                    vehicleId,
+                    fromDate,
+                    toDate,
+                    excludeOrderId);
+
+                return Ok(conflicts);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking conflicts for Vehicle {VehicleId}", vehicleId);
+                return StatusCode(500, new { Message = "Lỗi hệ thống." });
+            }
+        }
     }
 }
 

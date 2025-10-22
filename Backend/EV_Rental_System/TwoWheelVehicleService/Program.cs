@@ -36,6 +36,15 @@ builder.Services.AddScoped<IImageRepository, ImageRepository>();
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddScoped<IModelRepository, ModelRepository>();
 builder.Services.AddScoped<IModelService, ModelService>();
+builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
+
+// ====================== HttpClient for Microservice Communication ======================
+builder.Services.AddHttpClient("BookingService", client =>
+{
+    var bookingServiceUrl = builder.Configuration["ServiceUrls:BookingService"];
+    client.BaseAddress = new Uri(bookingServiceUrl!);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 var app = builder.Build();
 
