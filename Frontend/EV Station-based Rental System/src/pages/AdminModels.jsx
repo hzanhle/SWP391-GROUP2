@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import { getAllModels, createModel, updateModel, deleteModel } from '../api/vehicle'
+import AdminLayout from '../components/admin/AdminLayout'
+import '../styles/admin.css'
 
 function ModelRow({ m, onEdit, onDelete }) {
   return (
@@ -148,11 +148,9 @@ export default function AdminModels() {
   }
 
   return (
-    <div data-figma-layer="Admin Models">
-      <Navbar />
-      <main>
-        <section className="section" aria-labelledby="admin-models-title">
-          <div className="container">
+    <AdminLayout active="models">
+      <section className="section" aria-labelledby="admin-models-title">
+        <div className="container">
             <div className="section-header">
               <h1 id="admin-models-title" className="section-title">Quản lý mẫu xe</h1>
               <p className="section-subtitle">Thêm, sửa, xóa mẫu xe hai bánh.</p>
@@ -196,10 +194,8 @@ export default function AdminModels() {
               </div>
             )}
 
-          </div>
-        </section>
-      </main>
-      <Footer />
-    </div>
+        </div>
+      </section>
+    </AdminLayout>
   )
 }

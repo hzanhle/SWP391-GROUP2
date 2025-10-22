@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import api, { getAllUsers, deleteUser, toggleUserActive, toggleStaffAdmin } from '../api/client'
 import { isWarned, setWarned } from '../../utils/warnings'
+import AdminLayout from '../components/admin/AdminLayout'
+import '../styles/admin.css'
 
 function roleLabel(roleId) {
   switch (Number(roleId)) {
@@ -97,30 +97,24 @@ export default function AdminUsers() {
 
   if (forbidden) {
     return (
-      <div>
-        <Navbar />
-        <main>
-          <section className="section" aria-labelledby="admin-title">
-            <div className="container">
-              <div className="card card-body">
-                <h1 id="admin-title" className="section-title">Unauthorized</h1>
-                <p className="section-subtitle">Bạn không có quyền truy cập trang Admin.</p>
-                <CTA as="a" href="#" variant="secondary">Về trang chủ</CTA>
-              </div>
+      <AdminLayout active="users">
+        <section className="section" aria-labelledby="admin-title">
+          <div className="container">
+            <div className="card card-body">
+              <h1 id="admin-title" className="section-title">Unauthorized</h1>
+              <p className="section-subtitle">Bạn không có quyền truy cập trang Admin.</p>
+              <CTA as="a" href="#" variant="secondary">Về trang chủ</CTA>
             </div>
-          </section>
-        </main>
-        <Footer />
-      </div>
+          </div>
+        </section>
+      </AdminLayout>
     )
   }
 
   return (
-    <div data-figma-layer="Admin Users">
-      <Navbar />
-      <main>
-        <section className="section" aria-labelledby="users-title">
-          <div className="container">
+    <AdminLayout active="users">
+      <section className="section" aria-labelledby="users-title">
+        <div className="container">
             <div className="section-header">
               <h1 id="users-title" className="section-title">Quản lý người dùng</h1>
               <p className="section-subtitle">Xóa, chuyển role Staff ⇄ Admin, đánh dấu cảnh báo.</p>
@@ -176,8 +170,6 @@ export default function AdminUsers() {
             )}
           </div>
         </section>
-      </main>
-      <Footer />
-    </div>
+      </AdminLayout>
   )
 }
