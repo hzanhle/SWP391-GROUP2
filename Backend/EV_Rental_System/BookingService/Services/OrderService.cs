@@ -414,6 +414,11 @@ namespace BookingService.Services
 
         /// <summary>
         /// Hoàn thành chuyến thuê xe
+        /// NOTE: Fee calculation is performed separately through the FeeCalculationService
+        /// after return inspection is completed. This separation allows for:
+        /// 1. Manual review of inspection damages
+        /// 2. Flexible fee adjustment by staff
+        /// 3. Multiple fee types to be added over time
         /// </summary>
         public async Task<bool> CompleteRentalAsync(int orderId)
         {

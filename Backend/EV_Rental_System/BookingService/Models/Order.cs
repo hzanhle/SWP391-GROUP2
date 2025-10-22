@@ -31,8 +31,17 @@ namespace BookingService.Models
         public decimal DepositAmount { get; set; }
         public int InitialTrustScore { get; set; }
 
+        // Fee tracking properties
+        public decimal TotalPrice => TotalCost; // Alias for backward compatibility
+        public DateTime? ActualReturnDate { get; set; }
+        public int? PickupMileage { get; set; }
+        public int? ReturnMileage { get; set; }
+
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public OrderStatus Status { get; private set; } = OrderStatus.Pending;
+
+        // Navigation property for additional fees
+        public ICollection<AdditionalFee>? AdditionalFees { get; set; }
 
         public DateTime? ExpiresAt { get; set; }
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;

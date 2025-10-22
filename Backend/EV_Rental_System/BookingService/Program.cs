@@ -65,6 +65,7 @@ builder.Services.Configure<VNPaySettings>(builder.Configuration.GetSection("VNPa
 builder.Services.Configure<PdfSettings>(builder.Configuration.GetSection("PdfSettings"));
 builder.Services.Configure<ContractSettings>(builder.Configuration.GetSection("ContractSettings"));
 builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
+builder.Services.Configure<FeeSettings>(builder.Configuration.GetSection("FeeSettings"));
 
 // ====================== Repositories ======================
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -74,6 +75,7 @@ builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITrustScoreRepository, TrustScoreRepository>();
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
+builder.Services.AddScoped<IAdditionalFeeRepository, AdditionalFeeRepository>();
 
 // ====================== Services ======================
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -85,6 +87,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddSingleton<IPdfConverterService, PuppeteerPdfService>();
 builder.Services.AddScoped<IInspectionService, InspectionService>();
+builder.Services.AddScoped<IFeeCalculationService, FeeCalculationService>();
 
 // ====================== Build App ======================
 var app = builder.Build();
@@ -195,7 +198,7 @@ static void ValidateConfiguration(IConfiguration config)
     }
 
     // Required sections
-    var required = new[] { "EmailSettings", "VNPaySettings", "PdfSettings", "ContractSettings", "OrderSettings" };
+    var required = new[] { "EmailSettings", "VNPaySettings", "PdfSettings", "ContractSettings", "OrderSettings", "FeeSettings" };
     foreach (var section in required)
     {
         if (!config.GetSection(section).Exists())
