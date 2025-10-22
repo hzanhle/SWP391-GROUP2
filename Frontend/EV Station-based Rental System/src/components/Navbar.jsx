@@ -51,7 +51,7 @@ export default function Navbar() {
           <a className="nav-link" href="#support" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Support</a>
           {isAdmin && (
             <>
-              <a className="nav-link" href="admin" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Dashboard</a>
+              <a className="nav-link" href="#admin" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Dashboard</a>
               <a className="nav-link" href="#admin-users" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Users</a>
               <a className="nav-link" href="#admin-models" data-tailwind='class: "text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md"'>Models</a>
             </>
@@ -116,7 +116,7 @@ export default function Navbar() {
               <a className="nav-link" role="menuitem" href="#support" onClick={() => setOpen(false)}>Support</a>
               {isAdmin && (
                 <>
-                  <a className="nav-link" role="menuitem" href="admin" onClick={() => setOpen(false)}>Dashboard</a>
+                  <a className="nav-link" role="menuitem" href="#admin" onClick={() => setOpen(false)}>Dashboard</a>
                   <a className="nav-link" role="menuitem" href="#admin-users" onClick={() => setOpen(false)}>Users</a>
                   <a className="nav-link" role="menuitem" href="#admin-models" onClick={() => setOpen(false)}>Models</a>
                 </>

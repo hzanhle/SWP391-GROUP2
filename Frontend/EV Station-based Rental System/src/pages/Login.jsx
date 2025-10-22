@@ -31,7 +31,7 @@ export default function Login() {
         const roleId = Number((user && (user.roleId ?? user.RoleId)) ?? 0)
         const roleName = String((user && (user.roleName ?? user.RoleName)) || '').toLowerCase()
         const isAdmin = roleId === 3 || roleName === 'admin'
-        window.location.hash = isAdmin ? '#admin-users' : ''
+        window.location.hash = isAdmin ? '#admin' : ''
       } else {
         window.location.hash = ''
       }

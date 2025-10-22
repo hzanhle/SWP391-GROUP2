@@ -1,17 +1,17 @@
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
 import { useEffect, useMemo, useState } from 'react'
 import { getDashboardSummary, getRevenueByMonth, getTopUsedVehicles, getStationStats, getUserGrowth } from '../api/adminDashboard'
-import { Card, CardContent, CardHeader, Typography, Box } from '@mui/material'
+import { Card, CardContent, CardHeader, Typography } from '@mui/material'
 import { LineChart, BarChart, PieChart } from '@mui/x-charts'
+import AdminLayout from '../components/admin/AdminLayout'
+import '../styles/admin.css'
 
-function StatCard({ title, value, caption, color = 'primary' }) {
+function StatCard({ title, value, caption }) {
   return (
-    <Card>
-      <CardHeader title={title} />
+    <Card className="admin-card stat-card">
+      <CardHeader title={<span className="stat-title">{title}</span>} />
       <CardContent>
-        <Typography variant="h4" color={color}> {value} </Typography>
-        {caption ? <Typography variant="body2" color="text.secondary">{caption}</Typography> : null}
+        <div className="stat-value">{value}</div>
+        {caption ? <div className="stat-caption">{caption}</div> : null}
       </CardContent>
     </Card>
   )
@@ -69,125 +69,81 @@ export default function AdminDashboard() {
 
   if (forbidden) {
     return (
-      <div>
-        <Navbar />
-        <main>
-          <section className="section">
-            <div className="container">
-              <div className="card card-body">
-                <h1 className="section-title">Unauthorized</h1>
-                <p className="section-subtitle">Bạn không có quyền truy cập Dashboard Admin.</p>
-                <a className="btn" href="#">Về trang chủ</a>
-              </div>
+      <AdminLayout active="overview">
+        <section className="section">
+          <div className="container">
+            <div className="card card-body">
+              <h1 className="section-title">Unauthorized</h1>
+              <p className="section-subtitle">Bạn không có quyền truy cập Dashboard Admin.</p>
+              <a className="btn" href="#">Về trang chủ</a>
             </div>
-          </section>
-        </main>
-        <Footer />
-      </div>
+          </div>
+        </section>
+      </AdminLayout>
     )
   }
 
   return (
-    <div data-figma-layer="Admin Dashboard">
-      <Navbar />
-      <main>
-        <section className="section">
-          <div className="container">
-            <div className="section-header">
-              <h1 className="section-title">Bảng điều khiển</h1>
-              <p className="section-subtitle">Tổng quan hệ thống và các chỉ số chính</p>
-            </div>
-
-            {error ? (
-              <div role="alert" className="card card-body">{error}</div>
-            ) : null}
-
-            {loading ? (
-              <div className="card card-body">Đang tải...</div>
-            ) : (
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 2 }}>
-                <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 3' } }}>
-                  <StatCard title="Tổng người dùng" value={summary?.totalUsers ?? summary?.TotalUsers ?? 0} caption="Active/Total" />
-                </Box>
-                <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 3' } }}>
-                  <StatCard title="Đơn thuê" value={summary?.totalBookings ?? summary?.TotalBookings ?? 0} />
-                </Box>
-                <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 3' } }}>
-                  <StatCard title="Doanh thu (năm)" value={(summary?.yearlyRevenue ?? summary?.YearlyRevenue ?? 0).toLocaleString()} />
-                </Box>
-                <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 3' } }}>
-                  <StatCard title="Số trạm" value={summary?.totalStations ?? summary?.TotalStations ?? 0} />
-                </Box>
-
-                <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 8' } }}>
-                  <Card>
-                    <CardHeader title="Doanh thu theo tháng" />
-                    <CardContent>
-                      <LineChart
-                        height={280}
-                        series={[{ data: revenueSeries.values, label: 'Doanh thu' }]}
-                        xAxis={[{ scaleType: 'point', data: revenueSeries.months.map(m => `T${m}`) }]}
-                      />
-                    </CardContent>
-                  </Card>
-                </Box>
-
-                <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
-                  <Card>
-                    <CardHeader title="Top xe sử dụng" />
-                    <CardContent>
-                      <BarChart
-                        height={280}
-                        yAxis={[{ scaleType: 'band', data: (topVehicles || []).map(v => v.modelName || v.ModelName || v.name || v.Name) }]}
-                        series={[{ data: (topVehicles || []).map(v => Number(v.usageCount ?? v.UsageCount ?? v.count ?? 0)), label: 'Lượt thuê' }]}
-                        layout="horizontal"
-                      />
-                    </CardContent>
-                  </Card>
-                </Box>
-
-                <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 6' } }}>
-                  <Card>
-                    <CardHeader title="Tăng trưởng người dùng" />
-                    <CardContent>
-                      <LineChart
-                        height={260}
-                        series={[{ data: (userGrowth || []).map(u => Number(u.count ?? u.Count ?? 0)), label: 'Users' }]}
-                        xAxis={[{ scaleType: 'point', data: (userGrowth || []).map(u => u.label || u.Label || u.month || u.Month) }]}
-                      />
-                    </CardContent>
-                  </Card>
-                </Box>
-
-                <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 6' } }}>
-                  <Card>
-                    <CardHeader title="Trạng thái trạm" />
-                    <CardContent>
-                      <PieChart
-                        height={260}
-                        series={[{
-                          data: (
-                            (() => {
-                              const items = Array.isArray(stations) ? stations : []
-                              const on = items.filter(s => s.isOperational ?? s.IsOperational).length
-                              const off = items.length - on
-                              return [
-                                { id: 0, value: on, label: 'Hoạt động' },
-                                { id: 1, value: off, label: 'Bảo trì' },
-                              ]
-                            })()
-                          ),
-                        }]}
-                      />
-                    </CardContent>
-                  </Card>
-                </Box>
-              </Box>
-            )}
+    <AdminLayout active="overview">
+      <section className="section">
+        <div className="container">
+          <div className="section-header">
+            <h1 className="section-title">Bảng điều khiển</h1>
+            <p className="section-subtitle">Tổng quan hệ thống và các chỉ số chính</p>
           </div>
-        </section>
-      </main>
-      <Footer />
-    </div>
+
+          {error ? (
+            <div role="alert" className="card card-body">{error}</div>
+          ) : null}
+
+          {loading ? (
+            <div className="card card-body">Đang tải...</div>
+          ) : (
+            <div className="admin-grid">
+              <div className="col-12 lg-3"><StatCard title="Tổng người dùng" value={summary?.totalUsers ?? summary?.TotalUsers ?? 0} caption="Active/Total" /></div>
+              <div className="col-12 lg-3"><StatCard title="Đơn thuê" value={summary?.totalBookings ?? summary?.TotalBookings ?? 0} /></div>
+              <div className="col-12 lg-3"><StatCard title="Doanh thu (năm)" value={(summary?.yearlyRevenue ?? summary?.YearlyRevenue ?? 0).toLocaleString()} /></div>
+              <div className="col-12 lg-3"><StatCard title="Số trạm" value={summary?.totalStations ?? summary?.TotalStations ?? 0} /></div>
+
+              <div className="col-12 lg-8">
+                <Card className="admin-card">
+                  <CardHeader title="Doanh thu theo tháng" />
+                  <CardContent>
+                    <LineChart height={280} series={[{ data: revenueSeries.values, label: 'Doanh thu' }]} xAxis={[{ scaleType: 'point', data: revenueSeries.months.map(m => `T${m}`) }]} />
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="col-12 lg-4">
+                <Card className="admin-card">
+                  <CardHeader title="Top xe sử dụng" />
+                  <CardContent>
+                    <BarChart height={280} yAxis={[{ scaleType: 'band', data: (topVehicles || []).map(v => v.modelName || v.ModelName || v.name || v.Name) }]} series={[{ data: (topVehicles || []).map(v => Number(v.usageCount ?? v.UsageCount ?? v.count ?? 0)), label: 'Lượt thuê' }]} layout="horizontal" />
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="col-12 lg-6">
+                <Card className="admin-card">
+                  <CardHeader title="Tăng trưởng người dùng" />
+                  <CardContent>
+                    <LineChart height={260} series={[{ data: (userGrowth || []).map(u => Number(u.count ?? u.Count ?? 0)), label: 'Users' }]} xAxis={[{ scaleType: 'point', data: (userGrowth || []).map(u => u.label || u.Label || u.month || u.Month) }]} />
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="col-12 lg-6">
+                <Card className="admin-card">
+                  <CardHeader title="Trạng thái trạm" />
+                  <CardContent>
+                    <PieChart height={260} series={[{ data: ((() => { const items = Array.isArray(stations) ? stations : []; const on = items.filter(s => s.isOperational ?? s.IsOperational).length; const off = items.length - on; return [ { id: 0, value: on, label: 'Hoạt động' }, { id: 1, value: off, label: 'Bảo trì' }, ]; })()) }]} />
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+    </AdminLayout>
   )
 }
