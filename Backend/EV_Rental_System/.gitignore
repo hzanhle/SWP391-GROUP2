@@ -26,11 +26,7 @@ _TeamCity*/
 *.DotSettings.user
 
 # VS Code / JetBrains
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode/
 .idea/
 *.sln.iml
 
@@ -168,12 +164,38 @@ $RECYCLE.BIN/
 .LSOverride
 
 # ===========================================
-# FILES TO KEEP (TRACKED)
+# EXCLUDE SPECIFIC FILES (REQUESTED)
 # ===========================================
 
-!*.cs
-!*.json
+# AssemblyInfo files (auto-generated)
+**/AssemblyInfo.cs
+**/obj/**/AssemblyInfo.cs
+
+# DbContext files (database schema - don't track)
+**/MyDbContext.cs
+**/*DbContext.cs
+
+# Migration files (database migrations - don't track)
+**/Migrations/**
+**/Migrations/*.cs
+**/Migrations/*.Designer.cs
+
+# Environment-specific settings
+appsettings.json
+appsettings.*.json
+
+# NuGet cache
+project.nuget.cache
+**/*.nuget.cache
+
+# Documentation files (markdown)
+*.md
+
+# ===========================================
+# FILES TO KEEP (TRACKED)
+# ===========================================
+# Note: These overrides don't apply to files already excluded above
+
 !*.csproj
 !*.sln
 !*.config
-!*.xml
