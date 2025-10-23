@@ -1,6 +1,6 @@
 import React from 'react'
 import CTA from './CTA'
-import illustration from '../assets/ev-illustration.svg'
+import illustration from '../assets/ev-illustration.png'
 
 export default function Hero() {
   return (
@@ -14,9 +14,9 @@ export default function Hero() {
             <CTA as="a" href="#how" variant="ghost" aria-label="Learn how it works" data-figma-layer="CTA" data-tailwind='class: "border border-slate-200 text-slate-900 px-6 py-3 rounded-lg"'>How it works</CTA>
           </div>
         </div>
-        <div className="hero-media" role="img" aria-label="App preview mockup" data-figma-layer="HeroMedia" data-tailwind='class: "rounded-lg border border-slate-200 p-4 shadow-md bg-white"'>
+
           <img src={illustration} alt="EV app mockup illustration" className="media-img" />
-        </div>
+       
       </div>
     </section>
   )
