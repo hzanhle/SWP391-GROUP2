@@ -43,6 +43,12 @@ namespace StationService
                     .IsRequired()
                     .HasMaxLength(500);
 
+                entity.Property(e => e.Lat)
+                    .IsRequired();
+
+                entity.Property(e => e.Lng)
+                    .IsRequired();
+
                 entity.Property(e => e.ManagerId)
                     .IsRequired(false);
 
@@ -68,15 +74,18 @@ namespace StationService
         {
             modelBuilder.Entity<StaffShift>(entity =>
             {
-                // Primary Key
+                // Primary key
                 entity.HasKey(e => e.Id);
 
-                // Properties
-                entity.Property(e => e.UserId)
-                    .IsRequired();
+                // Relationships
+                entity.HasOne(e => e.Station)
+                    .WithMany(s => s.StaffShifts)
+                    .HasForeignKey(e => e.StationId)
+                    .OnDelete(DeleteBehavior.Restrict);
 
-                entity.Property(e => e.StationId)
-                    .IsRequired();
+                // Properties
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.StationId).IsRequired();
 
                 entity.Property(e => e.ShiftDate)
                     .IsRequired()
@@ -97,22 +106,46 @@ namespace StationService
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired()
-                    .HasDefaultValueSql("GETDATE()"); // SQL Server
-                                                      // .HasDefaultValueSql("NOW()"); // PostgreSQL/MySQL
+                    .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                // Indexes for performance
+                // Optional new fields
+                entity.Property(e => e.ActualCheckInTime)
+                    .HasColumnType("datetime2")
+                    .IsRequired(false);
+
+                entity.Property(e => e.ActualCheckOutTime)
+                    .HasColumnType("datetime2")
+                    .IsRequired(false);
+
+                entity.Property(e => e.Notes)
+                    .HasMaxLength(500)
+                    .IsRequired(false);
+
+                entity.Property(e => e.CancellationReason)
+                    .HasMaxLength(500)
+                    .IsRequired(false);
+
+                entity.Property(e => e.UpdatedAt)
+                    .HasColumnType("datetime2")
+                    .IsRequired(false);
+
+                // Indexes
                 entity.HasIndex(e => new { e.UserId, e.ShiftDate })
                     .HasDatabaseName("IX_StaffShift_User_Date");
 
                 entity.HasIndex(e => new { e.StationId, e.ShiftDate })
                     .HasDatabaseName("IX_StaffShift_Station_Date");
 
-                // Unique constraint - prevent duplicate shifts
+                entity.HasIndex(e => e.Status)
+                    .HasDatabaseName("IX_StaffShift_Status");
+
+                // Unique constraint
                 entity.HasIndex(e => new { e.UserId, e.StationId, e.ShiftDate, e.StartTime })
                     .IsUnique()
                     .HasDatabaseName("UQ_StaffShift_UniqueShift");
             });
         }
+
 
         private void ConfigureFeedback(ModelBuilder modelBuilder)
         {
@@ -139,6 +172,8 @@ namespace StationService
                     Id = 1,
                     Name = "Trạm Đăng Kiểm Quận 1",
                     Location = "123 Nguyễn Huệ, Quận 1, TP.HCM",
+                    Lat = 10.7769,
+                    Lng = 106.7009,
                     ManagerId = null,
                     IsActive = true
                 },
@@ -147,6 +182,8 @@ namespace StationService
                     Id = 2,
                     Name = "Trạm Đăng Kiểm Thủ Đức",
                     Location = "456 Võ Văn Ngân, Thủ Đức, TP.HCM",
+                    Lat = 10.8505,
+                    Lng = 106.7717,
                     ManagerId = null,
                     IsActive = true
                 },
@@ -155,6 +192,8 @@ namespace StationService
                     Id = 3,
                     Name = "Trạm Đăng Kiểm Bình Thạnh",
                     Location = "789 Xô Viết Nghệ Tĩnh, Bình Thạnh, TP.HCM",
+                    Lat = 10.8014,
+                    Lng = 106.7105,
                     ManagerId = null,
                     IsActive = true
                 }

@@ -19,6 +19,9 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     // Cấu hình dùng để ngắt các vòng lặp tham chiếu khi serialize JSON
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
+
+builder.Services.AddHttpClient();
+
 // Swagger (API documentation)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -80,6 +83,13 @@ builder.Services.AddScoped<IStationService, StationService.Services.StationServi
 // Feedback
 builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+
+//StaffShift
+builder.Services.AddScoped<IStaffShiftRepository, StaffShiftRepository>();
+builder.Services.AddScoped<IStaffShiftService, StaffShiftService>();
+
+//User Intergration
+builder.Services.AddScoped<IUserIntegrationService, UserIntegrationService>();
 
 // CẤU HÌNH JWT
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
