@@ -2,6 +2,7 @@
 using System.Net.Mail;
 using Microsoft.Extensions.Options;
 using BookingService.Models;
+
 namespace BookingService.Services
 {
     public class EmailService : IEmailService
@@ -17,17 +18,11 @@ namespace BookingService.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        /// <summary>
-        /// Gửi email đơn giản (dùng chung)
-        /// </summary>
         public async Task<bool> SendEmailAsync(string toEmail, string subject, string body)
         {
             return await SendEmailInternalAsync(toEmail, subject, body, attachmentPath: null);
         }
 
-        /// <summary>
-        /// Gửi email hợp đồng với file PDF đính kèm
-        /// </summary>
         public async Task<bool> SendContractEmailAsync(
             string toEmail,
             string customerName,
@@ -43,7 +38,7 @@ namespace BookingService.Services
         #region Private Methods
 
         /// <summary>
-        /// Logic gửi email chung (hỗ trợ đính kèm file)
+        /// ✅ COPY Y HỆT TỪ OtpService - Đã test gửi được
         /// </summary>
         private async Task<bool> SendEmailInternalAsync(
             string email,
@@ -88,15 +83,20 @@ namespace BookingService.Services
                     }
                 }
 
-                // Gửi email qua SMTP
+                // ✅ COPY Y HỆT TỪ OtpService - KHÔNG THÊM UseDefaultCredentials
+                //using var smtp = new SmtpClient(_emailSettings.SmtpServer, _emailSettings.SmtpPort)
+                //{
+                //    Credentials = new NetworkCredential(
+                //        _emailSettings.SenderEmail,
+                //        _emailSettings.SenderPassword),
+                //    EnableSsl = _emailSettings.EnableSsl
+                //};
+
                 using var smtp = new SmtpClient(_emailSettings.SmtpServer, _emailSettings.SmtpPort)
                 {
-                    Credentials = new NetworkCredential(
-                        _emailSettings.SenderEmail,
-                        _emailSettings.SenderPassword),
+                    Credentials = new NetworkCredential(_emailSettings.SenderEmail, _emailSettings.SenderPassword),
                     EnableSsl = _emailSettings.EnableSsl
                 };
-
                 await smtp.SendMailAsync(mail);
 
                 _logger.LogInformation("Đã gửi email thành công đến {Email}", email);
@@ -117,9 +117,6 @@ namespace BookingService.Services
             }
         }
 
-        /// <summary>
-        /// Tạo template HTML cho email hợp đồng
-        /// </summary>
         private string CreateContractEmailBody(string customerName, string contractNumber)
         {
             return $@"

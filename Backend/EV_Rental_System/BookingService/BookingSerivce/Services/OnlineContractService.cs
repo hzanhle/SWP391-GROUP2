@@ -3,6 +3,7 @@ using BookingService.Models;
 using BookingService.Repositories;
 using Microsoft.Extensions.Options;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 
 namespace BookingService.Services
 {
@@ -16,6 +17,9 @@ namespace BookingService.Services
         private readonly ILogger<OnlineContractService> _logger;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IConfiguration _configuration;
+
+        // ✅ Semaphore để đảm bảo chỉ 1 thread tạo contract number tại 1 thời điểm
+        private static readonly SemaphoreSlim _contractNumberLock = new SemaphoreSlim(1, 1);
 
         public OnlineContractService(
             IOnlineContractRepository contractRepo,
@@ -38,7 +42,7 @@ namespace BookingService.Services
         }
 
         /// <summary>
-        /// ⭐ METHOD CHÍNH - Tạo hợp đồng từ ContractDataDto (được Frontend gửi lên)
+        /// ⭐ METHOD CHÍNH - Tạo hợp đồng từ ContractDataDto với retry mechanism
         /// </summary>
         public async Task<ContractDetailsDto> CreateContractFromDataAsync(ContractDataDto contractData)
         {
@@ -46,70 +50,94 @@ namespace BookingService.Services
                 "Creating contract from data for Order {OrderId}, Customer {CustomerName}",
                 contractData.OrderId, contractData.CustomerName);
 
-            try
+            const int maxRetries = 3;
+            int attempt = 0;
+
+            while (attempt < maxRetries)
             {
-                await _unitOfWork.BeginTransactionAsync();
-
-                // 1. Validate dữ liệu đầu vào
-                ValidateContractData(contractData);
-
-                // 2. Tạo contract number duy nhất
-                var contractNumber = GenerateContractNumber(contractData.OrderId);
-                contractData.ContractNumber = contractNumber;
-
-                // 2.1. Fill default company info nếu chưa có
-                FillDefaultCompanyInfo(contractData);
-
-                // 3. Tạo PDF từ dữ liệu
-                var pdfPath = await GeneratePdfAsync(contractData);
-                _logger.LogInformation("PDF generated at {PdfPath}", pdfPath);
-
-                // 4. Tạo entity OnlineContract
-                var contract = MapToEntity(contractData, pdfPath);
-
-                // 5. Lưu vào database
-                var savedContract = await _contractRepo.CreateAsync(contract);
-
-                _logger.LogInformation(
-                    "Contract {ContractId} saved to database with number {ContractNumber}",
-                    savedContract.OnlineContractId, savedContract.ContractNumber);
-
-                // 6. Commit transaction (SaveChanges tự động)
-                await _unitOfWork.CommitTransactionAsync();
-
-                // 7. Gửi email bất đồng bộ SAU KHI COMMIT (không block response)
-                _ = Task.Run(async () =>
+                try
                 {
-                    try
+                    attempt++;
+                    _logger.LogInformation("Contract creation attempt {Attempt}/{MaxRetries} for Order {OrderId}",
+                        attempt, maxRetries, contractData.OrderId);
+
+                    // 1. Validate dữ liệu đầu vào
+                    ValidateContractData(contractData);
+
+                    // 2. ✅ Tạo contract number duy nhất với lock để tránh race condition
+                    var contractNumber = await GenerateUniqueContractNumberAsync();
+                    contractData.ContractNumber = contractNumber;
+
+                    _logger.LogInformation("Generated unique contract number: {ContractNumber}", contractNumber);
+
+                    // 2.1. Fill default company info nếu chưa có
+                    FillDefaultCompanyInfo(contractData);
+
+                    // 3. Tạo PDF từ dữ liệu
+                    var pdfPath = await GeneratePdfAsync(contractData);
+                    _logger.LogInformation("PDF generated at {PdfPath}", pdfPath);
+
+                    // 4. Tạo entity OnlineContract
+                    var contract = MapToEntity(contractData, pdfPath);
+
+                    // 5. ✅ Lưu vào database qua Repository (Repository tự SaveChanges)
+                    var savedContract = await _contractRepo.CreateAsync(contract);
+
+                    _logger.LogInformation(
+                        "Contract {ContractId} saved to database with number {ContractNumber}",
+                        savedContract.OnlineContractId, savedContract.ContractNumber);
+
+                    // 6. Gửi email bất đồng bộ SAU KHI LƯU DB THÀNH CÔNG (không block response)
+                    _ = Task.Run(async () =>
                     {
-                        await SendContractEmailAsync(contractData, pdfPath);
-                    }
-                    catch (Exception ex)
+                        try
+                        {
+                            await SendContractEmailAsync(contractData, pdfPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex,
+                                "Failed to send contract email for Order {OrderId}",
+                                contractData.OrderId);
+                        }
+                    });
+
+                    // 7. Trả về response
+                    return MapToDetailsDto(savedContract);
+                }
+                catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx
+                    && sqlEx.Number == 2601) // Duplicate key error
+                {
+                    if (attempt >= maxRetries)
                     {
                         _logger.LogError(ex,
-                            "Failed to send contract email for Order {OrderId}",
-                            contractData.OrderId);
-                        // Không throw - email fail không ảnh hưởng contract creation
+                            "Failed to create contract after {MaxRetries} attempts due to duplicate key for Order {OrderId}",
+                            maxRetries, contractData.OrderId);
+                        throw new InvalidOperationException(
+                            $"Không thể tạo hợp đồng sau {maxRetries} lần thử. Vui lòng thử lại sau.");
                     }
-                });
 
-                // 8. Trả về response
-                return MapToDetailsDto(savedContract);
+                    // ✅ Exponential backoff: đợi 100ms, 200ms, 400ms...
+                    var delayMs = 100 * (int)Math.Pow(2, attempt - 1);
+                    _logger.LogWarning(
+                        "Duplicate contract number detected on attempt {Attempt}. Retrying after {DelayMs}ms...",
+                        attempt, delayMs);
+                    await Task.Delay(delayMs);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error creating contract for Order {OrderId}", contractData.OrderId);
+                    throw new InvalidOperationException(
+                        $"Không thể tạo hợp đồng cho đơn hàng #{contractData.OrderId}", ex);
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating contract for Order {OrderId}", contractData.OrderId);
-                await _unitOfWork.RollbackTransactionAsync();
-                throw new InvalidOperationException(
-                    $"Không thể tạo hợp đồng cho đơn hàng #{contractData.OrderId}", ex);
-            }
+
+            throw new InvalidOperationException(
+                $"Không thể tạo hợp đồng sau {maxRetries} lần thử.");
         }
 
         #region Private Helpers - Validation
 
-        /// <summary>
-        /// ⚠️ ĐÃ FIX: Bỏ check FromDate trong quá khứ
-        /// </summary>
         private void ValidateContractData(ContractDataDto data)
         {
             var errors = new List<string>();
@@ -117,11 +145,9 @@ namespace BookingService.Services
             if (data == null)
                 throw new ArgumentNullException(nameof(data), "ContractDataDto không được null");
 
-            // Validate Order
             if (data.OrderId <= 0)
                 errors.Add("OrderId phải lớn hơn 0");
 
-            // Validate Customer
             if (string.IsNullOrWhiteSpace(data.CustomerName))
                 errors.Add("Tên khách hàng không được trống");
 
@@ -134,30 +160,21 @@ namespace BookingService.Services
             if (string.IsNullOrWhiteSpace(data.CustomerIdCard))
                 errors.Add("CMND/CCCD khách hàng không được trống");
 
-            // Validate Vehicle
             if (string.IsNullOrWhiteSpace(data.VehicleModel))
                 errors.Add("Model xe không được trống");
 
             if (string.IsNullOrWhiteSpace(data.LicensePlate))
                 errors.Add("Biển số xe không được trống");
 
-            // Validate Dates
             if (data.FromDate >= data.ToDate)
                 errors.Add("Ngày bắt đầu phải nhỏ hơn ngày kết thúc");
 
-            // ✅ ĐÃ BỎ CHECK NÀY - User đã thanh toán rồi, không cần validate FromDate nữa
-            // ❌ TRƯỚC ĐÂY:
-            // if (data.FromDate < DateTime.UtcNow.AddHours(-1))
-            //     errors.Add("Ngày bắt đầu không được trong quá khứ");
-
-            // Validate Financial
             if (data.TotalRentalCost <= 0)
                 errors.Add("Tổng chi phí thuê phải lớn hơn 0");
 
             if (data.TotalPaymentAmount <= 0)
                 errors.Add("Tổng thanh toán phải lớn hơn 0");
 
-            // Validate Payment
             if (string.IsNullOrWhiteSpace(data.TransactionId))
                 errors.Add("Mã giao dịch không được trống");
 
@@ -175,29 +192,83 @@ namespace BookingService.Services
 
         #endregion
 
-        #region Private Helpers - PDF Generation
+        #region Private Helpers - Contract Number Generation
 
         /// <summary>
-        /// Tạo PDF từ ContractDataDto
+        /// ✅ Tạo contract number duy nhất với lock mechanism
+        /// Format: CT-20251023-000001, CT-20251023-000002, ...
         /// </summary>
+        private async Task<string> GenerateUniqueContractNumberAsync()
+        {
+            // ✅ Lock để đảm bảo chỉ 1 thread tạo contract number tại 1 thời điểm
+            await _contractNumberLock.WaitAsync();
+
+            try
+            {
+                var prefix = _contractSettings.NumberPrefix;
+                var dateFormat = _contractSettings.DateFormat;
+                var today = DateTime.UtcNow.ToString(dateFormat);
+                var datePrefix = $"{prefix}-{today}-";
+
+                // ✅ Lấy contract number lớn nhất trong ngày từ Repository
+                var latestContractNumber = await _contractRepo.GetLatestContractNumberByDateAsync(datePrefix);
+
+                int nextNumber = 1;
+
+                if (!string.IsNullOrEmpty(latestContractNumber))
+                {
+                    // Extract số từ contract number: CT-20251023-000005 -> 000005
+                    var numberPart = latestContractNumber.Substring(datePrefix.Length);
+
+                    if (int.TryParse(numberPart, out int currentNumber))
+                    {
+                        nextNumber = currentNumber + 1;
+                    }
+                }
+
+                // Format: CT-20251023-000001
+                var padding = _contractSettings.OrderIdPadding;
+                var contractNumber = $"{datePrefix}{nextNumber.ToString($"D{padding}")}";
+
+                // ✅ Double check: Kiểm tra xem số vừa tạo có tồn tại chưa
+                var exists = await _contractRepo.ExistsByContractNumberAsync(contractNumber);
+
+                if (exists)
+                {
+                    // Nếu tồn tại, tăng thêm 1
+                    nextNumber++;
+                    contractNumber = $"{datePrefix}{nextNumber.ToString($"D{padding}")}";
+
+                    _logger.LogWarning(
+                        "Contract number collision detected, incremented to: {ContractNumber}",
+                        contractNumber);
+                }
+
+                return contractNumber;
+            }
+            finally
+            {
+                _contractNumberLock.Release();
+            }
+        }
+
+        #endregion
+
+        #region Private Helpers - PDF Generation
+
         public async Task<string> GeneratePdfAsync(ContractDataDto contractData)
         {
             _logger.LogInformation("Generating PDF for Order {OrderId}", contractData.OrderId);
 
             try
             {
-                // 1. Build HTML content
                 var htmlContent = BuildContractHtml(contractData);
-
-                // 2. Generate file path
                 var fileName = $"Contract_{contractData.OrderId}_{DateTime.UtcNow:yyyyMMddHHmmss}.pdf";
                 var contractsDir = _contractSettings.StoragePath;
                 var fullPath = Path.Combine(contractsDir, fileName);
 
-                // 3. Ensure directory exists
                 Directory.CreateDirectory(contractsDir);
 
-                // 4. Convert HTML to PDF
                 await ConvertHtmlToPdfAsync(htmlContent, fullPath);
 
                 _logger.LogInformation("PDF generated successfully at {FilePath}", fullPath);
@@ -210,19 +281,14 @@ namespace BookingService.Services
             }
         }
 
-        /// <summary>
-        /// Convert HTML to PDF using IPdfConverterService
-        /// </summary>
         private async Task ConvertHtmlToPdfAsync(string htmlContent, string outputPath)
         {
             try
             {
                 _logger.LogInformation("Converting HTML to PDF: {OutputPath}", outputPath);
 
-                // Sử dụng IPdfConverterService (đã inject PuppeteerPdfService)
                 await _pdfConverter.ConvertHtmlToPdfAsync(htmlContent, outputPath);
 
-                // Optional: Save HTML for debugging
                 if (_contractSettings.SaveDebugHtml)
                 {
                     var htmlPath = outputPath.Replace(".pdf", ".html");
@@ -243,9 +309,6 @@ namespace BookingService.Services
 
         #region Private Helpers - Mapping
 
-        /// <summary>
-        /// Map ContractDataDto to OnlineContract entity
-        /// </summary>
         private OnlineContract MapToEntity(ContractDataDto data, string pdfPath)
         {
             return new OnlineContract
@@ -260,9 +323,6 @@ namespace BookingService.Services
             };
         }
 
-        /// <summary>
-        /// Map OnlineContract entity to ContractDetailsDto
-        /// </summary>
         private ContractDetailsDto MapToDetailsDto(OnlineContract contract)
         {
             return new ContractDetailsDto
@@ -270,7 +330,7 @@ namespace BookingService.Services
                 ContractId = contract.OnlineContractId,
                 OrderId = contract.OrderId,
                 ContractNumber = contract.ContractNumber,
-                Status = ContractStatus.Signed, // Đã thanh toán thành công
+                Status = ContractStatus.Signed,
                 DownloadUrl = GenerateDownloadUrl(contract.ContractFilePath),
                 CreatedAt = contract.CreatedAt,
                 PaidAt = contract.SignedAt,
@@ -283,44 +343,21 @@ namespace BookingService.Services
 
         #region Private Helpers - HTML Generation
 
-        /// <summary>
-        /// Xây dựng HTML content cho hợp đồng
-        /// </summary>
         private string BuildContractHtml(ContractDataDto data)
         {
             var sb = new StringBuilder();
 
-            // HTML Header
             AppendHtmlHeader(sb);
-
-            // Contract Header
             AppendContractHeader(sb, data);
-
-            // Section I: Company Info
             AppendCompanyInfo(sb, data);
-
-            // Section II: Customer Info
             AppendCustomerInfo(sb, data);
-
-            // Section III: Vehicle Info
             AppendVehicleInfo(sb, data);
-
-            // Section IV: Rental Info
             AppendRentalInfo(sb, data);
-
-            // Section V: Financial Info
             AppendFinancialInfo(sb, data);
-
-            // Section VI: Payment Info
             AppendPaymentInfo(sb, data);
-
-            // Section VII: Terms & Conditions
             AppendTermsAndConditions(sb);
-
-            // Signatures
             AppendSignatures(sb, data);
 
-            // HTML Footer
             sb.AppendLine("</body></html>");
 
             return sb.ToString();
@@ -561,21 +598,16 @@ namespace BookingService.Services
 
         #region Private Helpers - Email
 
-        /// <summary>
-        /// Gửi email hợp đồng cho khách hàng
-        /// </summary>
         private async Task SendContractEmailAsync(ContractDataDto data, string pdfPath)
         {
             try
             {
-                // Đảm bảo file tồn tại
                 if (!File.Exists(pdfPath))
                 {
                     _logger.LogError("PDF file not found at {PdfPath}", pdfPath);
                     throw new FileNotFoundException($"Không tìm thấy file hợp đồng tại: {pdfPath}");
                 }
 
-                // Gọi EmailService để gửi email với attachment
                 var emailSent = await _emailService.SendContractEmailAsync(
                     toEmail: data.CustomerEmail,
                     customerName: data.CustomerName,
@@ -600,7 +632,6 @@ namespace BookingService.Services
                 _logger.LogError(ex,
                     "Error sending contract email to {Email} for Order {OrderId}",
                     data.CustomerEmail, data.OrderId);
-                // ✅ Không throw - email fail không ảnh hưởng contract creation
             }
         }
 
@@ -608,22 +639,6 @@ namespace BookingService.Services
 
         #region Private Helpers - Utilities
 
-        /// <summary>
-        /// Tạo số hợp đồng duy nhất
-        /// Format: CT-20251021-000123
-        /// </summary>
-        private string GenerateContractNumber(int orderId)
-        {
-            var prefix = _contractSettings.NumberPrefix;
-            var dateFormat = _contractSettings.DateFormat;
-            var padding = _contractSettings.OrderIdPadding;
-
-            return $"{prefix}-{DateTime.UtcNow.ToString(dateFormat)}-{orderId.ToString($"D{padding}")}";
-        }
-
-        /// <summary>
-        /// Fill default company info từ settings nếu FE chưa gửi
-        /// </summary>
         private void FillDefaultCompanyInfo(ContractDataDto data)
         {
             if (string.IsNullOrWhiteSpace(data.CompanyName))
@@ -639,9 +654,6 @@ namespace BookingService.Services
                 data.CompanyRepresentative = _contractSettings.CompanyRepresentative;
         }
 
-        /// <summary>
-        /// Tạo URL download hợp đồng
-        /// </summary>
         private string GenerateDownloadUrl(string pdfPath)
         {
             var fileName = Path.GetFileName(pdfPath);

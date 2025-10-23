@@ -21,7 +21,6 @@ namespace BookingService.Repositories
 
         public async Task<bool> UpdateAsync(OnlineContract contract)
         {
-            // Đảm bảo EF Core theo dõi (track) sự thay đổi của entity
             _context.OnlineContracts.Update(contract);
             return await _context.SaveChangesAsync() > 0;
         }
@@ -29,7 +28,7 @@ namespace BookingService.Repositories
         public async Task<OnlineContract?> GetByIdAsync(int contractId)
         {
             return await _context.OnlineContracts
-                .AsNoTracking() // Dùng AsNoTracking cho các truy vấn chỉ đọc
+                .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.OnlineContractId == contractId);
         }
 
@@ -46,11 +45,32 @@ namespace BookingService.Repositories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.ContractNumber == contractNumber);
         }
+
         public async Task<bool> ExistsByOrderIdAsync(int orderId)
         {
             return await _context.OnlineContracts
                 .AsNoTracking()
                 .AnyAsync(c => c.OrderId == orderId);
+        }
+
+        // ✅ THÊM: Kiểm tra contract number có tồn tại không
+        public async Task<bool> ExistsByContractNumberAsync(string contractNumber)
+        {
+            return await _context.OnlineContracts
+                .AsNoTracking()
+                .AnyAsync(c => c.ContractNumber == contractNumber);
+        }
+
+        // ✅ THÊM: Lấy contract number lớn nhất theo ngày
+        // Ví dụ: datePrefix = "CT-20251023-" -> Trả về "CT-20251023-000005"
+        public async Task<string?> GetLatestContractNumberByDateAsync(string datePrefix)
+        {
+            return await _context.OnlineContracts
+                .AsNoTracking()
+                .Where(c => c.ContractNumber.StartsWith(datePrefix))
+                .OrderByDescending(c => c.ContractNumber)
+                .Select(c => c.ContractNumber)
+                .FirstOrDefaultAsync();
         }
     }
 }
