@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import CTA from '../components/CTA'
 import api from '../api/client'
 
 export default function VerifyEmail() {
@@ -43,31 +41,62 @@ export default function VerifyEmail() {
 
   return (
     <div data-figma-layer="Verify Email Page">
-      <Navbar />
       <main>
-        <section id="verify-email" className="section" aria-labelledby="verify-title">
-          <div className="container">
-            <div className="section-header">
-              <h1 id="verify-title" className="section-title">Xác minh email</h1>
-              <p className="section-subtitle">Nhập mã xác minh đã được gửi tới email của bạn{email ? ` (${email})` : ''}.</p>
+        <section className="auth-section">
+          <div className="auth-page-hero">
+            <div className="auth-page-hero__overlay"></div>
+            <div className="container">
+              <div className="auth-page-hero__content">
+                <h1 className="auth-page-hero__title">Verify Email</h1>
+                <p className="auth-page-hero__subtitle">Complete your account verification</p>
+              </div>
             </div>
+          </div>
 
-            <div className="card">
-              <form className="card-body" onSubmit={handleSubmit} noValidate>
-                {error ? <div role="alert" className="badge gray" aria-live="assertive">{error}</div> : null}
-                {verified ? <div role="status" className="badge green">Xác minh thành công</div> : null}
-                <div className="field">
-                  <label htmlFor="code" className="label">Mã xác minh</label>
-                  <input id="code" name="code" className="input" type="text" placeholder="VD: 123456" inputMode="numeric" pattern="^[0-9]{4,8}$" required />
+          <div className="container">
+            <div className="auth-form-wrapper">
+              <div className="auth-form-card">
+                <h2>Verify Your Email</h2>
+                <p className="auth-form-subtitle">Enter the verification code sent to {email || 'your email'}</p>
+
+                <form onSubmit={handleSubmit} noValidate>
+                  {error && (
+                    <div role="alert" className="auth-error-message">
+                      <i className="fa-solid fa-circle-exclamation"></i>
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label htmlFor="code">Verification Code</label>
+                    <input
+                      id="code"
+                      name="code"
+                      type="text"
+                      placeholder="Enter 6-digit code"
+                      inputMode="numeric"
+                      pattern="^[0-9]{4,8}$"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-actions">
+                    <a href="#signup" className="forgot-link">Back to Sign Up</a>
+                    <button type="submit" className="auth-submit-btn" disabled={submitting}>
+                      {submitting ? 'Verifying...' : 'Verify Email'}
+                    </button>
+                  </div>
+                </form>
+
+                <div className="auth-divider">
+                  <span>or</span>
                 </div>
 
-                <div className="row-between">
-                  <a className="nav-link" href="#signup">Đăng ký lại</a>
-                  <CTA as="button" type="submit" disabled={submitting} aria-busy={submitting}>
-                    {submitting ? 'Đang xác minh…' : 'Xác minh'}
-                  </CTA>
+                <div className="auth-footer-text">
+                  <span>Already verified?</span>
+                  <a href="#login" className="auth-link">Sign in</a>
                 </div>
-              </form>
+              </div>
             </div>
           </div>
         </section>

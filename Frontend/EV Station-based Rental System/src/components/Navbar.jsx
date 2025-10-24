@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
+import NotificationBell from "./NotificationBell";
 
 function Navbar() {
   const [nav, setNav] = useState(false);
   const [user, setUser] = useState(null);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
-    const storedUser = sessionStorage.getItem('auth.user');
+    const storedUser = localStorage.getItem('auth.user');
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
@@ -16,7 +16,7 @@ function Navbar() {
     }
 
     const handleStorageChange = () => {
-      const updated = sessionStorage.getItem('auth.user');
+      const updated = localStorage.getItem('auth.user');
       if (updated) {
         try {
           setUser(JSON.parse(updated));
@@ -37,8 +37,8 @@ function Navbar() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('auth.token');
-    sessionStorage.removeItem('auth.user');
+    localStorage.removeItem('auth.token');
+    localStorage.removeItem('auth.user');
     setUser(null);
     window.location.hash = '';
   };
@@ -149,24 +149,20 @@ function Navbar() {
 
           <div className="navbar__right">
             {user ? (
-              <>
+              <div className="navbar__user">
+                <span className="navbar__greeting">Xin chào, {userName}</span>
                 <div className="navbar__notifications">
-                  <button
-                    className="notification-btn"
-                    onClick={() => setShowNotifications(!showNotifications)}
-                    aria-label="Notifications"
-                  >
-                    <i className="fa-solid fa-bell"></i>
-                    <span className="notification-badge">0</span>
-                  </button>
+                  <NotificationBell />
                 </div>
-                <div className="navbar__user">
-                  <span className="navbar__greeting">Welcome, {userName}</span>
-                  <button className="navbar__logout-btn" onClick={handleLogout}>
-                    <i className="fa-solid fa-sign-out-alt"></i> Logout
-                  </button>
-                </div>
-              </>
+                <a href="#profile" className="navbar__profile-btn">
+                  <i className="fa-solid fa-user"></i>
+                  <span>Profile</span>
+                </a>
+                <button className="navbar__logout-btn" onClick={handleLogout}>
+                  <i className="fa-solid fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </button>
+              </div>
             ) : (
               <div className="navbar__buttons">
                 <a className="navbar__buttons__sign-in" href="#login">

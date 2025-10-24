@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import DocumentUploader from '../components/DocumentUploader'
@@ -45,14 +44,11 @@ export default function Profile() {
       phoneNumber: u.phoneNumber || u.phone || '',
     })
 
-    // Prefill name into citizen form
     setCitizen((c) => ({ ...c, FullName: u.fullName || '' }))
 
-    // Try fetching existing docs if API is configured
     const token = localStorage.getItem('auth.token') || ''
     const userId = u.id || u.Id
 
-    // Hosted previews (like builder/browser preview) cannot reach localhost APIs.
     const runningOnHost = typeof window !== 'undefined' ? window.location.hostname : ''
     const isLocalApi = API_BASE.startsWith('http://localhost') || API_BASE.startsWith('https://localhost')
     const cannotReachLocalhost = isLocalApi && runningOnHost && runningOnHost !== 'localhost' && runningOnHost !== '127.0.0.1'
@@ -122,7 +118,6 @@ export default function Profile() {
     const u = loadUser()
     const userId = u.id || u.Id
     if (!API_BASE) { setApiError('Thiếu cấu hình VITE_API_URL'); return }
-    // prevent calling localhost from hosted previews
     const runningOnHost = typeof window !== 'undefined' ? window.location.hostname : ''
     const isLocalApi = API_BASE.startsWith('http://localhost') || API_BASE.startsWith('https://localhost')
     const cannotReachLocalhost = isLocalApi && runningOnHost && runningOnHost !== 'localhost' && runningOnHost !== '127.0.0.1'
@@ -158,7 +153,6 @@ export default function Profile() {
     const u = loadUser()
     const userId = u.id || u.Id
     if (!API_BASE) { setApiError('Thiếu cấu hình VITE_API_URL'); return }
-    // prevent calling localhost from hosted previews
     const runningOnHost = typeof window !== 'undefined' ? window.location.hostname : ''
     const isLocalApi = API_BASE.startsWith('http://localhost') || API_BASE.startsWith('https://localhost')
     const cannotReachLocalhost = isLocalApi && runningOnHost && runningOnHost !== 'localhost' && runningOnHost !== '127.0.0.1'
@@ -188,15 +182,19 @@ export default function Profile() {
 
   return (
     <div data-figma-layer="Renter Profile Page">
-      <Navbar />
       <main>
-        <section id="profile" className="section" aria-labelledby="profile-title">
-          <div className="container">
-            <div className="section-header">
-              <h1 id="profile-title" className="section-title">Hồ sơ cá nhân</h1>
-              <p className="section-subtitle">Cập nhật thông tin liên hệ và tài khoản của bạn.</p>
+        <section className="profile-section">
+          <div className="profile-hero">
+            <div className="profile-hero__overlay"></div>
+            <div className="container">
+              <div className="profile-hero__content">
+                <h1 className="profile-hero__title">Hồ sơ cá nhân</h1>
+                <p className="profile-hero__subtitle">Cập nhật thông tin liên hệ và tài khoản của bạn.</p>
+              </div>
             </div>
+          </div>
 
+          <div className="container">
             <div className="card">
               <div className="card-body">
                 <div className="profile-header">

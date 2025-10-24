@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import DocumentUploader from '../components/DocumentUploader'
@@ -19,15 +18,19 @@ export default function ProfileDocs() {
 
   return (
     <div data-figma-layer="Renter Documents Page">
-      <Navbar />
       <main>
-        <section id="profile-docs" className="section" aria-labelledby="docs-title">
-          <div className="container">
-            <div className="section-header">
-              <h1 id="docs-title" className="section-title">Hồ sơ giấy tờ</h1>
-              <p className="section-subtitle">Tải lên và quản lý giấy phép lái xe, CCCD/CMND để xác minh danh tính.</p>
+        <section className="profile-section">
+          <div className="profile-hero">
+            <div className="profile-hero__overlay"></div>
+            <div className="container">
+              <div className="profile-hero__content">
+                <h1 className="profile-hero__title">Hồ sơ giấy tờ</h1>
+                <p className="profile-hero__subtitle">Tải lên và quản lý giấy phép lái xe, CCCD/CMND để xác minh danh tính.</p>
+              </div>
             </div>
+          </div>
 
+          <div className="container">
             <div className="card">
               <form className="card-body" onSubmit={handleSubmit}>
                 <div className="docs-grid">

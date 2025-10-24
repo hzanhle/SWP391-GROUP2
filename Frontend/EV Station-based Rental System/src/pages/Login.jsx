@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import api from '../api/client'
 
@@ -25,8 +24,13 @@ export default function Login() {
       const token = data?.token ?? data?.Token
       const user = data?.user ?? data?.User
       if (token) {
-        sessionStorage.setItem('auth.token', token)
-        sessionStorage.setItem('auth.user', JSON.stringify(user || {}))
+        localStorage.setItem('auth.token', token)
+        localStorage.setItem('auth.user', JSON.stringify(user || {}))
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'auth.user',
+          newValue: JSON.stringify(user || {}),
+          storageArea: localStorage,
+        }))
         const roleId = Number((user && (user.roleId ?? user.RoleId)) ?? 0)
         const roleName = String((user && (user.roleName ?? user.RoleName)) || '').toLowerCase()
         const isAdmin = roleId === 3 || roleName === 'admin'
@@ -44,7 +48,6 @@ export default function Login() {
 
   return (
     <div data-figma-layer="Login Page">
-      <Navbar />
       <main>
         <section className="auth-section">
           <div className="auth-page-hero">

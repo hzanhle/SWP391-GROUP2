@@ -30,6 +30,21 @@ function getRoleId() {
 function resolveRoute() {
   const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
   const path = typeof window !== 'undefined' ? window.location.pathname.replace(/^\//, '') : ''
+  const roleId = getRoleId()
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth.token') : ''
+
+  // Auto-redirect admin to dashboard
+  if (token && roleId === 3) {
+    if (!hash && path.toLowerCase() === 'admin') return 'admin'
+    if (hash.startsWith('admin')) return hash.replace('#', '')
+    // If admin tries to access member pages, redirect to admin
+    if (['home', 'stations', 'vehicles', 'booking', 'booking-new', 'check-in', 'return', 'history', 'profile', 'profile-docs'].includes(hash)) {
+      return 'admin'
+    }
+    // Default for admin: show admin dashboard
+    return 'admin'
+  }
+
   if (!hash && path.toLowerCase() === 'admin') return 'admin'
   switch (hash) {
     case 'signup': return 'signup'
@@ -48,6 +63,7 @@ function resolveRoute() {
     case 'admin-users': return 'admin-users'
     case 'staff-verify': return 'staff-verify'
     case 'admin-models': return 'admin-models'
+    case 'admin': return 'admin'
     default: return 'home'
   }
 }
@@ -61,9 +77,12 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
+  // Check if current route is admin route
+  const isAdminRoute = ['admin', 'admin-users', 'admin-models', 'staff-verify'].includes(routeData)
+
   return (
     <>
-      <Navbar />
+      {!isAdminRoute && <Navbar />}
       {routeData === 'signup' && <Signup />}
       {routeData === 'login' && <Login />}
       {routeData === 'forgot-password' && <ForgotPassword />}

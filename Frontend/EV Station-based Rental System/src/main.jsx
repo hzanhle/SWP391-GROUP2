@@ -4,6 +4,9 @@ import './index.css'
 import './styles/tokens.css'
 import './styles/main.css'
 import './styles/featured.css'
+import './styles/profile.css'
+import './styles/notification.css'
+import './styles/admin.css'
 import App from './App.jsx'
 
 // Initialize theme early to avoid flash

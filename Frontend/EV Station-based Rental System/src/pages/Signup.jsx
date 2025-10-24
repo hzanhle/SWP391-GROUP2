@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import api from '../api/client'
 
@@ -23,7 +22,7 @@ export default function Signup() {
 
     try {
       const { data } = await api.sendRegistrationOtp(payload)
-      try { sessionStorage.setItem('pendingVerificationEmail', payload.email) } catch {}
+      try { localStorage.setItem('pendingVerificationEmail', payload.email) } catch {}
       window.alert((data && (data.message || data.Message)) || 'OTP sent. Please check your email for verification code.')
       window.location.hash = '#verify-email'
     } catch (err) {
@@ -36,7 +35,6 @@ export default function Signup() {
 
   return (
     <div data-figma-layer="Signup Page">
-      <Navbar />
       <main>
         <section className="auth-section">
           <div className="auth-page-hero">

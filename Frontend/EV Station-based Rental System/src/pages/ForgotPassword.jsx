@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import api from '../api/client'
 
@@ -57,7 +56,6 @@ export default function ForgotPassword() {
 
   return (
     <div data-figma-layer="Forgot Password Page">
-      <Navbar />
       <main>
         <section className="auth-section">
           <div className="auth-page-hero">

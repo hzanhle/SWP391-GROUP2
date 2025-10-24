@@ -67,57 +67,61 @@ export default function NotificationBell() {
 
   return (
     <div className="dropdown dropdown-right" ref={menuRef}>
-      <button className="btn btn-ghost" aria-label="Notifications" onClick={() => setOpen(v=>!v)} style={{ position: 'relative' }}>
+      <button className="btn btn-ghost" aria-label="Notifications" onClick={() => setOpen(v=>!v)}>
         <span className="sr-only">Notifications</span>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
         {unreadCount > 0 && <span className="notif-dot" aria-hidden="true"></span>}
       </button>
 
       {open && (
-        <div className="dropdown-menu card card-body" role="menu" style={{ right: 0, left: 'auto', width: 'min(92vw, 360px)' }}>
-          <div className="row-between">
-            <h4 className="card-title">Thông báo</h4>
-            <div className="row">
-              {items.length > 0 && (<small className="card-subtext">{unreadCount} chưa đọc</small>)}
-              {items.length > 0 && (
-                <button className="btn btn-ghost" onClick={async () => {
-                  try {
-                    await api.clearNotifications(userId, token)
-                    setItems([])
-                    setError('')
-                  } catch (e) {
-                    setError(e?.message || 'Không thể xóa thông báo')
-                  }
-                }}>Clear all</button>
-              )}
+        <div className="dropdown-menu card" role="menu">
+          <div className="card-body">
+            <div className="row-between">
+              <h4 className="card-title">Thông báo</h4>
+              <div className="row">
+                {items.length > 0 && (<small className="card-subtext">{unreadCount} chưa đọc</small>)}
+                {items.length > 0 && (
+                  <button className="btn-ghost" onClick={async () => {
+                    try {
+                      await api.clearNotifications(userId, token)
+                      setItems([])
+                      setError('')
+                    } catch (e) {
+                      setError(e?.message || 'Không thể xóa thông báo')
+                    }
+                  }}>Xóa tất cả</button>
+                )}
+              </div>
             </div>
-          </div>
 
-          {loading && (
-            <div className="text-center py-4"><div className="spinner"/></div>
-          )}
-          {error && (
-            <div className="text-center py-4"><p className="text-red-600">{error}</p></div>
-          )}
+            {loading && (
+              <div className="text-center py-4"><div className="spinner"/></div>
+            )}
+            {error && (
+              <div className="text-center py-4"><p className="text-red-600">{error}</p></div>
+            )}
 
-          {!loading && !error && items.length === 0 && (
-            <div className="py-6 text-center card-subtext">Không có thông báo mới</div>
-          )}
+            {!loading && !error && items.length === 0 && (
+              <div className="py-6 text-center card-subtext">Không có thông báo mới</div>
+            )}
 
-          {!loading && !error && items.length > 0 && (
-            <ul className="notif-list">
-              {items.slice(0, 8).map(n => (
-                <li key={n.id || n.Id} className="notif-item">
-                  <div className="notif-item-title">{n.title || n.Title}</div>
-                  <div className="notif-item-desc">{n.message || n.Message}</div>
-                  <div className="notif-item-time">{formatTime(n.created || n.Created)}</div>
-                </li>
-              ))}
-            </ul>
-          )}
+            {!loading && !error && items.length > 0 && (
+              <ul className="notif-list">
+                {items.slice(0, 8).map(n => (
+                  <li key={n.id || n.Id} className="notif-item">
+                    <div className="notif-item-title">{n.title || n.Title}</div>
+                    <div className="notif-item-desc">{n.message || n.Message}</div>
+                    <div className="notif-item-time">{formatTime(n.created || n.Created)}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
 
-          <div className="row-between mt-3">
-            <a href="#profile" className="btn btn-gradient" style={{ width: '100%' }}>Xem tất cả</a>
+            {!loading && !error && items.length > 0 && (
+              <div className="mt-3">
+                <a href="#profile" className="btn-gradient">Xem tất cả</a>
+              </div>
+            )}
           </div>
         </div>
       )}

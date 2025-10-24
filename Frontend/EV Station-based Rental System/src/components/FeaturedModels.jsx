@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import CarBox from "./CarBox";
+import CarBox from "./Carbox";
 import { getActiveModels } from "../api/vehicle";
 
 function FeaturedModels() {
