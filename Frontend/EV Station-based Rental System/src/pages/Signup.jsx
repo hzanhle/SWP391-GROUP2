@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import CTA from '../components/CTA'
 import api from '../api/client'
 
 export default function Signup() {
@@ -25,8 +24,8 @@ export default function Signup() {
     try {
       const { data } = await api.sendRegistrationOtp(payload)
       try { localStorage.setItem('pendingVerificationEmail', payload.email) } catch {}
-      window.alert((data && (data.message || data.Message)) || 'Đã gửi OTP. Vui lòng kiểm tra email để lấy mã xác minh.')
-      window.location.hash = 'verify-email'
+      window.alert((data && (data.message || data.Message)) || 'OTP sent. Please check your email for verification code.')
+      window.location.hash = '#verify-email'
     } catch (err) {
       const msg = (err?.data && (err.data.message || err.data.Message)) || err?.message || 'Registration failed'
       setError(msg)
@@ -39,43 +38,98 @@ export default function Signup() {
     <div data-figma-layer="Signup Page">
       <Navbar />
       <main>
-        <section id="signup" className="section" aria-labelledby="signup-title">
-          <div className="container">
-            <div className="section-header">
-              <h1 id="signup-title" className="section-title">Create your account</h1>
-              <p className="section-subtitle">Join to book EVs and charging stations with ease.</p>
+        <section className="auth-section">
+          <div className="auth-page-hero">
+            <div className="auth-page-hero__overlay"></div>
+            <div className="container">
+              <div className="auth-page-hero__content">
+                <h1 className="auth-page-hero__title">Create Account</h1>
+                <p className="auth-page-hero__subtitle">Join to book electric vehicles and access charging stations</p>
+              </div>
             </div>
+          </div>
 
-            <div className="card">
-              <form className="card-body" onSubmit={handleSubmit} noValidate>
-                {error ? <div role="alert" className="badge gray" aria-live="assertive">{error}</div> : null}
-                <div className="field">
-                  <label htmlFor="username" className="label">Username</label>
-                  <input id="username" name="username" className="input" type="text" placeholder="yourname" autoComplete="username" required />
+          <div className="container">
+            <div className="auth-form-wrapper">
+              <div className="auth-form-card">
+                <h2>Get Started</h2>
+                <p className="auth-form-subtitle">Create your account to begin booking EVs</p>
+
+                <form onSubmit={handleSubmit} noValidate>
+                  {error && (
+                    <div role="alert" className="auth-error-message">
+                      <i className="fa-solid fa-circle-exclamation"></i>
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label htmlFor="username">Username</label>
+                    <input
+                      id="username"
+                      name="username"
+                      type="text"
+                      placeholder="Choose your username"
+                      autoComplete="username"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="email">Email</label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="phone">Phone Number</label>
+                    <input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      placeholder="(+84) 901-234-567"
+                      autoComplete="tel"
+                      pattern="^[0-9+()\-\s]{7,}$"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="password">Password</label>
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-actions">
+                    <a href="#" className="forgot-link">Back to Home</a>
+                    <button type="submit" className="auth-submit-btn" disabled={submitting}>
+                      {submitting ? 'Creating account...' : 'Sign Up'}
+                    </button>
+                  </div>
+                </form>
+
+                <div className="auth-divider">
+                  <span>or</span>
                 </div>
 
-                <div className="field">
-                  <label htmlFor="email" className="label">Email</label>
-                  <input id="email" name="email" className="input" type="email" placeholder="you@example.com" autoComplete="email" required />
+                <div className="auth-footer-text">
+                  <span>Already have an account?</span>
+                  <a href="#login" className="auth-link">Sign in</a>
                 </div>
-
-                <div className="field">
-                  <label htmlFor="phone" className="label">Phone</label>
-                  <input id="phone" name="phone" className="input" type="tel" placeholder="(+84) 901-234-567" autoComplete="tel" pattern="^[0-9+()\-\s]{7,}$" required />
-                </div>
-
-                <div className="field">
-                  <label htmlFor="password" className="label">Password</label>
-                  <input id="password" name="password" className="input" type="password" placeholder="••••••••" autoComplete="new-password" minLength={6} required />
-                </div>
-
-                <div className="row-between">
-                  <a className="nav-link" href="#">Back to Home</a>
-                  <CTA as="button" type="submit" disabled={submitting} aria-busy={submitting}>
-                    {submitting ? 'Signing up…' : 'Sign up'}
-                  </CTA>
-                </div>
-              </form>
+              </div>
             </div>
           </div>
         </section>

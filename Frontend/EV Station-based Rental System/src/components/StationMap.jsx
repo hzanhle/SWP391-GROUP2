@@ -58,7 +58,7 @@ function useGeocoder() {
   return { geocode }
 }
 
-export default function StationMap() {
+export default function StationMap({ stations = [] }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const [error, setError] = useState(null)
@@ -69,9 +69,8 @@ export default function StationMap() {
 
     async function init() {
       try {
-        const { data } = await getActiveStations()
         if (!isMounted) return
-        const stations = Array.isArray(data) ? data : []
+        const data = Array.isArray(stations) ? stations : []
 
         // Initialize map once
         if (!mapRef.current && containerRef.current) {
@@ -92,10 +91,17 @@ export default function StationMap() {
 
         const bounds = L.latLngBounds([])
 
+        // Clear existing markers
+        map.eachLayer((layer) => {
+          if (layer instanceof L.Marker) {
+            map.removeLayer(layer)
+          }
+        })
+
         // Place markers using geocoded coordinates
-        for (const s of stations) {
+        for (const s of data) {
           const name = s.name ?? s.Name
-          const address = s.location ?? s.Location
+          const address = s.address ?? s.location ?? s.Location
           const point = await geocode(address)
           if (point && isFinite(point[0]) && isFinite(point[1])) {
             const marker = L.marker(point)
@@ -118,9 +124,11 @@ export default function StationMap() {
       }
     }
 
-    init()
+    if (stations.length > 0) {
+      init()
+    }
     return () => { isMounted = false }
-  }, [geocode])
+  }, [stations, geocode])
 
   // Recompute map size when container resizes
   useEffect(() => {

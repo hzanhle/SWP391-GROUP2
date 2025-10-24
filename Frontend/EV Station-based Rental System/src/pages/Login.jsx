@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import CTA from '../components/CTA'
 import api from '../api/client'
 
 export default function Login() {
@@ -36,7 +35,7 @@ export default function Login() {
         window.location.hash = ''
       }
     } catch (err) {
-      const msg = err?.data?.message || err?.message || 'Fail to login'
+      const msg = err?.data?.message || err?.message || 'Failed to login'
       setError(msg)
     } finally {
       setSubmitting(false)
@@ -47,38 +46,73 @@ export default function Login() {
     <div data-figma-layer="Login Page">
       <Navbar />
       <main>
-        <section id="login" className="section" aria-labelledby="login-title">
-          <div className="container">
-            <div className="section-header">
-              <h1 id="login-title" className="section-title">Login</h1>
-              <p className="section-subtitle">Truy cập để đặt xe và quản lý chuyến đi của bạn.</p>
+        <section className="auth-section">
+          <div className="auth-page-hero">
+            <div className="auth-page-hero__overlay"></div>
+            <div className="container">
+              <div className="auth-page-hero__content">
+                <h1 className="auth-page-hero__title">Sign In</h1>
+                <p className="auth-page-hero__subtitle">Access your account to book and manage your rides</p>
+              </div>
             </div>
+          </div>
 
-            <div className="card">
-              <form className="card-body" onSubmit={handleSubmit} noValidate>
-                {error ? <div role="alert" className="badge gray" aria-live="assertive">{error}</div> : null}
-                <div className="field">
-                  <label htmlFor="username" className="label">Username</label>
-                  <input id="username" name="username" className="input" type="text" placeholder="nhap_ten" autoComplete="username" required />
+          <div className="container">
+            <div className="auth-form-wrapper">
+              <div className="auth-form-card">
+                <h2>Welcome Back</h2>
+                <p className="auth-form-subtitle">Sign in to your account to continue</p>
+
+                <form onSubmit={handleSubmit} noValidate>
+                  {error && (
+                    <div role="alert" className="auth-error-message">
+                      <i className="fa-solid fa-circle-exclamation"></i>
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label htmlFor="username">Username</label>
+                    <input
+                      id="username"
+                      name="username"
+                      type="text"
+                      placeholder="Enter your username"
+                      autoComplete="username"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="password">Password</label>
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-actions">
+                    <a href="#forgot-password" className="forgot-link">Forgot password?</a>
+                    <button type="submit" className="auth-submit-btn" disabled={submitting}>
+                      {submitting ? 'Signing in...' : 'Sign In'}
+                    </button>
+                  </div>
+                </form>
+
+                <div className="auth-divider">
+                  <span>or</span>
                 </div>
 
-                <div className="field">
-                  <label htmlFor="password" className="label">Password</label>
-                  <input id="password" name="password" className="input" type="password" placeholder="••••••••" autoComplete="current-password" minLength={6} required />
+                <div className="auth-footer-text">
+                  <span>Don't have an account?</span>
+                  <a href="#signup" className="auth-link">Create one</a>
                 </div>
-
-                <div className="row-between">
-                  <a className="nav-link" href="#forgot-password">Forgot password?</a>
-                  <CTA as="button" type="submit" disabled={submitting} aria-busy={submitting}>
-                    {submitting ? 'Process' : 'Login'}
-                  </CTA>
-                </div>
-
-                <div className="row-center">
-                  <span className="section-subtitle">Don't have account?</span>
-                  <a className="nav-link" href="#signup">Sign up</a>
-                </div>
-              </form>
+              </div>
             </div>
           </div>
         </section>

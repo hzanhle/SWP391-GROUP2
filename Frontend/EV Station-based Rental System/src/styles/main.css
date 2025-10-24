@@ -2077,4 +2077,404 @@ footer {
 .contact-div__form form button:hover {
   box-shadow: 0 10px 15px 0 rgba(255, 83, 48, 0.6);
   background-color: #fa4226;
-}/*# sourceMappingURL=styles.css.map */
+}
+
+/* Models Section (Vehicles Page) */
+.models-section {
+  width: 100%;
+  padding: 0;
+}
+
+.models-page-hero {
+  width: 100%;
+  height: 41rem;
+  background: linear-gradient(135deg, #ff4d30 0%, #ff6b5a 100%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.models-page-hero__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.models-page-hero__content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: white;
+}
+
+.models-page-hero__title {
+  font-size: 4.8rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.models-page-hero__subtitle {
+  font-size: 2rem;
+  font-weight: 300;
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .models-page-hero {
+    height: 30rem;
+  }
+
+  .models-page-hero__title {
+    font-size: 3.2rem;
+  }
+
+  .models-page-hero__subtitle {
+    font-size: 1.6rem;
+  }
+}
+
+/* Auth Pages (Login / Signup) */
+.auth-section {
+  width: 100%;
+  background: white;
+}
+
+.auth-page-hero {
+  width: 100%;
+  height: 35rem;
+  background: linear-gradient(135deg, #ff4d30 0%, #ff6b5a 100%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-page-hero__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.auth-page-hero__content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: white;
+}
+
+.auth-page-hero__title {
+  font-size: 4.2rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+}
+
+.auth-page-hero__subtitle {
+  font-size: 1.8rem;
+  font-weight: 300;
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .auth-page-hero {
+    height: 25rem;
+  }
+
+  .auth-page-hero__title {
+    font-size: 3rem;
+  }
+
+  .auth-page-hero__subtitle {
+    font-size: 1.4rem;
+  }
+}
+
+.auth-form-wrapper {
+  padding: 6rem 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+}
+
+.auth-form-card {
+  background: white;
+  border-radius: 0.8rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  padding: 4rem;
+  width: 100%;
+  max-width: 45rem;
+}
+
+.auth-form-card h2 {
+  font-size: 3.2rem;
+  color: #010103;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.auth-form-subtitle {
+  font-size: 1.4rem;
+  color: #706f7b;
+  margin-bottom: 2.5rem;
+}
+
+.auth-error-message {
+  background-color: #fef2f2;
+  border-left: 4px solid #ff4d30;
+  color: #d32f2f;
+  padding: 1.2rem 1.5rem;
+  border-radius: 0.4rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 1.4rem;
+}
+
+.auth-error-message i {
+  font-size: 1.8rem;
+}
+
+.form-group {
+  margin-bottom: 1.8rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #010103;
+  margin-bottom: 0.6rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 1.2rem 1.5rem;
+  font-size: 1.4rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.4rem;
+  background-color: #f9f9f9;
+  color: #010103;
+  transition: all 0.3s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #ff4d30;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(255, 77, 48, 0.1);
+}
+
+.form-group input::placeholder {
+  color: #999;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.forgot-link {
+  font-size: 1.3rem;
+  color: #ff4d30;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.forgot-link:hover {
+  color: #fa4226;
+  text-decoration: underline;
+}
+
+.auth-submit-btn {
+  background-color: #ff4d30;
+  color: white;
+  border: none;
+  padding: 1.2rem 2.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 10px 15px rgba(255, 83, 48, 0.35);
+}
+
+.auth-submit-btn:hover:not(:disabled) {
+  background-color: #fa4226;
+  box-shadow: 0 10px 15px rgba(255, 83, 48, 0.6);
+  transform: translateY(-2px);
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 2rem 0;
+  font-size: 1.3rem;
+  color: #ccc;
+}
+
+.auth-divider span {
+  margin: 0 1rem;
+  color: #999;
+}
+
+.auth-footer-text {
+  text-align: center;
+  font-size: 1.3rem;
+  color: #666;
+}
+
+.auth-footer-text span {
+  margin-right: 0.5rem;
+}
+
+.auth-link {
+  color: #ff4d30;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s;
+  margin-left: 0.3rem;
+}
+
+.auth-link:hover {
+  color: #fa4226;
+  text-decoration: underline;
+}
+
+@media (max-width: 550px) {
+  .auth-form-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .auth-form-card h2 {
+    font-size: 2.4rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .auth-submit-btn {
+    width: 100%;
+  }
+}
+
+/* Featured Stations Section */
+.featured-stations-section {
+  background: white;
+  padding: 0;
+}
+
+.featured-stations-section .section-header {
+  padding: 5rem 0 3rem;
+  text-align: center;
+}
+
+.featured-stations-section .section-header h3 {
+  font-size: 1.8rem;
+  color: #ff4d30;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.featured-stations-section .section-header h2 {
+  font-size: 4rem;
+  color: #010103;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.featured-stations-section .section-header p {
+  font-size: 1.6rem;
+  color: #706f7b;
+}
+
+.map-section {
+  padding: 4rem 0;
+}
+
+.map-card {
+  width: 100%;
+  min-height: 50rem;
+  background: white;
+  border-radius: 0.8rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.map-canvas {
+  width: 100%;
+  height: 50rem;
+}
+
+@media (max-width: 768px) {
+  .featured-stations-section .section-header h2 {
+    font-size: 2.8rem;
+  }
+
+  .map-canvas {
+    height: 35rem;
+  }
+}
+
+/* Error and Loading States */
+.error-card {
+  background: #fef2f2;
+  border-left: 4px solid #d32f2f;
+  padding: 2rem;
+  border-radius: 0.4rem;
+  text-align: center;
+}
+
+.error-text {
+  color: #d32f2f;
+  font-size: 1.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.retry-button {
+  background-color: #ff4d30;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 10px 15px rgba(255, 83, 48, 0.35);
+}
+
+.retry-button:hover {
+  background-color: #fa4226;
+  box-shadow: 0 10px 15px rgba(255, 83, 48, 0.6);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.py-8 {
+  padding: 2rem 0;
+}
+
+.py-12 {
+  padding: 3rem 0;
+}
