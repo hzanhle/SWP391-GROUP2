@@ -23,7 +23,7 @@ export default function Signup() {
 
     try {
       const { data } = await api.sendRegistrationOtp(payload)
-      try { localStorage.setItem('pendingVerificationEmail', payload.email) } catch {}
+      try { sessionStorage.setItem('pendingVerificationEmail', payload.email) } catch {}
       window.alert((data && (data.message || data.Message)) || 'OTP sent. Please check your email for verification code.')
       window.location.hash = '#verify-email'
     } catch (err) {

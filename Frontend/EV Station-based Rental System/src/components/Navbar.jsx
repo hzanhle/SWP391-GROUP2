@@ -1,11 +1,49 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function Navbar() {
   const [nav, setNav] = useState(false);
+  const [user, setUser] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    const storedUser = sessionStorage.getItem('auth.user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        setUser(null);
+      }
+    }
+
+    const handleStorageChange = () => {
+      const updated = sessionStorage.getItem('auth.user');
+      if (updated) {
+        try {
+          setUser(JSON.parse(updated));
+        } catch {
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const openNav = () => {
     setNav(!nav);
   };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('auth.token');
+    sessionStorage.removeItem('auth.user');
+    setUser(null);
+    window.location.hash = '';
+  };
+
+  const userName = user?.userName || user?.username || 'User';
 
   return (
     <>
@@ -46,6 +84,20 @@ function Navbar() {
                 Contact
               </a>
             </li>
+            {user && (
+              <>
+                <li>
+                  <a onClick={openNav} href="#profile" style={{color: "inherit"}}>
+                    My Account
+                  </a>
+                </li>
+                <li>
+                  <a onClick={() => { handleLogout(); openNav(); }} href="#" style={{color: "inherit"}}>
+                    Logout
+                  </a>
+                </li>
+              </>
+            )}
           </ul>
         </div>
 
@@ -94,13 +146,37 @@ function Navbar() {
               </a>
             </li>
           </ul>
-          <div className="navbar__buttons">
-            <a className="navbar__buttons__sign-in" href="#login">
-              Sign In
-            </a>
-            <a className="navbar__buttons__register" href="#signup">
-              Register
-            </a>
+
+          <div className="navbar__right">
+            {user ? (
+              <>
+                <div className="navbar__notifications">
+                  <button
+                    className="notification-btn"
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    aria-label="Notifications"
+                  >
+                    <i className="fa-solid fa-bell"></i>
+                    <span className="notification-badge">0</span>
+                  </button>
+                </div>
+                <div className="navbar__user">
+                  <span className="navbar__greeting">Welcome, {userName}</span>
+                  <button className="navbar__logout-btn" onClick={handleLogout}>
+                    <i className="fa-solid fa-sign-out-alt"></i> Logout
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="navbar__buttons">
+                <a className="navbar__buttons__sign-in" href="#login">
+                  Sign In
+                </a>
+                <a className="navbar__buttons__register" href="#signup">
+                  Register
+                </a>
+              </div>
+            )}
           </div>
 
           {/* mobile */}

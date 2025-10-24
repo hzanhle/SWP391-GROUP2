@@ -25,8 +25,8 @@ export default function Login() {
       const token = data?.token ?? data?.Token
       const user = data?.user ?? data?.User
       if (token) {
-        localStorage.setItem('auth.token', token)
-        localStorage.setItem('auth.user', JSON.stringify(user || {}))
+        sessionStorage.setItem('auth.token', token)
+        sessionStorage.setItem('auth.user', JSON.stringify(user || {}))
         const roleId = Number((user && (user.roleId ?? user.RoleId)) ?? 0)
         const roleName = String((user && (user.roleName ?? user.RoleName)) || '').toLowerCase()
         const isAdmin = roleId === 3 || roleName === 'admin'

@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import CTA from '../components/CTA'
 import api from '../api/client'
 
 export default function ForgotPassword() {
@@ -23,9 +22,9 @@ export default function ForgotPassword() {
       const { data } = await api.sendPasswordResetOtp(value)
       setEmail(value)
       setSent(true)
-      window.alert((data && (data.message || data.Message)) || 'Đã gửi OTP. Vui lòng kiểm tra email để lấy mã xác minh.')
+      window.alert((data && (data.message || data.Message)) || 'OTP sent. Please check your email for verification code.')
     } catch (err) {
-      const msg = (err?.data && (err.data.message || err.data.Message)) || err?.message || 'Gửi OTP thất bại'
+      const msg = (err?.data && (err.data.message || err.data.Message)) || err?.message || 'Failed to send OTP'
       setError(msg)
     } finally {
       setSubmitting(false)
@@ -46,10 +45,10 @@ export default function ForgotPassword() {
     try {
       await api.verifyPasswordResetOtp(email, otp)
       await api.resetPassword({ email, otp, newPassword, confirmPassword })
-      window.alert('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.')
-      window.location.hash = 'login'
+      window.alert('Password changed successfully! Please login again.')
+      window.location.hash = '#login'
     } catch (err) {
-      const msg = (err?.data && (err.data.message || err.data.Message)) || err?.message || 'Xác minh hoặc đổi mật khẩu thất bại'
+      const msg = (err?.data && (err.data.message || err.data.Message)) || err?.message || 'Failed to verify or reset password'
       setError(msg)
     } finally {
       setSubmitting(false)
@@ -60,53 +59,115 @@ export default function ForgotPassword() {
     <div data-figma-layer="Forgot Password Page">
       <Navbar />
       <main>
-        <section id="forgot-password" className="section" aria-labelledby="forgot-title">
-          <div className="container">
-            <div className="section-header">
-              <h1 id="forgot-title" className="section-title">Quên mật khẩu</h1>
-              <p className="section-subtitle">Nhập email để nhận mã OTP đặt lại mật khẩu.</p>
+        <section className="auth-section">
+          <div className="auth-page-hero">
+            <div className="auth-page-hero__overlay"></div>
+            <div className="container">
+              <div className="auth-page-hero__content">
+                <h1 className="auth-page-hero__title">Reset Password</h1>
+                <p className="auth-page-hero__subtitle">Regain access to your account</p>
+              </div>
             </div>
+          </div>
 
-            <div className="card">
-              {!sent ? (
-                <form className="card-body" onSubmit={handleRequest} noValidate>
-                  {error ? <div role="alert" className="badge gray" aria-live="assertive">{error}</div> : null}
-                  <div className="field">
-                    <label htmlFor="email" className="label">Email</label>
-                    <input id="email" name="email" className="input" type="email" placeholder="ban@example.com" autoComplete="email" required />
-                  </div>
+          <div className="container">
+            <div className="auth-form-wrapper">
+              <div className="auth-form-card">
+                {!sent ? (
+                  <>
+                    <h2>Enter Your Email</h2>
+                    <p className="auth-form-subtitle">We'll send you a code to reset your password</p>
 
-                  <div className="row-between">
-                    <a className="nav-link" href="#login">Trở về đăng nhập</a>
-                    <CTA as="button" type="submit" disabled={submitting} aria-busy={submitting}>
-                      {submitting ? 'Đang gửi…' : 'Gửi OTP'}
-                    </CTA>
-                  </div>
-                </form>
-              ) : (
-                <form className="card-body" onSubmit={handleVerifyAndReset} noValidate>
-                  {error ? <div role="alert" className="badge gray" aria-live="assertive">{error}</div> : null}
-                  <div className="field">
-                    <label htmlFor="otp" className="label">Mã OTP</label>
-                    <input id="otp" name="otp" className="input" type="text" placeholder="VD: 123456" inputMode="numeric" pattern="^[0-9]{6}$" required />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="newPassword" className="label">Mật khẩu mới</label>
-                    <input id="newPassword" name="newPassword" className="input" type="password" placeholder="••••••••" autoComplete="new-password" minLength={6} required />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="confirmPassword" className="label">Xác nhận mật khẩu</label>
-                    <input id="confirmPassword" name="confirmPassword" className="input" type="password" placeholder="••••••••" autoComplete="new-password" minLength={6} required />
-                  </div>
+                    <form onSubmit={handleRequest} noValidate>
+                      {error && (
+                        <div role="alert" className="auth-error-message">
+                          <i className="fa-solid fa-circle-exclamation"></i>
+                          {error}
+                        </div>
+                      )}
 
-                  <div className="row-between">
-                    <a className="nav-link" href="#login">Trở về đăng nhập</a>
-                    <CTA as="button" type="submit" disabled={submitting} aria-busy={submitting}>
-                      {submitting ? 'Đang xác minh…' : 'Đổi mật khẩu'}
-                    </CTA>
-                  </div>
-                </form>
-              )}
+                      <div className="form-group">
+                        <label htmlFor="email">Email Address</label>
+                        <input
+                          id="email"
+                          name="email"
+                          type="email"
+                          placeholder="your@example.com"
+                          autoComplete="email"
+                          required
+                        />
+                      </div>
+
+                      <div className="form-actions">
+                        <a href="#login" className="forgot-link">Back to Sign In</a>
+                        <button type="submit" className="auth-submit-btn" disabled={submitting}>
+                          {submitting ? 'Sending...' : 'Send Code'}
+                        </button>
+                      </div>
+                    </form>
+                  </>
+                ) : (
+                  <>
+                    <h2>Verify & Reset</h2>
+                    <p className="auth-form-subtitle">Enter the code we sent to {email}</p>
+
+                    <form onSubmit={handleVerifyAndReset} noValidate>
+                      {error && (
+                        <div role="alert" className="auth-error-message">
+                          <i className="fa-solid fa-circle-exclamation"></i>
+                          {error}
+                        </div>
+                      )}
+
+                      <div className="form-group">
+                        <label htmlFor="otp">Verification Code</label>
+                        <input
+                          id="otp"
+                          name="otp"
+                          type="text"
+                          placeholder="Enter 6-digit code"
+                          inputMode="numeric"
+                          pattern="^[0-9]{6}$"
+                          required
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="newPassword">New Password</label>
+                        <input
+                          id="newPassword"
+                          name="newPassword"
+                          type="password"
+                          placeholder="••••••••"
+                          autoComplete="new-password"
+                          minLength={6}
+                          required
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="confirmPassword">Confirm Password</label>
+                        <input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type="password"
+                          placeholder="••••••••"
+                          autoComplete="new-password"
+                          minLength={6}
+                          required
+                        />
+                      </div>
+
+                      <div className="form-actions">
+                        <a href="#login" className="forgot-link">Back to Sign In</a>
+                        <button type="submit" className="auth-submit-btn" disabled={submitting}>
+                          {submitting ? 'Resetting...' : 'Reset Password'}
+                        </button>
+                      </div>
+                    </form>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </section>
