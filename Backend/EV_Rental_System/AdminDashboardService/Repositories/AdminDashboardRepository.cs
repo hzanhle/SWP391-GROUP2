@@ -1,7 +1,8 @@
-﻿using AdminDashboardService.DTOs;
+﻿using AdminDashboardService.Data;
+using AdminDashboardService.DTOs;
 using AdminDashboardService.ExternalDbContexts;
 using Microsoft.EntityFrameworkCore;
-using AdminDashboardService.Data;
+
 
 namespace AdminDashboardService.Repositories
 {
@@ -32,11 +33,11 @@ namespace AdminDashboardService.Repositories
 
         public async Task<DashboardSummaryDTO> GetDashboardSummaryAsync()
         {
-            _logger.LogInformation("Đang lấy dữ liệu tóm tắt cho bảng Dashboard từ cơ sở dữ liệu");
+            _logger.LogInformation("Đang lấy thông tin cho Dashboard từ nhiều cơ sở dữ liệu");
 
             try
             {
-                // Truy vấn tuần tự
+                // Sequential queries để tránh DbContext threading issues
                 var totalUsers = await GetTotalUsersAsync();
                 var usersByRole = await GetTotalUsersByRoleAsync();
                 var totalStations = await GetTotalStationsAsync();
@@ -61,12 +62,12 @@ namespace AdminDashboardService.Repositories
                     PendingLicenseApprovals = pendingApprovals.PendingLicense
                 };
 
-                _logger.LogInformation("Dashboard summary fetched successfully");
+                _logger.LogInformation("Lấy dữ liệu cho Dashboard thành công.");
                 return summary;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching dashboard summary");
+                _logger.LogError(ex, "Đã xảy ra lỗi khi tiến hành lấy dữ liệu");
                 throw;
             }
         }
@@ -130,8 +131,8 @@ namespace AdminDashboardService.Repositories
         private async Task<decimal> GetTotalRevenueAsync()
         {
             var totalRevenue = await _bookingDb.Payments
-                .Where(p => p.IsFullyPaid)
-                .SumAsync(p => (decimal?)p.PaidAmount) ?? 0;
+                .Where(p => p.Status == "Completed")
+                .SumAsync(p => p.Amount);
 
             return totalRevenue;
         }
@@ -153,7 +154,7 @@ namespace AdminDashboardService.Repositories
 
         public async Task<List<StationStatisticDTO>> GetStationStatisticsAsync()
         {
-            _logger.LogInformation("Fetching station statistics");
+            _logger.LogInformation("Đang thống kê dữ liệu trạm");
 
             var stations = await _stationDb.Stations
                 .Where(s => s.IsActive)
@@ -188,16 +189,17 @@ namespace AdminDashboardService.Repositories
 
         public async Task<List<RevenueByMonthDTO>> GetRevenueByMonthAsync(int year)
         {
-            _logger.LogInformation("Fetching revenue by month for year {Year}", year);
+            _logger.LogInformation("Đang lấy doanh thu theo tháng trong năm {Year}", year);
 
             var revenueByMonth = await _bookingDb.Payments
-                .Where(p => p.IsFullyPaid && p.FullPaymentDate.HasValue
-                    && p.FullPaymentDate.Value.Year == year)
-                .GroupBy(p => p.FullPaymentDate!.Value.Month)
+                .Where(p => p.Status == "Completed"
+                 && p.PaidAt.HasValue
+                 && p.PaidAt.Value.Year == year)
+                .GroupBy(p => p.PaidAt!.Value.Month)
                 .Select(g => new RevenueByMonthDTO
-                {
+        {
                     Month = g.Key,
-                    TotalRevenue = g.Sum(p => p.PaidAmount)
+                    TotalRevenue = g.Sum(p => p.Amount)
                 })
                 .OrderBy(r => r.Month)
                 .ToListAsync();
@@ -207,7 +209,7 @@ namespace AdminDashboardService.Repositories
 
         public async Task<List<VehicleUsageDTO>> GetTopUsedVehiclesAsync(int top = 10)
         {
-            _logger.LogInformation("Fetching top {Count} used vehicles", top);
+            _logger.LogInformation("Đang tìm {Count} xe được thuê nhiều nhất", top);
 
             var topVehicles = await _bookingDb.Orders
                 .GroupBy(o => o.VehicleId)
@@ -226,7 +228,7 @@ namespace AdminDashboardService.Repositories
 
         public async Task<UserGrowthStatisticsDTO> GetUserGrowthStatisticsAsync()
         {
-            _logger.LogInformation("Fetching user growth statistics");
+            _logger.LogInformation("Đang lấy dữ liệu thống kê tăng trưởng của người dùng.");
 
             var now = DateTime.UtcNow;
             var lastMonth = now.AddMonths(-1);

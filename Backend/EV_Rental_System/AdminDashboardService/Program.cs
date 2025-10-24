@@ -14,10 +14,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<MyDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("AdminDashboardConnection")));
 
-// External Service Databases (READ-ONLY)
+// External Service Databases (CHỈ ĐỌC LẤY DỮ LIỆU)
 builder.Services.AddDbContext<UserServiceDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("UserServiceConnection"))
-           .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)); // Read-only optimization
+           .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 
 builder.Services.AddDbContext<StationServiceDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("StationServiceConnection"))
@@ -76,10 +76,6 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
-
-// Database (EF Core)
-builder.Services.AddDbContext<MyDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // CORS
 builder.Services.AddCors(options =>
