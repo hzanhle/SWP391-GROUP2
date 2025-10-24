@@ -23,9 +23,30 @@ export default function Login() {
       const data = res.data
       const token = data?.token ?? data?.Token
       const user = data?.user ?? data?.User
+         // ---- derive userId from user object or JWT ----
+   let userId =
+     user?.userId ?? user?.UserId ??
+     user?.id     ?? user?.Id     ??
+     user?.uid    ?? null;
+
+   if (!userId && token && token.split('.').length === 3) {
+     try {
+       const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+       const payloadJwt = JSON.parse(atob(base64))
+       userId =
+         payloadJwt?.sub ||
+         payloadJwt?.userId ||
+         payloadJwt?.nameid ||
+         payloadJwt?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ||
+         null
+     } catch { /* ignore */ }
+   }
       if (token) {
         localStorage.setItem('auth.token', token)
         localStorage.setItem('auth.user', JSON.stringify(user || {}))
+             if (userId != null) {
+       localStorage.setItem('auth.userId', String(userId))
+     }
         window.dispatchEvent(new StorageEvent('storage', {
           key: 'auth.user',
           newValue: JSON.stringify(user || {}),

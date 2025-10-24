@@ -1,83 +1,441 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import Stepper from '../components/Stepper'
+import * as vehicleApi from '../api/vehicle'
+import * as stationApi from '../api/station'
+import * as bookingApi from '../api/booking'
+import { validateUserDocuments } from '/utils/documentValidation';
 
 export default function BookingNew() {
   const [step, setStep] = useState(0)
   const steps = ['Chọn điểm thuê', 'Chọn xe', 'Lịch & xác nhận']
+  
+  const [user, setUser] = useState(null)
+  const [token, setToken] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [documentError, setDocumentError] = useState(null)
+  
+  const [stations, setStations] = useState([])
+  const [models, setModels] = useState([])
+  const [vehicles, setVehicles] = useState([])
+  
+  const [selectedStation, setSelectedStation] = useState(null)
+  const [selectedModel, setSelectedModel] = useState(null)
+  const [selectedVehicle, setSelectedVehicle] = useState(null)
+  const [pickupDate, setPickupDate] = useState('')
+  const [dropoffDate, setDropoffDate] = useState('')
+  
+  const [preview, setPreview] = useState(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState(null)
+  
+  const [bookingLoading, setBookingLoading] = useState(false)
+  const [bookingError, setBookingError] = useState(null)
 
-  function next() { setStep((s) => Math.min(s + 1, steps.length - 1)) }
-  function back() { setStep((s) => Math.max(s - 1, 0)) }
+  // Initialize user and fetch data
+  useEffect(() => {
+    async function init() {
+      try {
+        const authUser = localStorage.getItem('auth.user')
+        const authToken = localStorage.getItem('auth.token')
+        const storedId  = localStorage.getItem('auth.userId')
 
-  function confirm() {
-    alert('Đã tạo đơn đặt xe')
-    window.location.hash = 'booking'
+        if (!authUser || !authToken) {
+          setError('Vui lòng đăng nhập để đặt xe')
+          window.location.hash = 'login'
+          return
+        }
+
+        const userData = JSON.parse(authUser)
+        setUser(userData)
+        setToken(authToken)
+
+        // Validate documents
+           const effectiveUserId =
+     storedId ??
+     userData?.userId ?? userData?.UserId ??
+     userData?.id     ?? userData?.Id ?? null
+
+   const docValidation = await validateUserDocuments(effectiveUserId, authToken)
+        if (!docValidation.hasAllDocuments) {
+          setDocumentError({
+            message: `Vui lòng cập nhật đầy đủ tài liệu trước khi đặt xe: ${docValidation.missingDocs.join(', ')}`,
+            missingDocs: docValidation.missingDocs,
+          })
+        }
+        
+        // Fetch stations and models
+        const [stationsRes, modelsRes, vehiclesRes] = await Promise.all([
+          stationApi.getActiveStations(authToken),
+          vehicleApi.getActiveModels(authToken),
+          vehicleApi.getActiveVehicles(authToken),
+        ])
+        
+        const stationsData = Array.isArray(stationsRes.data) ? stationsRes.data : []
+        const modelsData = Array.isArray(modelsRes.data) ? modelsRes.data : []
+        const vehiclesData = Array.isArray(vehiclesRes.data) ? vehiclesRes.data : []
+
+        setStations(stationsData)
+        setModels(modelsData)
+        setVehicles(vehiclesData)
+
+        // Pre-fill from quick_search_data if available
+        const quickSearchStr = localStorage.getItem('quick_search_data')
+        if (quickSearchStr) {
+          try {
+            const data = JSON.parse(quickSearchStr)
+            if (data.stationId) {
+              const station = stationsData.find(s => s.stationId === data.stationId)
+              if (station) setSelectedStation(station)
+            }
+            if (data.modelId) {
+              const model = modelsData.find(m => m.modelId === data.modelId)
+              if (model) setSelectedModel(model)
+              if (model) {
+                const vehicle = vehiclesData.find(v => v.modelId === data.modelId)
+                if (vehicle) setSelectedVehicle(vehicle)
+              }
+            }
+            if (data.pickupDate) setPickupDate(data.pickupDate)
+            if (data.dropoffDate) setDropoffDate(data.dropoffDate)
+            localStorage.removeItem('quick_search_data')
+          } catch (e) {
+            console.error('Error parsing quick search data:', e)
+          }
+        }
+
+        setError(null)
+      } catch (err) {
+        console.error('Error initializing booking:', err)
+        setError(err.message || 'Lỗi khi tải trang đặt xe')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    init()
+  }, [])
+
+  // Filter vehicles based on selected model
+  const filteredVehicles = selectedModel 
+    ? vehicles.filter(v => v.modelId === selectedModel.modelId)
+    : []
+
+  async function handlePreview() {
+    if (!selectedStation || !selectedVehicle || !pickupDate || !dropoffDate) {
+      setPreviewError('Vui lòng điền đầy đủ thông tin')
+      return
+    }
+    
+    if (new Date(pickupDate) >= new Date(dropoffDate)) {
+      setPreviewError('Thời gian trả xe phải sau thời gian nhận xe')
+      return
+    }
+    
+    try {
+      setPreviewLoading(true)
+      setPreviewError(null)
+      
+      const previewRes = await bookingApi.getOrderPreview({
+        userId: localStorage.getItem('auth.userId') ||
+        user?.userId || user?.UserId || user?.id || user?.Id,
+        vehicleId: selectedVehicle.vehicleId,
+        fromDate: new Date(pickupDate).toISOString(),
+        toDate: new Date(dropoffDate).toISOString(),
+        rentFeeForHour: selectedModel.rentFeeForHour,
+        modelPrice: selectedModel.modelCost,
+        paymentMethod: 'VNPay',
+      }, token)
+      
+      setPreview(previewRes.data)
+      setStep(2)
+    } catch (err) {
+      console.error('Error getting preview:', err)
+      setPreviewError(err.message || 'Lỗi khi xem trước đơn hàng')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
+  async function handleConfirmBooking() {
+    if (!preview) {
+      setBookingError('Vui lòng xem trước đơn hàng trước')
+      return
+    }
+    
+    try {
+      setBookingLoading(true)
+      setBookingError(null)
+      
+      const orderRes = await bookingApi.createOrder({
+        userId: user.userId || user.UserId,
+        vehicleId: selectedVehicle.vehicleId,
+        fromDate: new Date(pickupDate).toISOString(),
+        toDate: new Date(dropoffDate).toISOString(),
+        rentFeeForHour: selectedModel.rentFeeForHour,
+        modelPrice: selectedModel.modelCost,
+        paymentMethod: 'VNPay',
+      }, token)
+      
+      const orderId = orderRes.data.orderId
+      
+      // Store booking info for payment page
+      localStorage.setItem('pending_booking', JSON.stringify({
+        orderId,
+        totalAmount: orderRes.data.totalAmount,
+        expiresAt: orderRes.data.expiresAt,
+        vehicleInfo: {
+          station: selectedStation.name,
+          model: `${selectedModel.manufacturer} ${selectedModel.modelName}`,
+          color: selectedVehicle.color,
+        },
+        dates: {
+          from: pickupDate,
+          to: dropoffDate,
+        },
+      }))
+      
+      // Navigate to payment page
+      window.location.hash = 'payment'
+    } catch (err) {
+      console.error('Error creating booking:', err)
+      setBookingError(err.message || 'Lỗi khi tạo đơn hàng. Vui lòng thử lại.')
+    } finally {
+      setBookingLoading(false)
+    }
+  }
+
+  function next() {
+    if (step === 1 && !selectedModel) {
+      setPreviewError('Vui lòng chọn một xe')
+      return
+    }
+    setStep((s) => Math.min(s + 1, steps.length - 1))
+  }
+
+  function back() {
+    setStep((s) => Math.max(s - 1, 0))
+    setPreviewError(null)
+    setPreviewLoading(false)
+    setPreview(null)
+  }
+
+  if (loading) {
+    return (
+      <div data-figma-layer="Booking New Page">
+        <Navbar />
+        <main>
+          <section className="section">
+            <div className="container">
+              <div className="text-center" style={{ padding: '4rem 0' }}>
+                <p style={{ fontSize: '1.8rem' }}>Đang tải...</p>
+              </div>
+            </div>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    )
   }
 
   return (
     <div data-figma-layer="Booking New Page">
       <Navbar />
       <main>
-        <section id="booking-new" className="section" aria-labelledby="booking-title">
+        <section className="section">
           <div className="container">
             <div className="section-header">
-              <h1 id="booking-title" className="section-title">Đặt xe mới</h1>
+              <h1 className="section-title">Đặt xe mới</h1>
               <p className="section-subtitle">Hoàn thành 3 bước đơn giản để đặt xe.</p>
             </div>
+
+            {error && (
+              <div className="error-message" style={{ display: 'flex' }}>
+                <span>{error}</span>
+              </div>
+            )}
+
+            {documentError && (
+              <div className="error-message" style={{ display: 'flex', backgroundColor: '#fff3cd' }}>
+                <span style={{ color: '#856404' }}>
+                  ⚠️ {documentError.message}
+                  <br />
+                  <a href="#profile-docs" style={{ color: '#0066cc', textDecoration: 'underline', marginTop: '0.5rem', display: 'inline-block' }}>
+                    Cập nhật tài liệu →
+                  </a>
+                </span>
+              </div>
+            )}
 
             <div className="card">
               <div className="card-body">
                 <Stepper steps={steps} current={step} />
 
+                {/* Step 0: Select Station */}
                 {step === 0 && (
                   <div className="field">
-                    <label htmlFor="station" className="label">Điểm thuê</label>
-                    <select id="station" className="select" defaultValue="Central Hub">
-                      <option>Central Hub</option>
-                      <option>Riverside</option>
-                      <option>Airport West</option>
+                    <label htmlFor="station" className="label">Chọn điểm thuê xe</label>
+                    <select 
+                      id="station" 
+                      className="select"
+                      value={selectedStation?.stationId || ''}
+                      onChange={(e) => {
+                        const station = stations.find(s => s.stationId === Number(e.target.value))
+                        setSelectedStation(station)
+                      }}
+                    >
+                      <option value="">-- Chọn điểm thuê --</option>
+                      {stations.map(station => (
+                        <option key={station.stationId} value={station.stationId}>
+                          {station.name} - {station.location}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 )}
 
+                {/* Step 1: Select Vehicle Model */}
                 {step === 1 && (
                   <div className="field">
-                    <label htmlFor="vehicle" className="label">Chọn xe</label>
-                    <select id="vehicle" className="select" defaultValue="Tesla Model 3">
-                      <option>Tesla Model 3</option>
-                      <option>Nissan Leaf</option>
-                      <option>Hyundai Ioniq 5</option>
+                    <label htmlFor="model" className="label">Chọn mẫu xe</label>
+                    <select 
+                      id="model"
+                      className="select"
+                      value={selectedModel?.modelId || ''}
+                      onChange={(e) => {
+                        const model = models.find(m => m.modelId === Number(e.target.value))
+                        setSelectedModel(model)
+                        setSelectedVehicle(null)
+                      }}
+                    >
+                      <option value="">-- Chọn mẫu xe --</option>
+                      {models.map(model => (
+                        <option key={model.modelId} value={model.modelId}>
+                          {model.manufacturer} {model.modelName} - ${model.rentFeeForHour}/giờ
+                        </option>
+                      ))}
                     </select>
+
+                    {selectedModel && (
+                      <div style={{ marginTop: '2rem' }}>
+                        <label htmlFor="vehicle" className="label">Chọn chiếc xe cụ thể</label>
+                        <select 
+                          id="vehicle"
+                          className="select"
+                          value={selectedVehicle?.vehicleId || ''}
+                          onChange={(e) => {
+                            const vehicle = filteredVehicles.find(v => v.vehicleId === Number(e.target.value))
+                            setSelectedVehicle(vehicle)
+                          }}
+                        >
+                          <option value="">-- Chọn xe --</option>
+                          {filteredVehicles.map(vehicle => (
+                            <option key={vehicle.vehicleId} value={vehicle.vehicleId}>
+                              {vehicle.color} - {vehicle.status}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                 )}
 
+                {/* Step 2: Schedule & Confirmation */}
                 {step === 2 && (
                   <div className="booking-grid">
                     <div className="field">
-                      <label htmlFor="start" className="label">Thời gian bắt đầu</label>
-                      <input id="start" type="datetime-local" className="input" />
+                      <label htmlFor="pickup-date" className="label">Thời gian nhận xe</label>
+                      <input 
+                        id="pickup-date"
+                        type="datetime-local" 
+                        className="input"
+                        value={pickupDate}
+                        onChange={(e) => setPickupDate(e.target.value)}
+                      />
                     </div>
                     <div className="field">
-                      <label htmlFor="end" className="label">Thời gian kết thúc</label>
-                      <input id="end" type="datetime-local" className="input" />
+                      <label htmlFor="dropoff-date" className="label">Thời gian trả xe</label>
+                      <input 
+                        id="dropoff-date"
+                        type="datetime-local" 
+                        className="input"
+                        value={dropoffDate}
+                        onChange={(e) => setDropoffDate(e.target.value)}
+                      />
                     </div>
-                    <div className="summary">
-                      <h3 className="card-title">Tóm tắt</h3>
-                      <p className="card-subtext">Địa điểm: Central Hub</p>
-                      <p className="card-subtext">Xe: Tesla Model 3</p>
-                      <p className="card-subtext">Giá dự kiến: $48</p>
-                    </div>
+
+                    {previewError && (
+                      <div className="error-message" style={{ display: 'flex', gridColumn: '1 / -1' }}>
+                        <span>{previewError}</span>
+                      </div>
+                    )}
+
+                    {!preview && !previewLoading && (
+                      <div className="field" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
+                        <CTA as="button" onClick={handlePreview} disabled={!selectedVehicle || !pickupDate || !dropoffDate}>
+                          Xem trước chi phí
+                        </CTA>
+                      </div>
+                    )}
+
+                    {previewLoading && (
+                      <div className="field" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
+                        <p>Đang tính toán...</p>
+                      </div>
+                    )}
+
+                    {preview && (
+                      <div className="summary" style={{ gridColumn: '1 / -1' }}>
+                        <h3 className="card-title">Tóm tắt đơn hàng</h3>
+                        <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span className="card-subtext">Địa điểm:</span>
+                            <span className="card-subtext" style={{ fontWeight: 'bold' }}>{selectedStation?.name}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span className="card-subtext">Xe:</span>
+                            <span className="card-subtext" style={{ fontWeight: 'bold' }}>{selectedModel?.manufacturer} {selectedModel?.modelName}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span className="card-subtext">Giá thuê:</span>
+                            <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.totalRentalCost?.toFixed(2)}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span className="card-subtext">Tiền cọc:</span>
+                            <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.depositAmount?.toFixed(2)}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span className="card-subtext">Phí dịch vụ:</span>
+                            <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.serviceFee?.toFixed(2)}</span>
+                          </div>
+                          <hr style={{ margin: '1rem 0' }} />
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <h4 style={{ color: '#ff4d30', fontSize: '1.8rem' }}>Tổng cộng:</h4>
+                            <h4 style={{ color: '#ff4d30', fontSize: '1.8rem' }}>${preview.totalPaymentAmount?.toFixed(2)}</h4>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {bookingError && (
+                      <div className="error-message" style={{ display: 'flex', gridColumn: '1 / -1' }}>
+                        <span>{bookingError}</span>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                <div className="row-between">
-                  <CTA as="button" variant="ghost" onClick={back} aria-disabled={step===0}>Quay lại</CTA>
+                <div className="row-between" style={{ marginTop: '2rem' }}>
+                  <CTA as="button" variant="ghost" onClick={back}>Quay lại</CTA>
                   {step < steps.length - 1 ? (
                     <CTA as="button" onClick={next}>Tiếp tục</CTA>
                   ) : (
-                    <CTA as="button" onClick={confirm}>Xác nhận đặt</CTA>
+                    <CTA as="button" onClick={handleConfirmBooking} disabled={!preview || bookingLoading}>
+                      {bookingLoading ? 'Đang xử lý...' : 'Xác nhận & Thanh toán'}
+                    </CTA>
                   )}
                 </div>
               </div>

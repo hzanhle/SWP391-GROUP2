@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
+import * as vehicleApi from "../api/vehicle";
+import * as stationApi from "../api/station";
 
 function SearchBar() {
   const [modal, setModal] = useState(false);
+  const [models, setModels] = useState([]);
+  const [stations, setStations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [carType, setCarType] = useState("");
+  const [selectedModel, setSelectedModel] = useState(null);
   const [pickUp, setPickUp] = useState("");
   const [dropOff, setDropOff] = useState("");
   const [pickTime, setPickTime] = useState("");
@@ -18,6 +25,32 @@ function SearchBar() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [zipcode, setZipCode] = useState("");
+
+  // Fetch models and stations on component mount
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const authToken = localStorage.getItem('auth.token');
+
+        const [modelsRes, stationsRes] = await Promise.all([
+          vehicleApi.getActiveModels(authToken),
+          stationApi.getActiveStations(authToken),
+        ]);
+
+        setModels(Array.isArray(modelsRes.data) ? modelsRes.data : []);
+        setStations(Array.isArray(stationsRes.data) ? stationsRes.data : []);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
 
   const handleName = (e) => {
     setName(e.target.value);
@@ -80,14 +113,29 @@ function SearchBar() {
 
   const confirmBooking = (e) => {
     e.preventDefault();
-    setModal(!modal);
-    const doneMsg = document.querySelector(".booking-done");
-    doneMsg.style.display = "flex";
+
+    // Store booking data for pre-filling BookingNew page
+    if (selectedModel) {
+      localStorage.setItem('quick_search_data', JSON.stringify({
+        modelId: selectedModel.modelId,
+        stationId: stations.find(s => s.name === pickUp)?.stationId,
+        pickupDate: pickTime,
+        dropoffDate: dropTime,
+      }));
+    }
+
+    // Navigate to booking-new page
+    window.location.hash = 'booking-new';
   };
 
   const handleCar = (e) => {
-    setCarType(e.target.value);
-    setCarImg(e.target.value);
+    const modelId = Number(e.target.value);
+    const selected = models.find(m => m.modelId === modelId);
+    if (selected) {
+      setCarType(`${selected.manufacturer} ${selected.modelName}`);
+      setSelectedModel(selected);
+      setCarImg(selected.imageUrls?.[0] || e.target.value);
+    }
   };
 
   const handlePick = (e) => {
@@ -138,14 +186,17 @@ function SearchBar() {
                   <label>
                     <i className="fa-solid fa-car"></i> &nbsp; Select Vehicle Type <b>*</b>
                   </label>
-                  <select value={carType} onChange={handleCar}>
-                    <option>Select your vehicle type</option>
-                    <option value="Tesla Model 3">Tesla Model 3</option>
-                    <option value="Tesla Model Y">Tesla Model Y</option>
-                    <option value="Nissan Leaf">Nissan Leaf</option>
-                    <option value="Chevy Bolt">Chevy Bolt</option>
-                    <option value="Hyundai Ioniq">Hyundai Ioniq</option>
-                    <option value="BMW i4">BMW i4</option>
+                  <select value={selectedModel?.modelId || ''} onChange={handleCar}>
+                    <option value="">Select your vehicle type</option>
+                    {models.length > 0 ? (
+                      models.map(model => (
+                        <option key={model.modelId} value={model.modelId}>
+                          {model.manufacturer} {model.modelName} - ${model.rentFeeForHour}/hour
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>Loading vehicles...</option>
+                    )}
                   </select>
                 </div>
 
@@ -155,11 +206,15 @@ function SearchBar() {
                   </label>
                   <select value={pickUp} onChange={handlePick}>
                     <option>Select pickup station</option>
-                    <option>Downtown Station</option>
-                    <option>Airport Station</option>
-                    <option>City Center Station</option>
-                    <option>Harbor Station</option>
-                    <option>North Station</option>
+                    {stations.length > 0 ? (
+                      stations.map(station => (
+                        <option key={station.stationId} value={station.name}>
+                          {station.name} - {station.location}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>Loading stations...</option>
+                    )}
                   </select>
                 </div>
 
@@ -169,11 +224,15 @@ function SearchBar() {
                   </label>
                   <select value={dropOff} onChange={handleDrop}>
                     <option>Select dropoff station</option>
-                    <option>Downtown Station</option>
-                    <option>Airport Station</option>
-                    <option>City Center Station</option>
-                    <option>Harbor Station</option>
-                    <option>North Station</option>
+                    {stations.length > 0 ? (
+                      stations.map(station => (
+                        <option key={station.stationId} value={station.name}>
+                          {station.name} - {station.location}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>Loading stations...</option>
+                    )}
                   </select>
                 </div>
 
@@ -277,8 +336,11 @@ function SearchBar() {
           </div>
           <div className="booking-modal__car-info__model">
             <h5>
-              <span>Vehicle -</span> {carType}
+              <span>Vehicle -</span> {selectedModel ? `${selectedModel.manufacturer} ${selectedModel.modelName}` : carType}
             </h5>
+            {selectedModel?.imageUrls?.[0] && (
+              <img src={selectedModel.imageUrls[0]} alt={`${selectedModel.manufacturer} ${selectedModel.modelName}`} style={{ maxHeight: '200px', objectFit: 'contain' }} />
+            )}
           </div>
         </div>
         <div className="booking-modal__person-info">

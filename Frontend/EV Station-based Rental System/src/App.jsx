@@ -11,6 +11,7 @@ import Stations from './pages/Stations'
 import Vehicles from './pages/Vehicles'
 import BookingNew from './pages/BookingNew'
 import BookingDetail from './pages/BookingDetail'
+import Payment from './pages/Payment'
 import CheckIn from './pages/CheckIn'
 import Return from './pages/Return'
 import History from './pages/History'
@@ -38,7 +39,7 @@ function resolveRoute() {
     if (!hash && path.toLowerCase() === 'admin') return 'admin'
     if (hash.startsWith('admin')) return hash.replace('#', '')
     // If admin tries to access member pages, redirect to admin
-    if (['home', 'stations', 'vehicles', 'booking', 'booking-new', 'check-in', 'return', 'history', 'profile', 'profile-docs'].includes(hash)) {
+    if (['home', 'stations', 'vehicles', 'booking', 'booking-new', 'payment', 'check-in', 'return', 'history', 'profile', 'profile-docs'].includes(hash)) {
       return 'admin'
     }
     // Default for admin: show admin dashboard
@@ -56,6 +57,7 @@ function resolveRoute() {
     case 'stations': return 'stations'
     case 'vehicles': return 'vehicles'
     case 'booking-new': return 'booking-new'
+    case 'payment': return 'payment'
     case 'booking': return 'booking'
     case 'check-in': return 'check-in'
     case 'return': return 'return'
@@ -92,6 +94,7 @@ export default function App() {
       {routeData === 'stations' && <Stations />}
       {routeData === 'vehicles' && <Vehicles />}
       {routeData === 'booking-new' && <BookingNew />}
+      {routeData === 'payment' && <Payment />}
       {routeData === 'booking' && <BookingDetail />}
       {routeData === 'check-in' && <CheckIn />}
       {routeData === 'return' && <Return />}
