@@ -10,34 +10,54 @@ import * as userApi from '../src/api/client';
  * @returns {Promise<{hasAllDocuments: boolean, missingDocs: string[], citizenInfo: object|null, driverLicense: object|null}>}
  */
 export async function validateUserDocuments(userId, token) {
-      if (userId == null || userId === '' || userId === 'undefined') {
-    console.warn('validateUserDocuments: missing userId → skip API calls')
+      // Convert to number and validate
+  const numUserId = Number(userId)
+  console.log('[validateUserDocuments] received userId:', userId, 'type:', typeof userId, 'numUserId:', numUserId, 'isNaN:', isNaN(numUserId))
+
+  // Check for various forms of invalid userId
+  if (
+    userId == null ||
+    userId === '' ||
+    userId === 'undefined' ||
+    String(userId).toLowerCase() === 'undefined' ||
+    isNaN(numUserId) ||
+    numUserId <= 0
+  ) {
+    console.error('[validateUserDocuments] Invalid userId detected. Returning error state.', { userId, numUserId })
     return {
       hasAllDocuments: false,
-      missingDocs: ['Thiếu userId / chưa đăng nhập'],
+      missingDocs: ['Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.'],
       citizenInfo: null,
       driverLicense: null,
-      error: new Error('NO_USER_ID')
+      error: new Error('INVALID_USER_ID')
     }
   }
   try {
     const [citizenRes, licenseRes] = await Promise.all([
-      userApi.getCitizenInfo(userId, token),
-      userApi.getDriverLicense(userId, token),
+      userApi.getCitizenInfo(numUserId, token),
+      userApi.getDriverLicense(numUserId, token),
     ])
 
     const citizenInfo = citizenRes.data
     const driverLicense = licenseRes.data
     const missingDocs = []
 
+    console.log('[validateUserDocuments] citizenInfo:', citizenInfo)
+    console.log('[validateUserDocuments] driverLicense:', driverLicense)
+
     // Check if citizen info exists and is approved
-    if (!citizenInfo || citizenInfo.status !== 'Approved') {
+    // Status values: "Đã xác nhận" (Approved), "Chờ xác thực" (Pending), "Từ chối" (Rejected)
+    const citizenApproved = citizenInfo?.status === 'Đã xác nhận' || citizenInfo?.status === 'Approved'
+    if (!citizenInfo || !citizenApproved) {
       missingDocs.push('Hồ sơ CCCD/CMND')
+      console.log('[validateUserDocuments] Citizen info missing/not approved. Status:', citizenInfo?.status)
     }
 
     // Check if driver license exists and is approved
-    if (!driverLicense || driverLicense.status !== 'Approved') {
+    const licenseApproved = driverLicense?.status === 'Đã xác nhận' || driverLicense?.status === 'Approved'
+    if (!driverLicense || !licenseApproved) {
       missingDocs.push('Giấy phép lái xe')
+      console.log('[validateUserDocuments] Driver license missing/not approved. Status:', driverLicense?.status)
     }
 
     return {

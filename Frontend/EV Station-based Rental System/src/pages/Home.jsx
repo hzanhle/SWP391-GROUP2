@@ -1,5 +1,4 @@
 import Hero from "../components/Hero";
-import SearchBar from "../components/SearchBar";
 import HowItWorks from "../components/HowItWorks";
 import FeaturedModels from "../components/FeaturedModels";
 import Banner from "../components/Banner";
@@ -12,7 +11,6 @@ function Home() {
   return (
     <>
       <Hero />
-      <SearchBar />
       <FeaturedModels />
       <HowItWorks />
       <Banner />

@@ -43,6 +43,8 @@ export default function BookingNew() {
         const authToken = localStorage.getItem('auth.token')
         const storedId  = localStorage.getItem('auth.userId')
 
+        console.log('[BookingNew] LocalStorage values:', { authUser, authToken, storedId })
+
         if (!authUser || !authToken) {
           setError('Vui lòng đăng nhập để đặt xe')
           window.location.hash = 'login'
@@ -50,16 +52,42 @@ export default function BookingNew() {
         }
 
         const userData = JSON.parse(authUser)
+        console.log('[BookingNew] Parsed userData:', userData)
+
         setUser(userData)
         setToken(authToken)
 
-        // Validate documents
-           const effectiveUserId =
-     storedId ??
-     userData?.userId ?? userData?.UserId ??
-     userData?.id     ?? userData?.Id ?? null
+        // Validate documents - use stored userId as primary source
+        let effectiveUserId = storedId ? Number(storedId) : null
+        console.log('[BookingNew] storedId:', storedId, '→ effectiveUserId:', effectiveUserId, 'isNaN:', isNaN(effectiveUserId))
 
+        // Fallback to extracting from user object if stored ID not available
+        if (!effectiveUserId || isNaN(effectiveUserId)) {
+          const fallbackId = userData?.userId ?? userData?.UserId ??
+            userData?.id     ?? userData?.Id ?? null
+          effectiveUserId = Number(fallbackId)
+          console.log('[BookingNew] Fallback extraction: fallbackId =', fallbackId, '→ effectiveUserId =', effectiveUserId)
+        }
+
+        // If still invalid, prevent proceeding
+        if (!effectiveUserId || isNaN(effectiveUserId)) {
+          console.error('[BookingNew] Invalid userId. Extracted values:', {
+            storedId,
+            userIdField: userData?.userId,
+            UserIdField: userData?.UserId,
+            idField: userData?.id,
+            IdField: userData?.Id
+          })
+          setError('Không thể xác định ID người dùng. Vui lòng đăng nhập lại.')
+          window.location.hash = 'login'
+          return
+        }
+
+   console.log('[BookingNew] About to validate documents with userId:', effectiveUserId)
    const docValidation = await validateUserDocuments(effectiveUserId, authToken)
+
+        console.log('[BookingNew] Document validation result:', docValidation)
+
         if (!docValidation.hasAllDocuments) {
           setDocumentError({
             message: `Vui lòng cập nhật đầy đủ tài liệu trước khi đặt xe: ${docValidation.missingDocs.join(', ')}`,
@@ -73,10 +101,12 @@ export default function BookingNew() {
           vehicleApi.getActiveModels(authToken),
           vehicleApi.getActiveVehicles(authToken),
         ])
-        
+
         const stationsData = Array.isArray(stationsRes.data) ? stationsRes.data : []
         const modelsData = Array.isArray(modelsRes.data) ? modelsRes.data : []
         const vehiclesData = Array.isArray(vehiclesRes.data) ? vehiclesRes.data : []
+
+        console.log('[BookingNew] Loaded data:', { stationsData, modelsData, vehiclesData })
 
         setStations(stationsData)
         setModels(modelsData)
@@ -139,9 +169,14 @@ export default function BookingNew() {
       setPreviewLoading(true)
       setPreviewError(null)
       
+      const previewUserId = Number(localStorage.getItem('auth.userId')) || Number(user?.userId || user?.UserId || user?.id || user?.Id)
+      if (!previewUserId || isNaN(previewUserId)) {
+        setPreviewError('Không thể xác định ID người dùng')
+        return
+      }
+
       const previewRes = await bookingApi.getOrderPreview({
-        userId: localStorage.getItem('auth.userId') ||
-        user?.userId || user?.UserId || user?.id || user?.Id,
+        userId: previewUserId,
         vehicleId: selectedVehicle.vehicleId,
         fromDate: new Date(pickupDate).toISOString(),
         toDate: new Date(dropoffDate).toISOString(),
@@ -170,8 +205,14 @@ export default function BookingNew() {
       setBookingLoading(true)
       setBookingError(null)
       
+      const bookingUserId = Number(user?.userId || user?.UserId || user?.id || user?.Id)
+      if (!bookingUserId || isNaN(bookingUserId)) {
+        setBookingError('Không thể xác định ID người dùng')
+        return
+      }
+
       const orderRes = await bookingApi.createOrder({
-        userId: user.userId || user.UserId,
+        userId: bookingUserId,
         vehicleId: selectedVehicle.vehicleId,
         fromDate: new Date(pickupDate).toISOString(),
         toDate: new Date(dropoffDate).toISOString(),
@@ -209,8 +250,12 @@ export default function BookingNew() {
   }
 
   function next() {
+    if (step === 0 && !selectedStation) {
+      setPreviewError('Vui lòng chọn điểm thuê xe')
+      return
+    }
     if (step === 1 && !selectedModel) {
-      setPreviewError('Vui lòng chọn một xe')
+      setPreviewError('Vui lòng chọn mẫu xe')
       return
     }
     setStep((s) => Math.min(s + 1, steps.length - 1))
@@ -357,7 +402,7 @@ export default function BookingNew() {
                       />
                     </div>
                     <div className="field">
-                      <label htmlFor="dropoff-date" className="label">Thời gian trả xe</label>
+                      <label htmlFor="dropoff-date" className="label">Th���i gian trả xe</label>
                       <input 
                         id="dropoff-date"
                         type="datetime-local" 

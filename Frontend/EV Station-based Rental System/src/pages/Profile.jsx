@@ -47,7 +47,8 @@ export default function Profile() {
     setCitizen((c) => ({ ...c, FullName: u.fullName || '' }))
 
     const token = localStorage.getItem('auth.token') || ''
-    const userId = u.id || u.Id
+    const storedUserId = localStorage.getItem('auth.userId')
+    const userId = Number(storedUserId) || Number(u?.userId || u?.UserId || u?.id || u?.Id)
 
     const runningOnHost = typeof window !== 'undefined' ? window.location.hostname : ''
     const isLocalApi = API_BASE.startsWith('http://localhost') || API_BASE.startsWith('https://localhost')
@@ -58,7 +59,7 @@ export default function Profile() {
       return
     }
 
-    if (API_BASE && token && userId) {
+    if (API_BASE && token && userId && !isNaN(userId)) {
       Promise.allSettled([
         api.getCitizenInfo(userId, token),
         api.getDriverLicense(userId, token),

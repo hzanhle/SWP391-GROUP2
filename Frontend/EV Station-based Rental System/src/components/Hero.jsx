@@ -8,9 +8,7 @@ function Hero() {
   };
 
   const bookBtn = () => {
-    document
-      .querySelector("#booking-section")
-      .scrollIntoView({ behavior: "smooth" });
+    window.location.hash = 'booking-new';
   };
 
   useEffect(() => {
@@ -44,7 +42,7 @@ function Hero() {
                 <a
                   onClick={bookBtn}
                   className="hero-content__text__btns__book-ride"
-                  href="#booking-section"
+                  href="#booking-new"
                   style={{color: "white", textDecoration: "none"}}
                 >
                   Book Now &nbsp; <i className="fa-solid fa-circle-check"></i>
