@@ -26,17 +26,13 @@ namespace AdminDashboardService.ExternalModels.BookingServiceModels
         [Key]
         public int PaymentId { get; set; }
         public int OrderId { get; set; }
+        public decimal Amount { get; set; }
         public string PaymentMethod { get; set; } = string.Empty;
-        public string Status { get; set; } = "Pending";
-        public bool IsDeposited { get; set; } = false;
-        public decimal DepositedAmount { get; set; } = 0;
-        public DateTime? DepositDate { get; set; }
-        public string? DepositTransactionCode { get; set; }
-        public bool IsFullyPaid { get; set; } = false;
-        public decimal PaidAmount { get; set; } = 0;
-        public DateTime? FullPaymentDate { get; set; }
-        public string? TransactionCode { get; set; }
-        public string? Notes { get; set; }
+        public string Status { get; set; } = "Pending"; // Store as string: "Pending", "Completed", "Failed", "Refunded"
+        
+        public string? TransactionId { get; set; }
+        public DateTime? PaidAt { get; set; }
+        public string? PaymentGatewayResponse { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }
