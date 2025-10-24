@@ -10,6 +10,7 @@ namespace BookingService
         public DbSet<OnlineContract> OnlineContracts { get; set; }
         public DbSet<TrustScore> TrustScores { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Feedback> Feedbacks { get; set; }
 
         public MyDbContext(DbContextOptions<MyDbContext> options) : base(options) { }
 

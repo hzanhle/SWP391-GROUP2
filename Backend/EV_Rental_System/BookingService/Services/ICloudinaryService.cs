@@ -1,8 +1,8 @@
 ﻿namespace BookingService.Services
 {
-    public interface IGoogleDriveService
+    public interface ICloudinaryService
     {
         Task<string?> UploadFileAsync(string filePath, string fileName);
-        Task<bool> DeleteFileAsync(string fileId);
+        Task<bool> DeleteFileAsync(string publicId);
     }
 }

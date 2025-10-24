@@ -4,7 +4,6 @@ using BookingService.Models.ModelSettings;
 using BookingService.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using System;
 using System.Text;
 using File = System.IO.File;
 
@@ -13,7 +12,7 @@ namespace BookingService.Services
     public class OnlineContractService : IOnlineContractService
     {
         private readonly IPdfConverterService _pdfConverter;
-        private readonly IGoogleDriveService _googleDriveService;
+        private readonly ICloudinaryService _cloudinaryService;
         private readonly ContractSettings _contractSettings;
         private readonly PdfSettings _pdfSettings;
         private readonly IOnlineContractRepository _contractRepo;
@@ -26,7 +25,7 @@ namespace BookingService.Services
         private static readonly SemaphoreSlim _contractNumberLock = new SemaphoreSlim(1, 1);
 
         public OnlineContractService(
-            IGoogleDriveService googleDriveService,
+            ICloudinaryService cloudinaryService,
             IOnlineContractRepository contractRepo,
             IEmailService emailService,
             ILogger<OnlineContractService> logger,
@@ -36,13 +35,13 @@ namespace BookingService.Services
             IOptions<ContractSettings> contractSettings,
             IOptions<PdfSettings> pdfSettings)
         {
-            _googleDriveService = googleDriveService;
-            _contractRepo = contractRepo;
-            _emailService = emailService;
-            _logger = logger;
-            _unitOfWork = unitOfWork;
-            _configuration = configuration;
-            _pdfConverter = pdfConverter;
+            _cloudinaryService = cloudinaryService ?? throw new ArgumentNullException(nameof(cloudinaryService));
+            _contractRepo = contractRepo ?? throw new ArgumentNullException(nameof(contractRepo));
+            _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _pdfConverter = pdfConverter ?? throw new ArgumentNullException(nameof(pdfConverter));
             _contractSettings = contractSettings?.Value ?? throw new ArgumentNullException(nameof(contractSettings));
             _pdfSettings = pdfSettings?.Value ?? throw new ArgumentNullException(nameof(pdfSettings));
         }
@@ -76,29 +75,33 @@ namespace BookingService.Services
 
                     _logger.LogInformation("Generated unique contract number: {ContractNumber}", contractNumber);
 
-                    // 2.1. Fill default company info nếu chưa có
+                    // 3. Fill default company info nếu chưa có
                     FillDefaultCompanyInfo(contractData);
 
-                    // 3. Tạo PDF từ dữ liệu
+                    // 4. Tạo PDF từ dữ liệu
                     var pdfPath = await GeneratePdfAsync(contractData);
                     _logger.LogInformation("PDF generated at {PdfPath}", pdfPath);
 
-                    // 4. Tạo entity OnlineContract
-                    var contract = MapToEntity(contractData, pdfPath);
+                    // 5. Upload lên Google Drive
+                    var cloudinaryUrl = await UploadToCloudinaryAsync(contractNumber, pdfPath);
+                    _logger.LogInformation("PDF uploaded to Drive: {DriveLink}", cloudinaryUrl);
 
-                    // 5. ✅ Lưu vào database qua Repository (Repository tự SaveChanges)
+                    // 6. Tạo entity OnlineContract
+                    var contract = MapToEntity(contractData, cloudinaryUrl);
+
+                    // 7. ✅ Lưu vào database qua Repository (Repository tự SaveChanges)
                     var savedContract = await _contractRepo.CreateAsync(contract);
 
                     _logger.LogInformation(
                         "Contract {ContractId} saved to database with number {ContractNumber}",
                         savedContract.OnlineContractId, savedContract.ContractNumber);
 
-                    // 6. Gửi email bất đồng bộ SAU KHI LƯU DB THÀNH CÔNG (không block response)
+                    // 8. Gửi email bất đồng bộ SAU KHI LƯU DB THÀNH CÔNG (không block response)
                     _ = Task.Run(async () =>
                     {
                         try
                         {
-                            await SendContractEmailAsync(contractData, pdfPath);
+                            await SendContractEmailAsync(contractData, cloudinaryUrl);
                         }
                         catch (Exception ex)
                         {
@@ -108,7 +111,10 @@ namespace BookingService.Services
                         }
                     });
 
-                    // 7. Trả về response
+                    // 9. Xóa file local sau khi upload thành công
+                    DeleteLocalFile(pdfPath);
+
+                    // 10. Trả về response
                     return MapToDetailsDto(savedContract);
                 }
                 catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx
@@ -313,15 +319,89 @@ namespace BookingService.Services
 
         #endregion
 
+        #region Private Helpers - Google Drive
+
+        /// <summary>
+        /// Upload PDF lên Google Drive và trả về link
+        /// </summary>
+        private async Task<string> UploadToCloudinaryAsync(string contractNumber, string pdfPath)
+        {
+            try
+            {
+                _logger.LogInformation("Uploading contract {ContractNumber} to Cloudinary", contractNumber);
+
+                var fileName = $"{contractNumber}.pdf";
+                var uploadUrl = await _cloudinaryService.UploadFileAsync(pdfPath, fileName);
+
+                if (string.IsNullOrEmpty(uploadUrl))
+                {
+                    throw new InvalidOperationException("Upload Cloudinary thất bại");
+                }
+
+                _logger.LogInformation("✓ Contract uploaded successfully: {Url}", uploadUrl);
+                return uploadUrl;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading contract {ContractNumber} to Cloudinary", contractNumber);
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region Private Helpers - Email
+
+        /// <summary>
+        /// Gửi email hợp đồng với Google Drive link
+        /// </summary>
+        private async Task SendContractEmailAsync(ContractDataDto data, string driveLink)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "Sending contract email to {Email} for Order {OrderId}",
+                    data.CustomerEmail, data.OrderId);
+
+                var emailSent = await _emailService.SendContractEmailAsync(
+                    toEmail: data.CustomerEmail,
+                    customerName: data.CustomerName,
+                    contractNumber: data.ContractNumber,
+                    driveLink: driveLink);
+
+                if (emailSent)
+                {
+                    _logger.LogInformation(
+                        "✅ Contract email sent successfully to {Email} for Order {OrderId}",
+                        data.CustomerEmail, data.OrderId);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "⚠️ Failed to send contract email to {Email} for Order {OrderId}",
+                        data.CustomerEmail, data.OrderId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Error sending contract email to {Email} for Order {OrderId}",
+                    data.CustomerEmail, data.OrderId);
+                // Không throw exception - email failure không nên làm fail cả process
+            }
+        }
+
+        #endregion
+
         #region Private Helpers - Mapping
 
-        private OnlineContract MapToEntity(ContractDataDto data, string pdfPath)
+        private OnlineContract MapToEntity(ContractDataDto data, string driveLink)
         {
             return new OnlineContract
             {
                 OrderId = data.OrderId,
                 ContractNumber = data.ContractNumber,
-                ContractFilePath = pdfPath,
+                ContractFilePath = driveLink, // ✅ Lưu Drive link thay vì local path
                 SignedAt = data.PaidAt ?? data.PaymentDate,
                 SignatureData = data.TransactionId,
                 TemplateVersion = 1,
@@ -337,7 +417,7 @@ namespace BookingService.Services
                 OrderId = contract.OrderId,
                 ContractNumber = contract.ContractNumber,
                 Status = ContractStatus.Signed,
-                DownloadUrl = GenerateDownloadUrl(contract.ContractFilePath),
+                DownloadUrl = contract.ContractFilePath, // ✅ Trả về Drive link
                 CreatedAt = contract.CreatedAt,
                 PaidAt = contract.SignedAt,
                 TransactionId = contract.SignatureData,
@@ -602,82 +682,6 @@ namespace BookingService.Services
 
         #endregion
 
-        #region Private Helpers - Email
-
-        private async Task SendContractEmailAsync(ContractDataDto data, string pdfPath)
-        {
-            try
-            {
-                // 1. Kiểm tra file tồn tại
-                if (!File.Exists(pdfPath))
-                {
-                    _logger.LogError("PDF file not found at {PdfPath}", pdfPath);
-                    throw new FileNotFoundException($"Không tìm thấy file hợp đồng tại: {pdfPath}");
-                }
-
-                _logger.LogInformation(
-                    "Bắt đầu upload hợp đồng {ContractNumber} lên Google Drive",
-                    data.ContractNumber);
-
-                // 2. Upload lên Google Drive
-                var fileName = $"Contract_{data.ContractNumber}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.pdf";
-                var driveLink = await _googleDriveService.UploadFileAsync(pdfPath, fileName);
-
-                if (string.IsNullOrEmpty(driveLink))
-                {
-                    _logger.LogError(
-                        "Không thể upload hợp đồng {ContractNumber} lên Google Drive",
-                        data.ContractNumber);
-                    throw new Exception("Upload Google Drive thất bại");
-                }
-
-                _logger.LogInformation("✅ Upload thành công. Drive link: {Link}", driveLink);
-
-                // 3. Gửi email với link Google Drive
-                var emailSent = await _emailService.SendContractEmailAsync(
-                    toEmail: data.CustomerEmail,
-                    customerName: data.CustomerName,
-                    contractNumber: data.ContractNumber,
-                    driveLink: driveLink);
-
-                if (emailSent)
-                {
-                    _logger.LogInformation(
-                        "✅ Đã gửi email thành công đến {Email} cho Order {OrderId}, Contract {ContractNumber}",
-                        data.CustomerEmail, data.OrderId, data.ContractNumber);
-                }
-                else
-                {
-                    _logger.LogWarning(
-                        "⚠️ Gửi email thất bại đến {Email} cho Order {OrderId}",
-                        data.CustomerEmail, data.OrderId);
-                }
-
-                // 4. Xóa file local sau khi upload thành công
-                try
-                {
-                    if (System.IO.File.Exists(pdfPath))
-                    {
-                        File.Delete(pdfPath);
-                        _logger.LogInformation("Đã xóa file local: {PdfPath}", pdfPath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Không thể xóa file local: {PdfPath}", pdfPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Lỗi khi xử lý email hợp đồng cho {Email}, Order {OrderId}",
-                    data.CustomerEmail, data.OrderId);
-                throw;
-            }
-        }
-
-        #endregion
-
         #region Private Helpers - Utilities
 
         private void FillDefaultCompanyInfo(ContractDataDto data)
@@ -695,11 +699,24 @@ namespace BookingService.Services
                 data.CompanyRepresentative = _contractSettings.CompanyRepresentative;
         }
 
-        private string GenerateDownloadUrl(string pdfPath)
+        /// <summary>
+        /// Xóa file local sau khi upload thành công
+        /// </summary>
+        private void DeleteLocalFile(string pdfPath)
         {
-            var fileName = Path.GetFileName(pdfPath);
-            var baseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://api.example.com";
-            return $"{baseUrl}/api/contracts/download?file={Uri.EscapeDataString(fileName)}";
+            try
+            {
+                if (File.Exists(pdfPath))
+                {
+                    File.Delete(pdfPath);
+                    _logger.LogInformation("✅ Deleted local file: {PdfPath}", pdfPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "⚠️ Failed to delete local file: {PdfPath}", pdfPath);
+                // Không throw exception - việc xóa file không quan trọng lắm
+            }
         }
 
         #endregion
