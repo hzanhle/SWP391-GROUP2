@@ -1,0 +1,78 @@
+/* Additional styles for FeaturedStations and other components */
+.section {
+  padding: 5rem 0;
+}
+
+.section-header {
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.section-title {
+  font-size: 4.2rem;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #010103;
+}
+
+.section-subtitle {
+  font-size: 1.6rem;
+  font-family: "Rubik", sans-serif;
+  color: #706f7b;
+  margin: 0;
+}
+
+.card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 20px 0 rgba(0, 0, 0, 0.1);
+}
+
+.card-body {
+  padding: 2rem;
+}
+
+.card-subtext {
+  font-size: 1.6rem;
+  color: #706f7b;
+  font-family: "Rubik", sans-serif;
+}
+
+.carousel {
+  display: flex;
+  flex-direction: column;
+}
+
+.carousel-track {
+  display: flex;
+  gap: 2rem;
+  overflow-x: auto;
+  padding: 1rem 0;
+}
+
+.carousel-track > div {
+  flex: 0 0 auto;
+  min-width: 300px;
+}
+
+/* Station Card styles */
+.station-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 20px 0 rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  text-align: center;
+}
+
+.station-card h3 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  color: #010103;
+}
+
+.station-card p {
+  font-size: 1.4rem;
+  color: #706f7b;
+  margin: 0;
+}

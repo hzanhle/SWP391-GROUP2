@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Signup from './pages/Signup'
 import Login from './pages/Login'
@@ -60,30 +61,27 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  if (routeData === 'signup') return <Signup />
-  if (routeData === 'login') return <Login />
-  if (routeData === 'forgot-password') return <ForgotPassword />
-  if (routeData === 'verify-email') return <VerifyEmail />
-  if (routeData === 'profile') return <Profile />
-  if (routeData === 'profile-docs') return <ProfileDocs />
-  if (routeData === 'stations') return <Stations />
-  if (routeData === 'vehicles') return <Vehicles />
-  if (routeData === 'booking-new') return <BookingNew />
-  if (routeData === 'booking') return <BookingDetail />
-  if (routeData === 'check-in') return <CheckIn />
-  if (routeData === 'return') return <Return />
-  if (routeData === 'history') return <History />
-  if (routeData === 'admin') {
-    return <AdminDashboard />
-  }
-  if (routeData === 'admin-users') {
-    return <AdminUsers />
-  }
-  if (routeData === 'admin-models') {
-    return <AdminModels />
-  }
-  if (routeData === 'staff-verify') {
-    return <StaffVerification />
-  }
-  return <Home />
+  return (
+    <>
+      <Navbar />
+      {routeData === 'signup' && <Signup />}
+      {routeData === 'login' && <Login />}
+      {routeData === 'forgot-password' && <ForgotPassword />}
+      {routeData === 'verify-email' && <VerifyEmail />}
+      {routeData === 'profile' && <Profile />}
+      {routeData === 'profile-docs' && <ProfileDocs />}
+      {routeData === 'stations' && <Stations />}
+      {routeData === 'vehicles' && <Vehicles />}
+      {routeData === 'booking-new' && <BookingNew />}
+      {routeData === 'booking' && <BookingDetail />}
+      {routeData === 'check-in' && <CheckIn />}
+      {routeData === 'return' && <Return />}
+      {routeData === 'history' && <History />}
+      {routeData === 'admin' && <AdminDashboard />}
+      {routeData === 'admin-users' && <AdminUsers />}
+      {routeData === 'admin-models' && <AdminModels />}
+      {routeData === 'staff-verify' && <StaffVerification />}
+      {routeData === 'home' && <Home />}
+    </>
+  )
 }

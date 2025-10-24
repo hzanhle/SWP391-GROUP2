@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import './styles/tokens.css'
 import './styles/main.css'
+import './styles/featured.css'
 import App from './App.jsx'
 
 // Initialize theme early to avoid flash

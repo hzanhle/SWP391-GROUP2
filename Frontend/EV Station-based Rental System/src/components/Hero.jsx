@@ -1,23 +1,89 @@
-import React from 'react'
-import CTA from './CTA'
-import illustration from '../assets/ev-illustration.png'
+import { useEffect, useState } from "react";
 
-export default function Hero() {
+function Hero() {
+  const [goUp, setGoUp] = useState(false);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: (0, 0), behavior: "smooth" });
+  };
+
+  const bookBtn = () => {
+    document
+      .querySelector("#booking-section")
+      .scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const onPageScroll = () => {
+      if (window.pageYOffset > 600) {
+        setGoUp(true);
+      } else {
+        setGoUp(false);
+      }
+    };
+    window.addEventListener("scroll", onPageScroll);
+
+    return () => {
+      window.removeEventListener("scroll", onPageScroll);
+    };
+  }, []);
   return (
-    <section id="hero" className="hero section" data-figma-layer="Hero" data-tailwind='class: "bg-gradient-to-b from-sky-500/10 to-transparent py-10"'>
-      <div className="container hero-inner">
-        <div>
-          <h1 className="hero-title gradient-text" data-figma-layer="H1" data-tailwind='class: "text-5xl font-bold"'>Charge, drive, repeat.</h1>
-          <p className="hero-sub" data-figma-layer="Subtext" data-tailwind='class: "text-slate-600 text-lg mt-2"'>Find nearby EV charging stations and rent vehicles in minutes—simple, fast, and reliable.</p>
-          <div className="hero-actions" data-figma-layer="Actions" data-tailwind='class: "flex gap-4 mt-6 flex-wrap"'>
-            <CTA as="a" href="#search" variant="gradient" aria-label="Find a Station" data-figma-layer="CTA" data-tailwind='class: "bg-sky-500 text-white px-6 py-3 rounded-lg shadow-md"'>Find a Station</CTA>
-            <CTA as="a" href="#how" variant="ghost" aria-label="Learn how it works" data-figma-layer="CTA" data-tailwind='class: "border border-slate-200 text-slate-900 px-6 py-3 rounded-lg"'>How it works</CTA>
+    <>
+      <section id="home" className="hero-section">
+        <div className="container">
+          <div className="hero-content">
+            <div className="hero-content__text">
+              <h4>Charge your journey</h4>
+              <h1>
+                Power up your <span>EV experience</span>
+              </h1>
+              <p>
+                Find the perfect electric vehicle for your needs. Competitive rates, flexible booking options, and seamless charging station access everywhere.
+              </p>
+              <div className="hero-content__text__btns">
+                <a
+                  onClick={bookBtn}
+                  className="hero-content__text__btns__book-ride"
+                  href="#booking-section"
+                  style={{color: "white", textDecoration: "none"}}
+                >
+                  Book Now &nbsp; <i className="fa-solid fa-circle-check"></i>
+                </a>
+                <a className="hero-content__text__btns__learn-more" href="#" style={{color: "white", textDecoration: "none"}}>
+                  Learn More &nbsp; <i className="fa-solid fa-angle-right"></i>
+                </a>
+              </div>
+            </div>
+
+            {/* img placeholder */}
+            <div
+              style={{
+                width: "65%",
+                height: "400px",
+                background: "linear-gradient(135deg, #ff4d30 0%, #ffe5db 100%)",
+                borderRadius: "10px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: "2rem"
+              }}
+            >
+              EV Image
+            </div>
           </div>
         </div>
 
-          <img src={illustration} alt="EV app mockup illustration" className="media-img" />
-       
-      </div>
-    </section>
-  )
+        {/* page up */}
+        <div
+          onClick={scrollToTop}
+          className={`scroll-up ${goUp ? "show-scroll" : ""}`}
+        >
+          <i className="fa-solid fa-angle-up"></i>
+        </div>
+      </section>
+    </>
+  );
 }
+
+export default Hero;
