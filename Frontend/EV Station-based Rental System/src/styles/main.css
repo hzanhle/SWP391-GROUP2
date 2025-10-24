@@ -2607,6 +2607,11 @@ footer {
   background-color: #ffffff;
 }
 
+/* Ensure page content clears the absolute navbar */
+.section.page-offset {
+  padding-top: 10rem;
+}
+
 .section-header {
   text-align: center;
   margin-bottom: 3rem;
@@ -2703,6 +2708,16 @@ footer {
   background-color: #fff;
   position: relative;
   z-index: 100;
+  color: #010103;
+}
+
+.select option {
+  color: #010103;
+}
+
+.select option[disabled],
+.select option[value=""] {
+  color: #999;
 }
 
 .error-message {
@@ -2715,6 +2730,22 @@ footer {
   margin-bottom: 2rem;
   align-items: center;
   gap: 1rem;
+}
+
+/* Utility: make error visible (overrides default display none in legacy styles) */
+.error-message.error-visible {
+  display: flex;
+}
+
+/* Warning-styled error variant */
+.error-message.warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+/* Utility grid helpers */
+.grid-span-full {
+  grid-column: 1 / -1;
 }
 
 .error-message span {

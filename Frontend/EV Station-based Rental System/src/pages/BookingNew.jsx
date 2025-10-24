@@ -155,36 +155,44 @@ export default function BookingNew() {
     : []
 
   async function handlePreview() {
-    if (!selectedStation || !selectedVehicle || !pickupDate || !dropoffDate) {
+    // allow using first available vehicle if user did not pick a specific one
+    const vehicleToUse = selectedVehicle || (selectedModel && filteredVehicles.length > 0 ? filteredVehicles[0] : null)
+
+    if (!selectedStation || !vehicleToUse || !pickupDate || !dropoffDate) {
       setPreviewError('Vui lòng điền đầy đủ thông tin')
       return
     }
-    
+
     if (new Date(pickupDate) >= new Date(dropoffDate)) {
       setPreviewError('Thời gian trả xe phải sau thời gian nhận xe')
       return
     }
-    
+
     try {
       setPreviewLoading(true)
       setPreviewError(null)
-      
+
       const previewUserId = Number(localStorage.getItem('auth.userId')) || Number(user?.userId || user?.UserId || user?.id || user?.Id)
       if (!previewUserId || isNaN(previewUserId)) {
         setPreviewError('Không thể xác định ID người dùng')
         return
       }
 
+      // if we auto-picked a vehicle, reflect it in state so UI shows selection
+      if (!selectedVehicle && vehicleToUse) {
+        setSelectedVehicle(vehicleToUse)
+      }
+
       const previewRes = await bookingApi.getOrderPreview({
         userId: previewUserId,
-        vehicleId: selectedVehicle.vehicleId,
+        vehicleId: vehicleToUse.vehicleId,
         fromDate: new Date(pickupDate).toISOString(),
         toDate: new Date(dropoffDate).toISOString(),
         rentFeeForHour: selectedModel.rentFeeForHour,
         modelPrice: selectedModel.modelCost,
         paymentMethod: 'VNPay',
       }, token)
-      
+
       setPreview(previewRes.data)
       setStep(2)
     } catch (err) {
@@ -273,10 +281,10 @@ export default function BookingNew() {
       <div data-figma-layer="Booking New Page">
         <Navbar />
         <main>
-          <section className="section">
+          <section className="section page-offset">
             <div className="container">
-              <div className="text-center" style={{ padding: '4rem 0' }}>
-                <p style={{ fontSize: '1.8rem' }}>Đang tải...</p>
+              <div className="text-center py-12">
+                <p>Đang tải...</p>
               </div>
             </div>
           </section>
@@ -290,21 +298,21 @@ export default function BookingNew() {
     <div data-figma-layer="Booking New Page">
       <Navbar />
       <main>
-        <section className="section">
+        <section className="section page-offset">
           <div className="container">
             <div className="section-header">
               <h1 className="section-title">Đặt xe mới</h1>
-              <p className="section-subtitle">Hoàn thành 3 bước đơn giản để đặt xe.</p>
+              <p className="section-subtitle">Hoàn thành 3 bước đ��n giản để đặt xe.</p>
             </div>
 
             {error && (
-              <div className="error-message" style={{ display: 'flex' }}>
+              <div className="error-message error-visible">
                 <span>{error}</span>
               </div>
             )}
 
             {documentError && (
-              <div className="error-message" style={{ display: 'flex', backgroundColor: '#fff3cd' }}>
+              <div className="error-message error-visible warning">
                 <span style={{ color: '#856404' }}>
                   ⚠️ {documentError.message}
                   <br />
@@ -323,22 +331,33 @@ export default function BookingNew() {
                 {step === 0 && (
                   <div className="field">
                     <label htmlFor="station" className="label">Chọn điểm thuê xe</label>
-                    <select 
-                      id="station" 
+                    <select
+                      id="station"
                       className="select"
-                      value={selectedStation?.stationId || ''}
+                      value={String(selectedStation?.stationId ?? '')}
                       onChange={(e) => {
-                        const station = stations.find(s => s.stationId === Number(e.target.value))
-                        setSelectedStation(station)
+                        const val = e.target.value
+                        const station = stations.find(s => String(s.stationId) === val || s.stationId === Number(val) || s.name === val)
+                        setSelectedStation(station || null)
                       }}
                     >
                       <option value="">-- Chọn điểm thuê --</option>
                       {stations.map(station => (
-                        <option key={station.stationId} value={station.stationId}>
+                        <option key={station.stationId} value={String(station.stationId)}>
                           {station.name} - {station.location}
                         </option>
                       ))}
                     </select>
+
+                    {stations.length === 0 && !loading && (
+                      <div className="error-message error-visible warning" role="alert">
+                        <span>
+                          Không tìm thấy điểm thuê. Nếu bạn đang dùng bản preview, frontend không thể truy cập API localhost.
+                          Chạy frontend cục bộ hoặc cấu hình VITE_STATION_API_URL tới URL công khai để lấy dữ liệu.
+                        </span>
+                      </div>
+                    )}
+
                   </div>
                 )}
 
@@ -346,19 +365,20 @@ export default function BookingNew() {
                 {step === 1 && (
                   <div className="field">
                     <label htmlFor="model" className="label">Chọn mẫu xe</label>
-                    <select 
+                    <select
                       id="model"
                       className="select"
-                      value={selectedModel?.modelId || ''}
+                      value={String(selectedModel?.modelId ?? '')}
                       onChange={(e) => {
-                        const model = models.find(m => m.modelId === Number(e.target.value))
-                        setSelectedModel(model)
+                        const val = e.target.value
+                        const model = models.find(m => String(m.modelId) === val || m.modelId === Number(val) || (`${m.manufacturer} ${m.modelName}`) === val)
+                        setSelectedModel(model || null)
                         setSelectedVehicle(null)
                       }}
                     >
                       <option value="">-- Chọn mẫu xe --</option>
                       {models.map(model => (
-                        <option key={model.modelId} value={model.modelId}>
+                        <option key={model.modelId} value={String(model.modelId)}>
                           {model.manufacturer} {model.modelName} - ${model.rentFeeForHour}/giờ
                         </option>
                       ))}
@@ -367,18 +387,19 @@ export default function BookingNew() {
                     {selectedModel && (
                       <div style={{ marginTop: '2rem' }}>
                         <label htmlFor="vehicle" className="label">Chọn chiếc xe cụ thể</label>
-                        <select 
+                        <select
                           id="vehicle"
                           className="select"
-                          value={selectedVehicle?.vehicleId || ''}
+                          value={String(selectedVehicle?.vehicleId ?? '')}
                           onChange={(e) => {
-                            const vehicle = filteredVehicles.find(v => v.vehicleId === Number(e.target.value))
-                            setSelectedVehicle(vehicle)
+                            const val = e.target.value
+                            const vehicle = filteredVehicles.find(v => String(v.vehicleId) === val || v.vehicleId === Number(val))
+                            setSelectedVehicle(vehicle || null)
                           }}
                         >
                           <option value="">-- Chọn xe --</option>
                           {filteredVehicles.map(vehicle => (
-                            <option key={vehicle.vehicleId} value={vehicle.vehicleId}>
+                            <option key={vehicle.vehicleId} value={String(vehicle.vehicleId)}>
                               {vehicle.color} - {vehicle.status}
                             </option>
                           ))}
@@ -402,7 +423,7 @@ export default function BookingNew() {
                       />
                     </div>
                     <div className="field">
-                      <label htmlFor="dropoff-date" className="label">Th���i gian trả xe</label>
+                      <label htmlFor="dropoff-date" className="label">Thời gian trả xe</label>
                       <input 
                         id="dropoff-date"
                         type="datetime-local" 
@@ -413,27 +434,27 @@ export default function BookingNew() {
                     </div>
 
                     {previewError && (
-                      <div className="error-message" style={{ display: 'flex', gridColumn: '1 / -1' }}>
+                      <div className="error-message error-visible grid-span-full">
                         <span>{previewError}</span>
                       </div>
                     )}
 
                     {!preview && !previewLoading && (
-                      <div className="field" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
-                        <CTA as="button" onClick={handlePreview} disabled={!selectedVehicle || !pickupDate || !dropoffDate}>
+                      <div className="field grid-span-full text-center">
+                        <CTA as="button" onClick={handlePreview} disabled={!((selectedVehicle || (selectedModel && filteredVehicles.length>0)) && pickupDate && dropoffDate)}>
                           Xem trước chi phí
                         </CTA>
                       </div>
                     )}
 
                     {previewLoading && (
-                      <div className="field" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
+                      <div className="field grid-span-full text-center">
                         <p>Đang tính toán...</p>
                       </div>
                     )}
 
                     {preview && (
-                      <div className="summary" style={{ gridColumn: '1 / -1' }}>
+                      <div className="summary grid-span-full">
                         <h3 className="card-title">Tóm tắt đơn hàng</h3>
                         <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -466,7 +487,7 @@ export default function BookingNew() {
                     )}
 
                     {bookingError && (
-                      <div className="error-message" style={{ display: 'flex', gridColumn: '1 / -1' }}>
+                      <div className="error-message error-visible grid-span-full">
                         <span>{bookingError}</span>
                       </div>
                     )}
