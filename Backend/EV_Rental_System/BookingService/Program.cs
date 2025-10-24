@@ -1,5 +1,7 @@
-﻿using BookingService;
+﻿using BookingSerivce.Models.VNPAY;
+using BookingService;
 using BookingService.Models;
+using BookingService.Models.ModelSettings;
 using BookingService.Repositories;
 using BookingService.Services;
 using BookingService.Services.SignalR;
@@ -59,13 +61,12 @@ builder.Services.AddSignalR(options =>
 });
 
 // ====================== Settings ======================
+builder.Services.Configure<GoogleDriveSettings>(builder.Configuration.GetSection("GoogleDriveSettings"));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.Configure<VNPaySettings>(builder.Configuration.GetSection("VNPaySettings"));
 builder.Services.Configure<PdfSettings>(builder.Configuration.GetSection("PdfSettings"));
 builder.Services.Configure<ContractSettings>(builder.Configuration.GetSection("ContractSettings"));
 builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
-
-// ====================== Stripe Configuration ======================
-ConfigureStripe(builder.Configuration);
 
 // ====================== Repositories ======================
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -76,13 +77,14 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITrustScoreRepository, TrustScoreRepository>();
 
 // ====================== Services ======================
+builder.Services.AddScoped<IGoogleDriveService, GoogleDriveService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOnlineContractService, OnlineContractService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ITrustScoreService, TrustScoreService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<IStripePaymentService, StripePaymentService>();
+builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddSingleton<IPdfConverterService, PuppeteerPdfService>();
 
 // ====================== Build App ======================
@@ -167,8 +169,6 @@ var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("=====================================");
 logger.LogInformation("🚀 BookingService API Started");
 logger.LogInformation("Environment: {Env}", app.Environment.EnvironmentName);
-logger.LogInformation("💳 Stripe: {Status}",
-    string.IsNullOrEmpty(builder.Configuration["Stripe:SecretKey"]) ? "❌ Not Configured" : "✅ Configured");
 if (app.Environment.IsDevelopment())
 {
     logger.LogInformation("Swagger: http://localhost:5049");
@@ -196,20 +196,13 @@ static void ValidateConfiguration(IConfiguration config)
     }
 
     // Required sections
-    var required = new[] { "EmailSettings", "PdfSettings", "ContractSettings", "OrderSettings" };
+    var required = new[] { "EmailSettings", "VNPaySettings", "PdfSettings", "ContractSettings", "OrderSettings" };
     foreach (var section in required)
     {
         if (!config.GetSection(section).Exists())
         {
             throw new InvalidOperationException($"Section '{section}' không tồn tại");
         }
-    }
-
-    // Stripe (Warning only, không throw exception)
-    var stripeKey = config["Stripe:SecretKey"];
-    if (string.IsNullOrEmpty(stripeKey))
-    {
-        Console.WriteLine("⚠️  WARNING: Stripe SecretKey chưa được cấu hình. Payment features sẽ không hoạt động.");
     }
 }
 
@@ -359,23 +352,4 @@ static void ConfigureAuthentication(IServiceCollection services, IConfiguration 
         });
 
     services.AddAuthorization();
-}
-
-static void ConfigureStripe(IConfiguration config)
-{
-    var stripeSecretKey = config["Stripe:SecretKey"];
-
-    if (!string.IsNullOrEmpty(stripeSecretKey))
-    {
-        Stripe.StripeConfiguration.ApiKey = stripeSecretKey;
-
-        // Optional: Set API version (recommended để tránh breaking changes)
-        // Stripe.StripeConfiguration.ApiVersion = "2023-10-16";
-
-        Console.WriteLine("✅ Stripe configured successfully");
-    }
-    else
-    {
-        Console.WriteLine("⚠️  Stripe not configured - Payment features will be disabled");
-    }
 }

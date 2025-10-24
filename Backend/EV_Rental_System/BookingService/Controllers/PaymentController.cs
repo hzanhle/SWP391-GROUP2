@@ -1,9 +1,8 @@
-﻿using BookingService.Services;
+﻿using BookingSerivce.Models.VNPAY;
+using BookingService.Models;
+using BookingService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Stripe;
-using Stripe.Checkout;
-
 
 namespace BookingService.Controllers
 {
@@ -12,51 +11,48 @@ namespace BookingService.Controllers
     [Authorize] // Yêu cầu authentication cho tất cả endpoints
     public class PaymentController : ControllerBase
     {
-        private readonly IStripePaymentService _stripeService;
+        private readonly IVNPayService _vnpayService;
+        private readonly VNPaySettings _vnpaySettings;
         private readonly IPaymentService _paymentService;
         private readonly ILogger<PaymentController> _logger;
-        private readonly IConfiguration _configuration;
 
         public PaymentController(
-            IStripePaymentService stripeService,
+            IVNPayService vnpayService,
             IPaymentService paymentService,
-            ILogger<PaymentController> logger,
-            IConfiguration configuration)
+            ILogger<PaymentController> logger)
         {
-            _stripeService = stripeService;
+            _vnpayService = vnpayService;
             _paymentService = paymentService;
             _logger = logger;
-            _configuration = configuration;
         }
 
         /// <summary>
-        /// Tạo Stripe Checkout Session cho Order đã tồn tại
-        /// POST: api/payment/create-checkout-session
-        /// Body: { "orderId": 123 }
-        /// Chỉ Member (khách hàng) mới được tạo checkout session
+        /// Tạo URL thanh toán VNPay cho Order đã tồn tại
+        /// GET: api/payment/vnpay-create?orderId=123
+        /// Chỉ Member (khách hàng) mới được tạo URL thanh toán
         /// </summary>
-        [HttpPost("create-checkout-session")]
+        [HttpGet("vnpay-create")]
         [Authorize(Roles = "Member")]
-        public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateCheckoutRequest request)
+        public async Task<IActionResult> CreatePaymentUrl([FromQuery] int orderId)
         {
             try
             {
-                if (request.OrderId <= 0)
+                if (orderId <= 0)
                 {
                     return BadRequest(new { message = "OrderId không hợp lệ" });
                 }
 
                 // Lấy payment record từ database
-                var payment = await _paymentService.GetPaymentByOrderIdAsync(request.OrderId);
+                var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
 
                 if (payment == null)
                 {
-                    return NotFound(new { message = $"Không tìm thấy payment cho Order #{request.OrderId}" });
+                    return NotFound(new { message = $"Không tìm thấy payment cho Order #{orderId}" });
                 }
 
-                // TODO: Service phải validate Member chỉ tạo payment cho đơn hàng của mình
+                // TODO: Service phải validate Member chỉ tạo payment URL cho đơn hàng của mình
                 // var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                // await _paymentService.ValidateOrderOwnershipAsync(request.OrderId, userId);
+                // await _paymentService.ValidateOrderOwnershipAsync(orderId, userId);
 
                 // Kiểm tra trạng thái payment
                 if (payment.IsCompleted())
@@ -74,168 +70,259 @@ namespace BookingService.Controllers
                     return BadRequest(new { message = "Payment đã thất bại, vui lòng tạo order mới" });
                 }
 
-                // Tạo Stripe Checkout Session
-                var domain = $"{Request.Scheme}://{Request.Host}";
-                var session = await _stripeService.CreateCheckoutSessionAsync(
+                // Tạo VNPay payment URL
+                var paymentUrl = _vnpayService.CreatePaymentUrl(
+                    orderId,
                     payment.Amount,
-                    "vnd", // hoặc "usd" tùy theo currency của bạn
-                    $"{domain}/api/payment/success?orderId={request.OrderId}",
-                    $"{domain}/api/payment/cancel?orderId={request.OrderId}",
-                    new Dictionary<string, string>
-                    {
-                        { "order_id", request.OrderId.ToString() }
-                    }
+                    $"Thanh toan don hang #{orderId}"
                 );
 
-                // Domain sẽ tự động là http://localhost:5049 khi chạy local
-
                 _logger.LogInformation(
-                    "Tạo Stripe Checkout Session cho Order {OrderId}, SessionId: {SessionId}, Amount: {Amount}",
-                    request.OrderId, session.Id, payment.Amount
+                    "Tạo VNPay URL cho Order {OrderId}, Amount: {Amount}",
+                    orderId, payment.Amount
                 );
 
                 return Ok(new
                 {
                     success = true,
-                    sessionId = session.Id,
-                    checkoutUrl = session.Url,
-                    orderId = request.OrderId,
+                    paymentUrl,
+                    orderId,
                     amount = payment.Amount,
                     paymentMethod = payment.PaymentMethod
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi tạo Stripe Checkout Session cho Order {OrderId}", request.OrderId);
-                return StatusCode(500, new { message = "Lỗi tạo checkout session", error = ex.Message });
+                _logger.LogError(ex, "Lỗi tạo VNPay URL cho Order {OrderId}", orderId);
+                return StatusCode(500, new { message = "Lỗi tạo URL thanh toán", error = ex.Message });
             }
         }
 
         /// <summary>
-        /// Success callback từ Stripe (user redirect)
-        /// GET: api/payment/success?orderId=123
-        /// AllowAnonymous vì đây là callback từ Stripe redirect browser
+        /// Callback từ VNPay sau khi user thanh toán (user redirect)
+        /// GET: api/payment/vnpay-deposit-callback?vnp_Amount=...&vnp_ResponseCode=...
+        /// AllowAnonymous vì đây là callback từ VNPay redirect browser
         /// </summary>
-        [HttpGet("success")]
+        [HttpGet("vnpay-deposit-callback")]
         [AllowAnonymous]
-        public async Task<IActionResult> PaymentSuccess([FromQuery] int orderId)
+        public async Task<IActionResult> VNPayCallback()
         {
             try
             {
-                _logger.LogInformation("Payment success callback - Order: {OrderId}", orderId);
+                var query = Request.Query;
 
+                // Log toàn bộ query để debug
+                _logger.LogInformation("VNPay callback: {@Query}",
+                    query.ToDictionary(k => k.Key, v => v.Value.ToString()));
+
+                // 1. Validate chữ ký từ VNPay
+                var isValid = _vnpayService.ValidateCallback(query);
+
+                if (!isValid)
+                {
+                    _logger.LogWarning("❌ VNPay callback - Chữ ký không hợp lệ");
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Chữ ký không hợp lệ"
+                    });
+                }
+
+                // 2. Parse thông tin từ VNPay
+                var responseCode = query["vnp_ResponseCode"].ToString();
+                var txnRef = query["vnp_TxnRef"].ToString();
+                var amount = query["vnp_Amount"].ToString();
+                var transactionNo = query["vnp_TransactionNo"].ToString();
+                var bankCode = query["vnp_BankCode"].ToString();
+                var payDate = query["vnp_PayDate"].ToString();
+                var orderInfo = query["vnp_OrderInfo"].ToString();
+
+                // Parse OrderId từ TxnRef (format: {orderId}_{tick})
+                var orderId = ParseOrderIdFromTxnRef(txnRef);
+                if (orderId == 0)
+                {
+                    _logger.LogError("Không parse được OrderId từ TxnRef: {TxnRef}", txnRef);
+                    return BadRequest(new { success = false, message = "TxnRef không hợp lệ" });
+                }
+
+                // Parse amount
+                var actualAmount = long.TryParse(amount, out var amt) ? amt / 100 : 0;
+
+                // 3. Lấy payment từ database
                 var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
-
                 if (payment == null)
                 {
+                    _logger.LogError("Không tìm thấy Payment cho Order {OrderId}", orderId);
                     return NotFound(new { success = false, message = "Không tìm thấy payment" });
                 }
 
-                // Stripe webhook sẽ xử lý việc cập nhật payment status
-                // Endpoint này chỉ để hiển thị thông báo cho user
-                return Ok(new
+                // 4. Xử lý theo response code
+                if (responseCode == "00")
                 {
-                    success = true,
-                    message = "Thanh toán thành công! Đang xử lý đơn hàng của bạn.",
-                    orderId,
-                    status = payment.Status.ToString()
-                });
+                    // Thanh toán thành công
+                    var gatewayResponse = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        responseCode,
+                        transactionNo,
+                        bankCode,
+                        payDate,
+                        orderInfo,
+                        amount = actualAmount
+                    });
+
+                    var success = await _paymentService.MarkPaymentCompletedAsync(
+                        orderId,
+                        transactionNo,
+                        gatewayResponse
+                    );
+
+                    if (success)
+                    {
+                        _logger.LogInformation(
+                            "✅ Payment completed - Order: {OrderId}, TxnNo: {TransactionNo}, Amount: {Amount}",
+                            orderId, transactionNo, actualAmount
+                        );
+
+                        // TODO: Gọi OrderService để cập nhật Order status
+                        // await _orderService.ConfirmPaymentAsync(orderId);
+
+                        return Ok(new
+                        {
+                            success = true,
+                            message = "Thanh toán thành công",
+                            data = new
+                            {
+                                orderId,
+                                transactionNo,
+                                amount = actualAmount,
+                                bankCode,
+                                payDate
+                            }
+                        });
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Không thể cập nhật Payment cho Order {OrderId}", orderId);
+                        return BadRequest(new { success = false, message = "Không thể cập nhật payment" });
+                    }
+                }
+                else
+                {
+                    // Thanh toán thất bại
+                    var errorMessage = GetVNPayErrorMessage(responseCode);
+
+                    var gatewayResponse = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        responseCode,
+                        errorMessage,
+                        orderInfo
+                    });
+
+                    await _paymentService.MarkPaymentFailedAsync(orderId, gatewayResponse);
+
+                    _logger.LogWarning(
+                        "❌ Payment failed - Order: {OrderId}, Code: {ResponseCode}, Message: {Message}",
+                        orderId, responseCode, errorMessage
+                    );
+
+                    return Ok(new
+                    {
+                        success = false,
+                        message = errorMessage,
+                        data = new
+                        {
+                            orderId,
+                            responseCode
+                        }
+                    });
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi xử lý success callback cho Order {OrderId}", orderId);
-                return StatusCode(500, new { success = false, message = "Lỗi xử lý callback" });
+                _logger.LogError(ex, "Lỗi xử lý VNPay callback");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Lỗi xử lý callback",
+                    error = ex.Message
+                });
             }
         }
 
-        /// <summary>
-        /// Cancel callback từ Stripe (user redirect)
-        /// GET: api/payment/cancel?orderId=123
-        /// AllowAnonymous vì đây là callback từ Stripe redirect browser
-        /// </summary>
-        [HttpGet("cancel")]
-        [AllowAnonymous]
-        public IActionResult PaymentCancel([FromQuery] int orderId)
-        {
-            _logger.LogInformation("Payment cancelled - Order: {OrderId}", orderId);
 
-            return Ok(new
-            {
-                success = false,
-                message = "Thanh toán đã bị hủy",
-                orderId
-            });
-        }
+
 
         /// <summary>
-        /// Webhook endpoint cho Stripe (server-to-server)
-        /// POST: api/payment/stripe-webhook
-        /// AllowAnonymous vì webhook từ Stripe không có JWT token
-        /// CRITICAL: PHẢI validate signature để đảm bảo request từ Stripe thật
+        /// IPN endpoint cho VNPay (webhook từ VNPay server-to-server)
+        /// GET: api/payment/vnpay-ipn
+        /// AllowAnonymous vì webhook từ VNPay không có JWT token
+        /// CRITICAL: PHẢI validate signature để đảm bảo request từ VNPay thật
         /// </summary>
-        [HttpPost("stripe-webhook")]
+        [HttpGet("vnpay-ipn")]
         [AllowAnonymous]
-        public async Task<IActionResult> StripeWebhook()
+        public async Task<IActionResult> VNPayIPN()
         {
             try
             {
-                var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-                var stripeSignature = Request.Headers["Stripe-Signature"].ToString();
-                var webhookSecret = _configuration["Stripe:WebhookSecret"];
+                var query = Request.Query;
 
-                Event stripeEvent;
+                _logger.LogInformation("VNPay IPN received: {@Query}",
+                    query.ToDictionary(k => k.Key, v => v.Value.ToString()));
 
-                try
+                // Validate signature - CRITICAL SECURITY CHECK
+                var isValid = _vnpayService.ValidateCallback(query);
+                if (!isValid)
                 {
-                    // Validate signature - CRITICAL SECURITY CHECK
-                    stripeEvent = EventUtility.ConstructEvent(
-                        json,
-                        stripeSignature,
-                        webhookSecret
-                    );
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Stripe webhook - Invalid signature");
-                    return BadRequest(new { error = "Invalid signature" });
+                    _logger.LogWarning("VNPay IPN - Invalid signature");
+                    return Ok(new { RspCode = "97", Message = "Invalid signature" });
                 }
 
-                _logger.LogInformation("Stripe webhook received: {EventType}", stripeEvent.Type);
+                var responseCode = query["vnp_ResponseCode"].ToString();
+                var txnRef = query["vnp_TxnRef"].ToString();
+                var transactionNo = query["vnp_TransactionNo"].ToString();
 
-                // Xử lý các event types
-                switch (stripeEvent.Type)
+                var orderId = ParseOrderIdFromTxnRef(txnRef);
+                if (orderId == 0)
                 {
-                    case "checkout.session.completed":
-                        var session = stripeEvent.Data.Object as Session;
-                        await HandleCheckoutSessionCompleted(session);
-                        break;
-
-                    case "payment_intent.succeeded":
-                        var paymentIntent = stripeEvent.Data.Object as PaymentIntent;
-                        await HandlePaymentIntentSucceeded(paymentIntent);
-                        break;
-
-                    case "payment_intent.payment_failed":
-                        var failedPaymentIntent = stripeEvent.Data.Object as PaymentIntent;
-                        await HandlePaymentIntentFailed(failedPaymentIntent);
-                        break;
-
-                    case "charge.refunded":
-                        var charge = stripeEvent.Data.Object as Charge;
-                        await HandleChargeRefunded(charge);
-                        break;
-
-                    default:
-                        _logger.LogInformation("Unhandled event type: {EventType}", stripeEvent.Type);
-                        break;
+                    return Ok(new { RspCode = "01", Message = "Order not found" });
                 }
 
-                return Ok(new { received = true });
+                // Kiểm tra payment đã xử lý chưa (idempotency)
+                var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
+                if (payment == null)
+                {
+                    return Ok(new { RspCode = "01", Message = "Order not found" });
+                }
+
+                if (payment.IsCompleted())
+                {
+                    // Đã xử lý rồi, return success
+                    _logger.LogInformation("VNPay IPN - Payment already processed for Order {OrderId}", orderId);
+                    return Ok(new { RspCode = "00", Message = "Confirm Success" });
+                }
+
+                // Xử lý payment
+                if (responseCode == "00")
+                {
+                    var gatewayResponse = System.Text.Json.JsonSerializer.Serialize(query.ToDictionary(k => k.Key, v => v.Value.ToString()));
+                    await _paymentService.MarkPaymentCompletedAsync(orderId, transactionNo, gatewayResponse);
+
+                    _logger.LogInformation("VNPay IPN - Payment completed for Order {OrderId}", orderId);
+                }
+                else
+                {
+                    var gatewayResponse = System.Text.Json.JsonSerializer.Serialize(new { responseCode, message = GetVNPayErrorMessage(responseCode) });
+                    await _paymentService.MarkPaymentFailedAsync(orderId, gatewayResponse);
+
+                    _logger.LogWarning("VNPay IPN - Payment failed for Order {OrderId}, Code: {ResponseCode}", orderId, responseCode);
+                }
+
+                return Ok(new { RspCode = "00", Message = "Confirm Success" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi xử lý Stripe webhook");
-                return StatusCode(500, new { error = "Webhook handler failed" });
+                _logger.LogError(ex, "Lỗi xử lý VNPay IPN");
+                return Ok(new { RspCode = "99", Message = "Unknown error" });
             }
         }
 
@@ -283,208 +370,99 @@ namespace BookingService.Controllers
             }
         }
 
-        /// <summary>
-        /// Tạo refund cho một payment
-        /// POST: api/payment/refund
-        /// Body: { "orderId": 123, "reason": "Customer request" }
-        /// Chỉ Admin/Employee được phép refund
-        /// </summary>
-        [HttpPost("refund")]
-        [Authorize(Roles = "Admin,Employee")]
-        public async Task<IActionResult> CreateRefund([FromBody] RefundRequest request)
+        // ===== HELPER METHODS =====
+
+        private int ParseOrderIdFromTxnRef(string txnRef)
         {
             try
             {
-                var payment = await _paymentService.GetPaymentByOrderIdAsync(request.OrderId);
-
-                if (payment == null)
+                // Format: {orderId}_{tick}
+                var parts = txnRef.Split('_');
+                if (parts.Length > 0 && int.TryParse(parts[0], out var orderId))
                 {
-                    return NotFound(new { message = $"Không tìm thấy payment cho Order #{request.OrderId}" });
+                    return orderId;
                 }
-
-                if (!payment.IsCompleted())
-                {
-                    return BadRequest(new { message = "Chỉ có thể refund payment đã hoàn thành" });
-                }
-
-                if (string.IsNullOrEmpty(payment.TransactionId))
-                {
-                    return BadRequest(new { message = "Không tìm thấy transaction ID" });
-                }
-
-                // Tạo refund trên Stripe
-                var refund = await _stripeService.CreateRefundAsync(
-                    payment.TransactionId,
-                    request.Reason
-                );
-
-                // Cập nhật database
-                await _paymentService.MarkPaymentRefundedAsync(
-                    request.OrderId,
-                    refund.Id,
-                    request.Reason
-                );
-
-                _logger.LogInformation(
-                    "Refund created - Order: {OrderId}, RefundId: {RefundId}, Amount: {Amount}",
-                    request.OrderId, refund.Id, refund.Amount / 100m
-                );
-
-                return Ok(new
-                {
-                    success = true,
-                    message = "Refund thành công",
-                    refundId = refund.Id,
-                    amount = refund.Amount / 100m,
-                    status = refund.Status
-                });
+                return 0;
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Lỗi tạo refund cho Order {OrderId}", request.OrderId);
-                return StatusCode(500, new { message = "Lỗi tạo refund", error = ex.Message });
+                return 0;
             }
         }
 
-        // ===== PRIVATE HELPER METHODS =====
-
-        private async Task HandleCheckoutSessionCompleted(Session session)
+        private string GetVNPayErrorMessage(string responseCode)
         {
-            try
+            return responseCode switch
             {
-                // Lấy orderId từ metadata
-                if (session.Metadata.TryGetValue("order_id", out var orderIdStr) &&
-                    int.TryParse(orderIdStr, out var orderId))
-                {
-                    var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
-
-                    if (payment != null && !payment.IsCompleted())
-                    {
-                        var gatewayResponse = System.Text.Json.JsonSerializer.Serialize(new
-                        {
-                            sessionId = session.Id,
-                            paymentStatus = session.PaymentStatus,
-                            amountTotal = session.AmountTotal,
-                            currency = session.Currency,
-                            customerEmail = session.CustomerEmail
-                        });
-
-                        await _paymentService.MarkPaymentCompletedAsync(
-                            orderId,
-                            session.PaymentIntentId ?? session.Id,
-                            gatewayResponse
-                        );
-
-                        _logger.LogInformation(
-                            "✅ Checkout session completed - Order: {OrderId}, SessionId: {SessionId}",
-                            orderId, session.Id
-                        );
-
-                        // TODO: Gọi OrderService để cập nhật Order status
-                        // await _orderService.ConfirmPaymentAsync(orderId);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error handling checkout.session.completed");
-            }
+                "00" => "Giao dịch thành công",
+                "07" => "Trừ tiền thành công. Giao dịch bị nghi ngờ (liên quan tới lừa đảo, giao dịch bất thường).",
+                "09" => "Thẻ/Tài khoản chưa đăng ký dịch vụ InternetBanking tại ngân hàng.",
+                "10" => "Khách hàng xác thực thông tin thẻ/tài khoản không đúng quá 3 lần",
+                "11" => "Đã hết hạn chờ thanh toán. Vui lòng thực hiện lại giao dịch.",
+                "12" => "Thẻ/Tài khoản bị khóa.",
+                "13" => "Quý khách nhập sai mật khẩu xác thực giao dịch (OTP).",
+                "24" => "Khách hàng hủy giao dịch",
+                "51" => "Tài khoản không đủ số dư để thực hiện giao dịch.",
+                "65" => "Tài khoản đã vượt quá hạn mức giao dịch trong ngày.",
+                "75" => "Ngân hàng thanh toán đang bảo trì.",
+                "79" => "KH nhập sai mật khẩu thanh toán quá số lần quy định. Thử lại sau.",
+                _ => $"Giao dịch thất bại - Mã lỗi: {responseCode}"
+            };
         }
-
-        private async Task HandlePaymentIntentSucceeded(PaymentIntent paymentIntent)
-        {
-            try
-            {
-                if (paymentIntent.Metadata.TryGetValue("order_id", out var orderIdStr) &&
-                    int.TryParse(orderIdStr, out var orderId))
-                {
-                    var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
-
-                    if (payment != null && !payment.IsCompleted())
-                    {
-                        var gatewayResponse = System.Text.Json.JsonSerializer.Serialize(new
-                        {
-                            paymentIntentId = paymentIntent.Id,
-                            amount = paymentIntent.Amount,
-                            currency = paymentIntent.Currency,
-                            status = paymentIntent.Status
-                        });
-
-                        await _paymentService.MarkPaymentCompletedAsync(
-                            orderId,
-                            paymentIntent.Id,
-                            gatewayResponse
-                        );
-
-                        _logger.LogInformation(
-                            "✅ Payment intent succeeded - Order: {OrderId}, PaymentIntentId: {PaymentIntentId}",
-                            orderId, paymentIntent.Id
-                        );
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error handling payment_intent.succeeded");
-            }
-        }
-
-        private async Task HandlePaymentIntentFailed(PaymentIntent paymentIntent)
-        {
-            try
-            {
-                if (paymentIntent.Metadata.TryGetValue("order_id", out var orderIdStr) &&
-                    int.TryParse(orderIdStr, out var orderId))
-                {
-                    var gatewayResponse = System.Text.Json.JsonSerializer.Serialize(new
-                    {
-                        paymentIntentId = paymentIntent.Id,
-                        status = paymentIntent.Status,
-                        lastPaymentError = paymentIntent.LastPaymentError?.Message
-                    });
-
-                    await _paymentService.MarkPaymentFailedAsync(orderId, gatewayResponse);
-
-                    _logger.LogWarning(
-                        "❌ Payment intent failed - Order: {OrderId}, Error: {Error}",
-                        orderId, paymentIntent.LastPaymentError?.Message
-                    );
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error handling payment_intent.payment_failed");
-            }
-        }
-
-        private async Task HandleChargeRefunded(Charge charge)
-        {
-            try
-            {
-                // Tìm payment bằng PaymentIntentId
-                // TODO: Implement logic tìm payment và cập nhật status
-                _logger.LogInformation(
-                    "Charge refunded - ChargeId: {ChargeId}, Amount: {Amount}",
-                    charge.Id, charge.AmountRefunded / 100m
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error handling charge.refunded");
-            }
-        }
-    }
-
-    // ===== REQUEST/RESPONSE MODELS =====
-
-    public class CreateCheckoutRequest
-    {
-        public int OrderId { get; set; }
-    }
-
-    public class RefundRequest
-    {
-        public int OrderId { get; set; }
-        public string Reason { get; set; }
     }
 }
+
+/*
+ * ===== PHÂN QUYỀN PAYMENT CONTROLLER =====
+ * 
+ * 🔐 MEMBER (Khách hàng):
+ *    - GET /vnpay-create?orderId=X: Tạo URL thanh toán cho đơn hàng của mình
+ *    - GET /status/{orderId}: Xem trạng thái thanh toán của đơn hàng mình
+ * 
+ * 👔 EMPLOYEE (Nhân viên):
+ *    - GET /status/{orderId}: Xem trạng thái thanh toán bất kỳ đơn nào
+ * 
+ * 👑 ADMIN (Quản trị viên):
+ *    - Tất cả quyền của Employee
+ * 
+ * 🌐 ALLOW ANONYMOUS (VNPay webhooks):
+ *    - GET /vnpay-deposit-callback: Callback sau khi user thanh toán (browser redirect)
+ *    - GET /vnpay-ipn: IPN webhook từ VNPay server (server-to-server)
+ * 
+ * ⚠️ LƯU Ý BẢO MẬT QUAN TRỌNG:
+ * 
+ * 1. Webhook Security:
+ *    - Callback và IPN endpoints dùng AllowAnonymous (VNPay không gửi JWT)
+ *    - PHẢI validate signature từ VNPay bằng secret key
+ *    - Đã có: _vnpayService.ValidateCallback(query) - CRITICAL!
+ *    - Optional: Thêm IP whitelist cho IPN (chỉ nhận từ IP VNPay)
+ * 
+ * 2. Ownership Validation:
+ *    - Member chỉ được tạo payment URL và xem status của đơn hàng mình
+ *    - Service layer PHẢI validate userId từ JWT vs Order.UserId
+ *    - Đề xuất implement:
+ *      ```csharp
+ *      var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+ *      var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+ *      if (userRole == "Member") {
+ *          await _paymentService.ValidateOrderOwnershipAsync(orderId, userId);
+ *      }
+ *      ```
+ * 
+ * 3. Idempotency:
+ *    - IPN endpoint đã xử lý idempotency (check payment.IsCompleted())
+ *    - VNPay có thể gửi IPN nhiều lần, phải tránh xử lý trùng
+ * 
+ * 4. Callback vs IPN:
+ *    - Callback: User redirect từ VNPay → Browser → Backend
+ *      → Dùng để hiển thị kết quả cho user
+ *    - IPN: VNPay server → Backend server (không qua browser)
+ *      → Dùng để xử lý business logic chính thức
+ *      → Đáng tin cậy hơn callback (user không can thiệp được)
+ * 
+ * 5. Error Handling:
+ *    - Callback: Return 200 + JSON với success/message cho frontend xử lý
+ *    - IPN: Return VNPay format { RspCode, Message } theo docs VNPay
+ *      → RspCode "00" = success
+ *      → RspCode khác = error
+ */

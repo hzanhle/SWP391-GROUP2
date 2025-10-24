@@ -1,4 +1,4 @@
-﻿using BookingService.Models;
+﻿using BookingService.Models.ModelSettings;
 using Microsoft.Extensions.Options;
 using PuppeteerSharp;
 using PuppeteerSharp.Media;

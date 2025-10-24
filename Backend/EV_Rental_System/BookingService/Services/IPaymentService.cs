@@ -3,21 +3,43 @@ namespace BookingService.Services
 {
     public interface IPaymentService
     {
-        // Create
-        Task<Payment> CreatePaymentForOrderAsync(int orderId, decimal amount, string paymentMethod = "Stripe");
+        /**
+         * Tạo một bản ghi thanh toán mới (ở trạng thái Pending) cho một Order.
+         * Được gọi bởi OrderService.
+         */
+        Task<Payment> CreatePaymentForOrderAsync(int orderId, decimal amount, string paymentMethod);
 
-        // Update Status
-        Task<bool> MarkPaymentCompletedAsync(int orderId, string transactionId, string? gatewayResponse = null);
-        Task<bool> MarkPaymentFailedAsync(int orderId, string? gatewayResponse = null);
-        Task<bool> MarkPaymentRefundedAsync(int orderId, string refundId, string? reason = null);
+        /**
+         * Đánh dấu thanh toán là 'Completed' (Hoàn thành).
+         * Được gọi bởi Webhook/Callback từ cổng thanh toán.
+         */
+        Task<bool> MarkPaymentCompletedAsync(int orderId, string transactionId, string? gatewayResponse);
 
-        // Query
+        /**
+         * Đánh dấu thanh toán là 'Failed' (Thất bại).
+         * Được gọi bởi Webhook/Callback hoặc nếu có lỗi.
+         */
+        Task<bool> MarkPaymentFailedAsync(int orderId, string? gatewayResponse);
+
+        /**
+         * Lấy thông tin thanh toán bằng OrderId.
+         */
         Task<Payment?> GetPaymentByOrderIdAsync(int orderId);
-        Task<Payment?> GetPaymentByTransactionIdAsync(string transactionId);
-        Task<IEnumerable<Payment>> GetPendingPaymentsAsync();
-        Task<IEnumerable<Payment>> GetPaymentsByStatusAsync(PaymentStatus status);
 
-        // Validation
-        Task<bool> ValidateOrderOwnershipAsync(int orderId, string userId);
+        /**
+         * Lấy thông tin thanh toán bằng TransactionId (mã giao dịch từ cổng TT).
+         */
+        Task<Payment?> GetPaymentByTransactionIdAsync(string transactionId);
+
+        /**
+         * Lấy tất cả các khoản thanh toán đang chờ xử lý.
+         * Hữu ích cho các background job dọn dẹp.
+         */
+        Task<IEnumerable<Payment>> GetPendingPaymentsAsync();
+
+        /**
+         * (Tùy chọn) Xóa một bản ghi thanh toán (thường không nên làm).
+         */
+        Task<bool> DeletePaymentAsync(int paymentId);
     }
 }
