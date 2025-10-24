@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import vehicle from '../assets/ev-illustration.png';
 function Hero() {
   const [goUp, setGoUp] = useState(false);
 
@@ -69,7 +69,7 @@ function Hero() {
                 fontSize: "2rem"
               }}
             >
-              EV Image
+              <img src={vehicle} alt="vehicle-img" class="hero-content__car-img"></img>
             </div>
           </div>
         </div>
