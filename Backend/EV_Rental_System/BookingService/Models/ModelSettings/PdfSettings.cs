@@ -1,4 +1,4 @@
-﻿namespace BookingService.Models
+﻿namespace BookingService.Models.ModelSettings
 {
     /// <summary>
     /// Configuration settings cho PDF generation

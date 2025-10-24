@@ -1,6 +1,7 @@
 ﻿using BookingSerivce.Models.VNPAY;
 using BookingService;
 using BookingService.Models;
+using BookingService.Models.ModelSettings;
 using BookingService.Repositories;
 using BookingService.Services;
 using BookingService.Services.SignalR;
@@ -60,6 +61,7 @@ builder.Services.AddSignalR(options =>
 });
 
 // ====================== Settings ======================
+builder.Services.Configure<GoogleDriveSettings>(builder.Configuration.GetSection("GoogleDriveSettings"));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<VNPaySettings>(builder.Configuration.GetSection("VNPaySettings"));
 builder.Services.Configure<PdfSettings>(builder.Configuration.GetSection("PdfSettings"));
@@ -75,6 +77,7 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITrustScoreRepository, TrustScoreRepository>();
 
 // ====================== Services ======================
+builder.Services.AddScoped<IGoogleDriveService, GoogleDriveService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOnlineContractService, OnlineContractService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();

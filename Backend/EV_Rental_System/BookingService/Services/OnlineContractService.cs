@@ -1,15 +1,19 @@
 ﻿using BookingService.DTOs;
 using BookingService.Models;
+using BookingService.Models.ModelSettings;
 using BookingService.Repositories;
-using Microsoft.Extensions.Options;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using System;
+using System.Text;
+using File = System.IO.File;
 
 namespace BookingService.Services
 {
     public class OnlineContractService : IOnlineContractService
     {
         private readonly IPdfConverterService _pdfConverter;
+        private readonly IGoogleDriveService _googleDriveService;
         private readonly ContractSettings _contractSettings;
         private readonly PdfSettings _pdfSettings;
         private readonly IOnlineContractRepository _contractRepo;
@@ -22,6 +26,7 @@ namespace BookingService.Services
         private static readonly SemaphoreSlim _contractNumberLock = new SemaphoreSlim(1, 1);
 
         public OnlineContractService(
+            IGoogleDriveService googleDriveService,
             IOnlineContractRepository contractRepo,
             IEmailService emailService,
             ILogger<OnlineContractService> logger,
@@ -31,6 +36,7 @@ namespace BookingService.Services
             IOptions<ContractSettings> contractSettings,
             IOptions<PdfSettings> pdfSettings)
         {
+            _googleDriveService = googleDriveService;
             _contractRepo = contractRepo;
             _emailService = emailService;
             _logger = logger;
@@ -602,36 +608,71 @@ namespace BookingService.Services
         {
             try
             {
+                // 1. Kiểm tra file tồn tại
                 if (!File.Exists(pdfPath))
                 {
                     _logger.LogError("PDF file not found at {PdfPath}", pdfPath);
                     throw new FileNotFoundException($"Không tìm thấy file hợp đồng tại: {pdfPath}");
                 }
 
+                _logger.LogInformation(
+                    "Bắt đầu upload hợp đồng {ContractNumber} lên Google Drive",
+                    data.ContractNumber);
+
+                // 2. Upload lên Google Drive
+                var fileName = $"Contract_{data.ContractNumber}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.pdf";
+                var driveLink = await _googleDriveService.UploadFileAsync(pdfPath, fileName);
+
+                if (string.IsNullOrEmpty(driveLink))
+                {
+                    _logger.LogError(
+                        "Không thể upload hợp đồng {ContractNumber} lên Google Drive",
+                        data.ContractNumber);
+                    throw new Exception("Upload Google Drive thất bại");
+                }
+
+                _logger.LogInformation("✅ Upload thành công. Drive link: {Link}", driveLink);
+
+                // 3. Gửi email với link Google Drive
                 var emailSent = await _emailService.SendContractEmailAsync(
                     toEmail: data.CustomerEmail,
                     customerName: data.CustomerName,
                     contractNumber: data.ContractNumber,
-                    absoluteFilePath: pdfPath);
+                    driveLink: driveLink);
 
                 if (emailSent)
                 {
                     _logger.LogInformation(
-                        "Contract email sent successfully to {Email} for Order {OrderId}, Contract {ContractNumber}",
+                        "✅ Đã gửi email thành công đến {Email} cho Order {OrderId}, Contract {ContractNumber}",
                         data.CustomerEmail, data.OrderId, data.ContractNumber);
                 }
                 else
                 {
                     _logger.LogWarning(
-                        "Failed to send contract email to {Email} for Order {OrderId}",
+                        "⚠️ Gửi email thất bại đến {Email} cho Order {OrderId}",
                         data.CustomerEmail, data.OrderId);
+                }
+
+                // 4. Xóa file local sau khi upload thành công
+                try
+                {
+                    if (System.IO.File.Exists(pdfPath))
+                    {
+                        File.Delete(pdfPath);
+                        _logger.LogInformation("Đã xóa file local: {PdfPath}", pdfPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Không thể xóa file local: {PdfPath}", pdfPath);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Error sending contract email to {Email} for Order {OrderId}",
+                    "Lỗi khi xử lý email hợp đồng cho {Email}, Order {OrderId}",
                     data.CustomerEmail, data.OrderId);
+                throw;
             }
         }
 
