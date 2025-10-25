@@ -83,6 +83,7 @@ namespace BookingService.Services
 
 
                 _logger.LogInformation("📨 Đang gửi email đến {Email}...", toEmail);
+                _logger.LogInformation("📧 Gmail config: {Email} / {Password}", _settings.SenderEmail, _settings.SenderPassword);
                 await smtp.SendMailAsync(mail);
                 _logger.LogInformation("✅ Gửi email thành công đến {Email}", toEmail);
 

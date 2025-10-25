@@ -22,7 +22,7 @@ namespace BookingService.Repositories
         {
             return await _context.Feedbacks
                 .AsNoTracking()
-                .FirstOrDefaultAsync(f => f.FeedBackId == feedBackId);
+                .FirstOrDefaultAsync(f => f.FeedbackId == feedBackId);
         }
 
         public async Task<Feedback?> GetByOrderIdAsync(int orderId)
