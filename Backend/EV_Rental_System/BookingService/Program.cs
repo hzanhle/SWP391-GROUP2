@@ -61,12 +61,13 @@ builder.Services.AddSignalR(options =>
 });
 
 // ====================== Settings ======================
-builder.Services.Configure<GoogleDriveSettings>(builder.Configuration.GetSection("GoogleDriveSettings"));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<VNPaySettings>(builder.Configuration.GetSection("VNPaySettings"));
 builder.Services.Configure<PdfSettings>(builder.Configuration.GetSection("PdfSettings"));
 builder.Services.Configure<ContractSettings>(builder.Configuration.GetSection("ContractSettings"));
 builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
+builder.Services.Configure<AwsS3Settings>(builder.Configuration.GetSection("AwsS3Settings"));
+
 
 // ====================== Repositories ======================
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -75,9 +76,10 @@ builder.Services.AddScoped<IOnlineContractRepository, OnlineContractRepository>(
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITrustScoreRepository, TrustScoreRepository>();
+builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
 
 // ====================== Services ======================
-builder.Services.AddScoped<IGoogleDriveService, GoogleDriveService>();
+builder.Services.AddScoped<IAwsS3Service, AwsS3Service>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOnlineContractService, OnlineContractService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
@@ -86,6 +88,7 @@ builder.Services.AddScoped<ITrustScoreService, TrustScoreService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddSingleton<IPdfConverterService, PuppeteerPdfService>();
+builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 
 // ====================== Build App ======================
 var app = builder.Build();
@@ -181,29 +184,47 @@ app.Run();
 
 static void ValidateConfiguration(IConfiguration config)
 {
+    var errors = new List<string>();
+
     // JWT
     var jwtSecret = config["JwtSettings:SecretKey"];
-    if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
+    if (string.IsNullOrEmpty(jwtSecret))
     {
-        throw new InvalidOperationException($"JWT SecretKey phải >= 32 ký tự. Hiện tại: {jwtSecret?.Length ?? 0}");
+        errors.Add("JwtSettings:SecretKey không được để trống");
+    }
+    else if (jwtSecret.Length < 32)
+    {
+        errors.Add($"JWT SecretKey phải >= 32 ký tự. Hiện tại: {jwtSecret.Length}");
     }
 
     // Connection String
     var connStr = config.GetConnectionString("DefaultConnection");
     if (string.IsNullOrEmpty(connStr))
     {
-        throw new InvalidOperationException("ConnectionString 'DefaultConnection' không tồn tại");
+        errors.Add("ConnectionString 'DefaultConnection' không tồn tại");
     }
 
     // Required sections
-    var required = new[] { "EmailSettings", "VNPaySettings", "PdfSettings", "ContractSettings", "OrderSettings" };
+    var required = new[] {"EmailSettings", "VNPaySettings", "PdfSettings", "ContractSettings", "OrderSettings" };
     foreach (var section in required)
     {
         if (!config.GetSection(section).Exists())
         {
-            throw new InvalidOperationException($"Section '{section}' không tồn tại");
+            errors.Add($"Section '{section}' không tồn tại");
         }
     }
+
+
+
+    // Throw all errors at once
+    if (errors.Any())
+    {
+        var errorMessage = "❌ Configuration validation failed:\n" +
+                          string.Join("\n", errors.Select(e => $"  • {e}"));
+        throw new InvalidOperationException(errorMessage);            // Dòng bị lỗi
+    }
+
+    Console.WriteLine("✓ Configuration validation passed");
 }
 
 static void ConfigureSwagger(IServiceCollection services)
