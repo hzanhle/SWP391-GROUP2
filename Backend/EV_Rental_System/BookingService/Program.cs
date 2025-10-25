@@ -66,8 +66,7 @@ builder.Services.Configure<VNPaySettings>(builder.Configuration.GetSection("VNPa
 builder.Services.Configure<PdfSettings>(builder.Configuration.GetSection("PdfSettings"));
 builder.Services.Configure<ContractSettings>(builder.Configuration.GetSection("ContractSettings"));
 builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
-builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
-
+builder.Services.Configure<AwsS3Settings>(builder.Configuration.GetSection("AwsS3Settings"));
 
 
 // ====================== Repositories ======================
@@ -80,7 +79,7 @@ builder.Services.AddScoped<ITrustScoreRepository, TrustScoreRepository>();
 builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
 
 // ====================== Services ======================
-builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
+builder.Services.AddScoped<IAwsS3Service, AwsS3Service>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOnlineContractService, OnlineContractService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
