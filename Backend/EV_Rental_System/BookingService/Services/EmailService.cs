@@ -1,47 +1,35 @@
 ﻿using System.Net;
 using System.Net.Mail;
 using Microsoft.Extensions.Options;
-using BookingService.Models;
 using BookingService.Models.ModelSettings;
 
 namespace BookingService.Services
 {
     public class EmailService : IEmailService
     {
-        private readonly EmailSettings _emailSettings;
+        private readonly EmailSettings _settings;
         private readonly ILogger<EmailService> _logger;
 
-        public EmailService(
-            IOptions<EmailSettings> emailSettings,
-            ILogger<EmailService> logger)
+        public EmailService(IOptions<EmailSettings> settings, ILogger<EmailService> logger)
         {
-            _emailSettings = emailSettings.Value ?? throw new ArgumentNullException(nameof(emailSettings));
+            _settings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _logger.LogWarning("📧 Email Config Loaded => Email: {Email}, Pass: {HasPass}, From: {SenderName}",
+            _settings.SenderEmail,
+            string.IsNullOrEmpty(_settings.SenderPassword) ? "❌ No Password" : "✅ Has Password",
+            _settings.SenderName);
+
         }
 
-        /// <summary>
-        /// Gửi email cơ bản
-        /// </summary>
-        public async Task<bool> SendEmailAsync(string toEmail, string subject, string body)
-        {
-            return await SendEmailInternalAsync(toEmail, subject, body);
-        }
+        // ------------------ Public Methods ------------------
 
-        /// <summary>
-        /// Gửi email hợp đồng với Google Drive link
-        /// </summary>
-        public async Task<bool> SendContractEmailAsync(
-            string toEmail,
-            string customerName,
-            string contractNumber,
-            string driveLink)
+        public Task<bool> SendEmailAsync(string toEmail, string subject, string body)
+            => SendEmailInternalAsync(toEmail, subject, body);
+
+        public async Task<bool> SendContractEmailAsync(string toEmail, string customerName, string contractNumber, string driveLink)
         {
             try
             {
-                _logger.LogInformation(
-                    "Chuẩn bị gửi email hợp đồng đến {Email} với Drive link",
-                    toEmail);
-
                 var subject = $"[Xác nhận] Hợp đồng điện tử {contractNumber}";
                 var body = CreateContractEmailBody(customerName, contractNumber, driveLink);
 
@@ -49,178 +37,159 @@ namespace BookingService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi gửi email hợp đồng đến {Email}", toEmail);
+                _logger.LogError(ex, "❌ Lỗi khi gửi email hợp đồng đến {Email}", toEmail);
                 return false;
             }
         }
 
-        #region Private Methods
+        // ------------------ Core Send Logic ------------------
 
-        /// <summary>
-        /// Core method gửi email (không attachment)
-        /// </summary>
-        private async Task<bool> SendEmailInternalAsync(
-            string email,
-            string subject,
-            string body)
+        private async Task<bool> SendEmailInternalAsync(string toEmail, string subject, string body)
         {
+            if (string.IsNullOrWhiteSpace(toEmail))
+            {
+                _logger.LogWarning("⚠️ Email người nhận trống, bỏ qua gửi.");
+                return false;
+            }
+
             try
             {
-                _logger.LogInformation(
-                    "Bắt đầu gửi email (Subject: {Subject}) đến {Email}",
-                    subject, email);
-
-                if (string.IsNullOrWhiteSpace(email))
-                {
-                    _logger.LogWarning("Email recipient is empty");
-                    return false;
-                }
-
                 using var mail = new MailMessage
                 {
-                    From = new MailAddress(_emailSettings.SenderEmail, _emailSettings.SenderName),
+                    From = new MailAddress(_settings.SenderEmail, _settings.SenderName),
                     Subject = subject,
                     Body = body,
                     IsBodyHtml = true
                 };
-                mail.To.Add(email);
 
-                using var smtp = new SmtpClient(_emailSettings.SmtpServer, _emailSettings.SmtpPort)
+                mail.To.Add(toEmail);
+
+                //using var smtp = new SmtpClient(_settings.SmtpServer, _settings.SmtpPort)
+                //{
+                //    EnableSsl = _settings.EnableSsl,
+                //    DeliveryMethod = SmtpDeliveryMethod.Network,
+                //    UseDefaultCredentials = false,
+                //    Credentials = new NetworkCredential(_settings.SenderEmail, _settings.SenderPassword),
+                //    Timeout = 10000
+                //};
+
+                using var smtp = new SmtpClient(_settings.SmtpServer, _settings.SmtpPort)
                 {
-                    Credentials = new NetworkCredential(_emailSettings.SenderEmail, _emailSettings.SenderPassword),
-                    EnableSsl = _emailSettings.EnableSsl
+                    EnableSsl = true,
+                    DeliveryMethod = SmtpDeliveryMethod.Network,
+                    UseDefaultCredentials = false,
+                    Credentials = new NetworkCredential(_settings.SenderEmail, _settings.SenderPassword)
                 };
 
-                await smtp.SendMailAsync(mail);
 
-                _logger.LogInformation("✅ Đã gửi email thành công đến {Email}", email);
+                _logger.LogInformation("📨 Đang gửi email đến {Email}...", toEmail);
+                _logger.LogInformation("📧 Gmail config: {Email} / {Password}", _settings.SenderEmail, _settings.SenderPassword);
+                await smtp.SendMailAsync(mail);
+                _logger.LogInformation("✅ Gửi email thành công đến {Email}", toEmail);
+
                 return true;
             }
             catch (SmtpException ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Lỗi SMTP khi gửi email đến {Email}. StatusCode: {StatusCode}",
-                    email, ex.StatusCode);
+                _logger.LogError(ex, "❌ Lỗi SMTP ({StatusCode}) khi gửi đến {Email}", ex.StatusCode, toEmail);
                 return false;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi không xác định khi gửi email đến {Email}", email);
+                _logger.LogError(ex, "❌ Lỗi không xác định khi gửi email đến {Email}", toEmail);
                 return false;
             }
         }
 
-        /// <summary>
-        /// Tạo HTML email body với Google Drive link
-        /// </summary>
-        private string CreateContractEmailBody(
-            string customerName,
-            string contractNumber,
-            string driveLink)
+        // ------------------ Email Template ------------------
+
+        private string CreateContractEmailBody(string customerName, string contractNumber, string driveLink)
         {
+            var currentTime = DateTime.UtcNow.AddHours(7).ToString("dd/MM/yyyy HH:mm");
+
             return $@"
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset='utf-8'>
-                <style>
-                    body {{ 
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                        line-height: 1.6; 
-                        color: #333; 
-                        margin: 0;
-                        padding: 0;
-                    }}
-                    .container {{ 
-                        max-width: 600px; 
-                        margin: 0 auto; 
-                        background: #f9f9f9; 
-                    }}
-                    .header {{ 
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        color: white; 
-                        padding: 30px; 
-                        text-align: center; 
-                    }}
-                    .content {{ 
-                        background: white; 
-                        padding: 30px; 
-                    }}
-                    .footer {{ 
-                        background: #f0f0f0; 
-                        padding: 20px; 
-                        text-align: center; 
-                        font-size: 12px; 
-                        color: #666; 
-                    }}
-                    .highlight {{ 
-                        color: #667eea; 
-                        font-weight: bold; 
-                    }}
-                    .button {{ 
-                        display: inline-block; 
-                        background: #667eea; 
-                        color: white !important; 
-                        padding: 14px 30px; 
-                        text-decoration: none; 
-                        border-radius: 6px; 
-                        margin: 20px 0;
-                        font-weight: bold;
-                        font-size: 16px;
-                    }}
-                    .button:hover {{ 
-                        background: #5568d3; 
-                    }}
-                    .info-box {{ 
-                        background: #f8f9fa; 
-                        border-left: 4px solid #667eea; 
-                        padding: 15px; 
-                        margin: 20px 0; 
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class='container'>
-                    <div class='header'>
-                        <h2>✅ Hợp Đồng Được Xác Nhận</h2>
-                    </div>
-                    <div class='content'>
-                        <p>Xin chào <span class='highlight'>{customerName}</span>,</p>
-                        <p>Cảm ơn bạn đã hoàn tất thanh toán. Hợp đồng điện tử của bạn đã được tạo thành công!</p>
-                        
-                        <div class='info-box'>
-                            <strong>📄 Thông tin hợp đồng:</strong><br>
-                            Số hợp đồng: <span class='highlight'>{contractNumber}</span><br>
-                            Ngày tạo: {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm} (GMT+7)
-                        </div>
-
-                        <p style='text-align: center;'>
-                            <a href='{driveLink}' class='button'>📥 Tải Hợp Đồng PDF</a>
-                        </p>
-
-                        <p style='color: #666; font-size: 14px; line-height: 1.8;'>
-                            <strong>📌 Lưu ý:</strong><br>
-                            • Vui lòng lưu lại hợp đồng để đối chiếu khi cần thiết<br>
-                            • Link tải hợp đồng luôn có hiệu lực<br>
-                            • Nếu có thắc mắc, vui lòng liên hệ bộ phận hỗ trợ khách hàng
-                        </p>
-
-                        <p style='color: #999; font-size: 13px; margin-top: 30px; text-align: center;'>
-                            🚗 Chúc bạn có chuyến đi an toàn và vui vẻ! 🎉
-                        </p>
-                    </div>
-                    <div class='footer'>
-                        <p>© 2025 EV Rental System. All rights reserved.</p>
-                        <p style='color: #999; margin-top: 10px;'>
-                            Đây là email tự động, vui lòng không trả lời email này.
-                        </p>
-                    </div>
-                </div>
-            </body>
-            </html>";
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+<meta charset='UTF-8'>
+<style>
+    body {{
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        color: #333;
+        background-color: #f9f9f9;
+        margin: 0;
+        padding: 0;
+    }}
+    .container {{
+        max-width: 600px;
+        background: #fff;
+        margin: 20px auto;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }}
+    .header {{
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }}
+    .content {{
+        padding: 30px;
+        line-height: 1.6;
+    }}
+    .button {{
+        display: inline-block;
+        background-color: #667eea;
+        color: white;
+        padding: 14px 28px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: bold;
+        margin-top: 20px;
+    }}
+    .info-box {{
+        background: #f2f4ff;
+        padding: 15px;
+        border-left: 4px solid #667eea;
+        margin: 20px 0;
+    }}
+    .footer {{
+        background-color: #f0f0f0;
+        padding: 15px;
+        text-align: center;
+        font-size: 13px;
+        color: #777;
+    }}
+</style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h2>Hợp Đồng Được Xác Nhận ✅</h2>
+        </div>
+        <div class='content'>
+            <p>Xin chào <strong>{customerName}</strong>,</p>
+            <p>Hợp đồng điện tử của bạn đã được tạo thành công.</p>
+            <div class='info-box'>
+                <b>Mã hợp đồng:</b> {contractNumber}<br>
+                <b>Thời gian:</b> {currentTime} (GMT+7)
+            </div>
+            <p style='text-align:center'>
+                <a href='{driveLink}' class='button'>📥 Tải Hợp Đồng PDF</a>
+            </p>
+            <p style='font-size:14px;color:#666'>
+                • Vui lòng lưu lại hợp đồng để đối chiếu khi cần thiết<br>
+                • Link tải hợp đồng luôn có hiệu lực<br>
+                • Nếu có thắc mắc, vui lòng liên hệ bộ phận hỗ trợ khách hàng
+            </p>
+        </div>
+        <div class='footer'>
+            © 2025 EV Rental System — Email tự động, vui lòng không trả lời.
+        </div>
+    </div>
+</body>
+</html>";
         }
-
-        #endregion
     }
 }
