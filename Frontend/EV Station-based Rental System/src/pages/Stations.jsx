@@ -17,6 +17,7 @@ export default function Stations() {
         const { data } = await getAllStations()
         if (!mounted) return
         const mapped = Array.isArray(data) ? data.map(s => ({
+          id: s.stationId ?? s.id ?? s.Id,
           name: s.name ?? s.Name,
           address: s.location ?? s.Location,
         })) : []

@@ -76,3 +76,299 @@
   color: #706f7b;
   margin: 0;
 }
+
+/* Booking Page Grid Layouts */
+.booking-section-label {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #010103;
+}
+
+/* Station Selection Container */
+.station-selection-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.station-selection-map-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.station-selection-grid-section {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Stations Grid */
+.stations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.station-card-item {
+  padding: 1.5rem;
+  border: 2px solid #d0d0d0;
+  border-radius: 0.8rem;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.station-card-item:hover {
+  border-color: #ff4d30;
+  box-shadow: 0 4px 12px rgba(255, 77, 48, 0.15);
+  transform: translateY(-2px);
+  background-color: #fafafa;
+}
+
+.station-card-item.selected {
+  border-color: #ff4d30;
+  background-color: #fff5f0;
+  box-shadow: 0 4px 16px rgba(255, 77, 48, 0.3);
+  font-weight: 500;
+}
+
+.station-card-name {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #010103;
+  margin: 0;
+}
+
+.station-card-location {
+  font-size: 1.4rem;
+  color: #706f7b;
+  margin: 0;
+}
+
+.station-card-checkmark {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  background-color: #ff4d30;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+
+/* Model Selection Container */
+.model-selection-container {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 2rem;
+}
+
+/* Models Grid */
+.models-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.model-card-item {
+  padding: 1.5rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 0.8rem;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.model-card-item:hover {
+  border-color: #ff4d30;
+  box-shadow: 0 4px 12px rgba(255, 77, 48, 0.15);
+  transform: translateY(-2px);
+}
+
+.model-card-item.selected {
+  border-color: #ff4d30;
+  background-color: #fff5f0;
+  box-shadow: 0 4px 12px rgba(255, 77, 48, 0.25);
+}
+
+.model-card-item.unavailable {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+}
+
+.model-card-item.unavailable:hover {
+  border-color: #e0e0e0;
+  box-shadow: none;
+  transform: none;
+}
+
+.model-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.model-card-name {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #010103;
+  margin: 0;
+  flex: 1;
+}
+
+.model-card-status {
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.4rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.model-card-status.unavailable {
+  background-color: #f0f0f0;
+  color: #999;
+}
+
+.model-card-specs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.model-spec {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.4rem;
+  color: #706f7b;
+}
+
+.spec-label {
+  font-weight: 500;
+  color: #010103;
+}
+
+.spec-value {
+  color: #706f7b;
+}
+
+.model-card-price {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.price-label {
+  font-size: 1.4rem;
+  color: #706f7b;
+  font-weight: 500;
+}
+
+.price-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #ff4d30;
+}
+
+.model-card-checkmark {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  background-color: #ff4d30;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+
+/* Map Card */
+.map-card {
+  background-color: white;
+  border-radius: 0.8rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.map-canvas {
+  width: 100%;
+  height: 400px;
+  min-height: 400px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .station-selection-container {
+    grid-template-columns: 1fr;
+  }
+
+  .stations-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  .models-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .stations-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .models-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .map-canvas {
+    height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stations-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .models-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .station-card-item,
+  .model-card-item {
+    padding: 1rem;
+  }
+
+  .station-card-name,
+  .model-card-name {
+    font-size: 1.4rem;
+  }
+
+  .map-canvas {
+    height: 250px;
+  }
+}

@@ -3,10 +3,13 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import Stepper from '../components/Stepper'
+import BookingStep1_SelectStation from './BookingStep1_SelectStation'
+import BookingStep2_SelectModel from './BookingStep2_SelectModel'
+import BookingStep3_Schedule from './BookingStep3_Schedule'
 import * as vehicleApi from '../api/vehicle'
 import * as stationApi from '../api/station'
 import * as bookingApi from '../api/booking'
-import { validateUserDocuments } from '/utils/documentValidation';
+import { validateUserDocuments } from '/utils/documentValidation'
 
 export default function BookingNew() {
   const [step, setStep] = useState(0)
@@ -24,7 +27,6 @@ export default function BookingNew() {
   
   const [selectedStation, setSelectedStation] = useState(null)
   const [selectedModel, setSelectedModel] = useState(null)
-  const [selectedVehicle, setSelectedVehicle] = useState(null)
   const [pickupDate, setPickupDate] = useState('')
   const [dropoffDate, setDropoffDate] = useState('')
   
@@ -57,19 +59,15 @@ export default function BookingNew() {
         setUser(userData)
         setToken(authToken)
 
-        // Validate documents - use stored userId as primary source
+        // Validate documents
         let effectiveUserId = storedId ? Number(storedId) : null
-        console.log('[BookingNew] storedId:', storedId, '→ effectiveUserId:', effectiveUserId, 'isNaN:', isNaN(effectiveUserId))
 
-        // Fallback to extracting from user object if stored ID not available
         if (!effectiveUserId || isNaN(effectiveUserId)) {
           const fallbackId = userData?.userId ?? userData?.UserId ??
             userData?.id     ?? userData?.Id ?? null
           effectiveUserId = Number(fallbackId)
-          console.log('[BookingNew] Fallback extraction: fallbackId =', fallbackId, '→ effectiveUserId =', effectiveUserId)
         }
 
-        // If still invalid, prevent proceeding
         if (!effectiveUserId || isNaN(effectiveUserId)) {
           console.error('[BookingNew] Invalid userId. Extracted values:', {
             storedId,
@@ -83,9 +81,7 @@ export default function BookingNew() {
           return
         }
 
-   console.log('[BookingNew] About to validate documents with userId:', effectiveUserId)
-   const docValidation = await validateUserDocuments(effectiveUserId, authToken)
-
+        const docValidation = await validateUserDocuments(effectiveUserId, authToken)
         console.log('[BookingNew] Document validation result:', docValidation)
 
         if (!docValidation.hasAllDocuments) {
@@ -96,37 +92,74 @@ export default function BookingNew() {
         }
         
         // Fetch stations and models
-        const [stationsRes, modelsRes, vehiclesRes] = await Promise.all([
-          stationApi.getActiveStations(authToken),
-          vehicleApi.getActiveModels(authToken),
-          vehicleApi.getActiveVehicles(authToken),
-        ])
+        let stationsRes, modelsRes, vehiclesRes
+        try {
+          [stationsRes, modelsRes, vehiclesRes] = await Promise.all([
+            stationApi.getActiveStations(authToken).catch(err => {
+              console.error('[BookingNew] Error fetching stations:', err)
+              return { data: [] }
+            }),
+            vehicleApi.getActiveModels(authToken).catch(err => {
+              console.error('[BookingNew] Error fetching models:', err)
+              return { data: [] }
+            }),
+            vehicleApi.getActiveVehicles(authToken).catch(err => {
+              console.error('[BookingNew] Error fetching vehicles:', err)
+              return { data: [] }
+            }),
+          ])
+        } catch (err) {
+          console.error('[BookingNew] Promise.all error:', err)
+          stationsRes = { data: [] }
+          modelsRes = { data: [] }
+          vehiclesRes = { data: [] }
+        }
 
         const stationsData = Array.isArray(stationsRes.data) ? stationsRes.data : []
         const modelsData = Array.isArray(modelsRes.data) ? modelsRes.data : []
         const vehiclesData = Array.isArray(vehiclesRes.data) ? vehiclesRes.data : []
 
-        console.log('[BookingNew] Loaded data:', { stationsData, modelsData, vehiclesData })
+        console.log('[BookingNew] Loaded data:', {
+          stationsCount: stationsData.length,
+          modelsCount: modelsData.length,
+          vehiclesCount: vehiclesData.length
+        })
+
+        if (vehiclesData.length === 0) {
+          console.warn('[BookingNew] No vehicles returned from API')
+        }
 
         setStations(stationsData)
         setModels(modelsData)
         setVehicles(vehiclesData)
+
+        // Debug: Check vehicles structure
+        console.log('[BookingNew] Vehicles data sample:', vehiclesData.slice(0, 2))
+        console.log('[BookingNew] Models data sample:', modelsData.slice(0, 2))
+        if (vehiclesData.length > 0) {
+          console.log('[BookingNew] First vehicle keys:', Object.keys(vehiclesData[0]))
+        }
+        if (modelsData.length > 0) {
+          console.log('[BookingNew] First model keys:', Object.keys(modelsData[0]))
+        }
 
         // Pre-fill from quick_search_data if available
         const quickSearchStr = localStorage.getItem('quick_search_data')
         if (quickSearchStr) {
           try {
             const data = JSON.parse(quickSearchStr)
-            if (data.stationId) {
-              const station = stationsData.find(s => s.stationId === data.stationId)
-              if (station) setSelectedStation(station)
+            if (data.stationId || data.Id) {
+              const searchId = data.stationId || data.Id
+              const station = stationsData.find(s => (s.Id || s.stationId) === searchId)
+              if (station) {
+                setSelectedStation(station)
+              }
             }
-            if (data.modelId) {
-              const model = modelsData.find(m => m.modelId === data.modelId)
-              if (model) setSelectedModel(model)
+            if (data.modelId || data.ModelId) {
+              const searchId = data.modelId || data.ModelId
+              const model = modelsData.find(m => (m.ModelId || m.modelId) === searchId)
               if (model) {
-                const vehicle = vehiclesData.find(v => v.modelId === data.modelId)
-                if (vehicle) setSelectedVehicle(vehicle)
+                setSelectedModel(model)
               }
             }
             if (data.pickupDate) setPickupDate(data.pickupDate)
@@ -149,17 +182,52 @@ export default function BookingNew() {
     init()
   }, [])
 
-  // Filter vehicles based on selected model
-  const filteredVehicles = selectedModel 
-    ? vehicles.filter(v => v.modelId === selectedModel.modelId)
-    : []
+  // Get first available vehicle for selected model
+  const getFirstAvailableVehicle = () => {
+    if (!selectedModel) return null
 
-  async function handlePreview() {
-    // allow using first available vehicle if user did not pick a specific one
-    const vehicleToUse = selectedVehicle || (selectedModel && filteredVehicles.length > 0 ? filteredVehicles[0] : null)
+    if (vehicles.length === 0) {
+      console.warn('[BookingNew] No vehicles loaded from API')
+      return null
+    }
 
-    if (!selectedStation || !vehicleToUse || !pickupDate || !dropoffDate) {
-      setPreviewError('Vui lòng điền đầy đủ thông tin')
+    const modelId = selectedModel.ModelId || selectedModel.modelId
+    const available = vehicles.filter(v => {
+      const vModelId = v.ModelId || v.modelId
+      return vModelId === modelId
+    })
+
+    if (available.length > 0) {
+      const vehicleId = available[0].VehicleId || available[0].vehicleId || available[0].id
+      console.log('[BookingNew] Found vehicle for model:', { modelId, vehicleId })
+      return available[0]
+    }
+
+    // Fallback: return first vehicle if available
+    console.warn('[BookingNew] No vehicle matched model, using first available')
+    return vehicles.length > 0 ? vehicles[0] : null
+  }
+
+  const handlePreview = async () => {
+    setPreviewError(null)
+
+    if (!selectedStation) {
+      setPreviewError('Vui lòng chọn điểm thuê xe')
+      return
+    }
+
+    if (!selectedModel) {
+      setPreviewError('Vui lòng chọn mẫu xe')
+      return
+    }
+
+    if (!pickupDate) {
+      setPreviewError('Vui lòng nhập thời gian nhận xe')
+      return
+    }
+
+    if (!dropoffDate) {
+      setPreviewError('Vui lòng nhập thời gian tr��� xe')
       return
     }
 
@@ -170,76 +238,150 @@ export default function BookingNew() {
 
     try {
       setPreviewLoading(true)
-      setPreviewError(null)
 
       const previewUserId = Number(localStorage.getItem('auth.userId')) || Number(user?.userId || user?.UserId || user?.id || user?.Id)
       if (!previewUserId || isNaN(previewUserId)) {
-        setPreviewError('Không thể xác định ID người dùng')
+        setPreviewError('Không thể xác định ID người dùng. Vui lòng đăng nhập lại.')
         return
       }
 
-      // if we auto-picked a vehicle, reflect it in state so UI shows selection
-      if (!selectedVehicle && vehicleToUse) {
-        setSelectedVehicle(vehicleToUse)
+      if (vehicles.length === 0) {
+        setPreviewError('Không có xe khả dụng lúc này. Vui lòng thử lại sau.')
+        return
+      }
+
+      const vehicleToUse = getFirstAvailableVehicle()
+      if (!vehicleToUse) {
+        setPreviewError('Không thể tìm xe cho mẫu này. Vui lòng thử lại hoặc chọn mẫu khác.')
+        return
+      }
+
+      const vehicleId = vehicleToUse.VehicleId || vehicleToUse.vehicleId || vehicleToUse.id
+      if (!vehicleId || isNaN(Number(vehicleId))) {
+        setPreviewError('Thông tin xe không hợp lệ. Vui lòng thử lại.')
+        return
+      }
+
+      const rentFee = Number(selectedModel.RentFeeForHour || selectedModel.rentFeeForHour || 0)
+      const modelCost = Number(selectedModel.ModelCost || selectedModel.modelCost || 0)
+
+      if (rentFee <= 0) {
+        setPreviewError('Giá thuê không hợp lệ. Vui lòng thử lại hoặc chọn mẫu khác.')
+        return
+      }
+
+      if (modelCost <= 0) {
+        setPreviewError('Giá xe không hợp lệ. Vui lòng thử lại hoặc chọn mẫu khác.')
+        return
       }
 
       const previewRes = await bookingApi.getOrderPreview({
         userId: previewUserId,
-        vehicleId: vehicleToUse.vehicleId,
+        vehicleId: Number(vehicleId),
         fromDate: new Date(pickupDate).toISOString(),
         toDate: new Date(dropoffDate).toISOString(),
-        rentFeeForHour: selectedModel.rentFeeForHour,
-        modelPrice: selectedModel.modelCost,
+        rentFeeForHour: rentFee,
+        modelPrice: modelCost,
         paymentMethod: 'VNPay',
       }, token)
 
+      if (!previewRes.data) {
+        setPreviewError('Không thể tính toán chi phí. Vui lòng thử lại.')
+        return
+      }
+
       setPreview(previewRes.data)
-      setStep(2)
     } catch (err) {
       console.error('Error getting preview:', err)
-      setPreviewError(err.message || 'Lỗi khi xem trước đơn hàng')
+      setPreviewError(err.message || 'Lỗi khi tính toán chi phí. Vui lòng thử lại.')
     } finally {
       setPreviewLoading(false)
     }
   }
 
-  async function handleConfirmBooking() {
+  const handleConfirmBooking = async () => {
+    setBookingError(null)
+
     if (!preview) {
-      setBookingError('Vui lòng xem trước đơn hàng trước')
+      setBookingError('Vui lòng xem trước đơn hàng trước khi xác nhận')
+      return
+    }
+
+    if (!selectedStation) {
+      setBookingError('Thông tin điểm thuê bị mất. Vui lòng quay lại và chọn lại.')
+      return
+    }
+
+    if (!selectedModel) {
+      setBookingError('Thông tin mẫu xe bị mất. Vui lòng quay lại và chọn lại.')
+      return
+    }
+
+    if (!pickupDate || !dropoffDate) {
+      setBookingError('Thông tin thời gian bị mất. Vui lòng quay lại và nhập lại.')
       return
     }
     
     try {
       setBookingLoading(true)
-      setBookingError(null)
       
-      const bookingUserId = Number(user?.userId || user?.UserId || user?.id || user?.Id)
+      const bookingUserId = Number(localStorage.getItem('auth.userId')) || Number(user?.userId || user?.UserId || user?.id || user?.Id)
       if (!bookingUserId || isNaN(bookingUserId)) {
-        setBookingError('Không thể xác định ID người dùng')
+        setBookingError('Không thể xác định ID người dùng. Vui lòng đăng nhập lại.')
+        return
+      }
+
+      const vehicleToUse = getFirstAvailableVehicle()
+      if (!vehicleToUse) {
+        setBookingError('Không thể tìm xe. Vui lòng quay lại và thử lại.')
+        return
+      }
+
+      const vehicleId = vehicleToUse.VehicleId || vehicleToUse.vehicleId || vehicleToUse.id
+      if (!vehicleId || isNaN(Number(vehicleId))) {
+        setBookingError('Thông tin xe không hợp lệ. Vui lòng thử lại.')
+        return
+      }
+
+      const rentFee = Number(selectedModel.RentFeeForHour || selectedModel.rentFeeForHour || 0)
+      const modelCost = Number(selectedModel.ModelCost || selectedModel.modelCost || 0)
+
+      if (rentFee <= 0 || modelCost <= 0) {
+        setBookingError('Thông tin giá xe không hợp lệ. Vui lòng thử lại.')
         return
       }
 
       const orderRes = await bookingApi.createOrder({
         userId: bookingUserId,
-        vehicleId: selectedVehicle.vehicleId,
+        vehicleId: Number(vehicleId),
         fromDate: new Date(pickupDate).toISOString(),
         toDate: new Date(dropoffDate).toISOString(),
-        rentFeeForHour: selectedModel.rentFeeForHour,
-        modelPrice: selectedModel.modelCost,
+        rentFeeForHour: rentFee,
+        modelPrice: modelCost,
         paymentMethod: 'VNPay',
       }, token)
       
+      if (!orderRes.data || !orderRes.data.orderId) {
+        setBookingError('Không thể tạo đơn hàng. Vui lòng thử lại.')
+        return
+      }
+
       const orderId = orderRes.data.orderId
       
       // Store booking info for payment page
+      const stationName = selectedStation.Name || selectedStation.name
+      const manufacturer = selectedModel.Manufacturer || selectedModel.manufacturer
+      const modelName = selectedModel.ModelName || selectedModel.modelName
+      const vehicleColor = vehicleToUse.Color || vehicleToUse.color
+
       localStorage.setItem('pending_booking', JSON.stringify({
         orderId,
         totalAmount: orderRes.data.totalAmount,
         expiresAt: orderRes.data.expiresAt,
         vehicleInfo: {
-          station: selectedStation.name,
-          model: `${selectedModel.manufacturer} ${selectedModel.modelName}`,
-          color: selectedVehicle.color,
+          station: stationName,
+          model: `${manufacturer} ${modelName}`,
+          color: vehicleColor,
         },
         dates: {
           from: pickupDate,
@@ -247,6 +389,7 @@ export default function BookingNew() {
         },
       }))
       
+      console.log('[BookingNew] Booking created successfully, navigating to payment...')
       // Navigate to payment page
       window.location.hash = 'payment'
     } catch (err) {
@@ -257,7 +400,7 @@ export default function BookingNew() {
     }
   }
 
-  function next() {
+  const handleNext = () => {
     if (step === 0 && !selectedStation) {
       setPreviewError('Vui lòng chọn điểm thuê xe')
       return
@@ -267,11 +410,14 @@ export default function BookingNew() {
       return
     }
     setStep((s) => Math.min(s + 1, steps.length - 1))
+    setPreviewError(null)
+    setBookingError(null)
   }
 
-  function back() {
+  const handleBack = () => {
     setStep((s) => Math.max(s - 1, 0))
     setPreviewError(null)
+    setBookingError(null)
     setPreviewLoading(false)
     setPreview(null)
   }
@@ -302,7 +448,7 @@ export default function BookingNew() {
           <div className="container">
             <div className="section-header">
               <h1 className="section-title">Đặt xe mới</h1>
-              <p className="section-subtitle">Hoàn thành 3 bước đ��n giản để đặt xe.</p>
+              <p className="section-subtitle">Hoàn thành 3 bước đơn giản để đặt xe.</p>
             </div>
 
             {error && (
@@ -327,177 +473,48 @@ export default function BookingNew() {
               <div className="card-body">
                 <Stepper steps={steps} current={step} />
 
-                {/* Step 0: Select Station */}
+                {/* Step 0 */}
                 {step === 0 && (
-                  <div className="field">
-                    <label htmlFor="station" className="label">Chọn điểm thuê xe</label>
-                    <select
-                      id="station"
-                      className="select"
-                      value={String(selectedStation?.stationId ?? '')}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        const station = stations.find(s => String(s.stationId) === val || s.stationId === Number(val) || s.name === val)
-                        setSelectedStation(station || null)
-                      }}
-                    >
-                      <option value="">-- Chọn điểm thuê --</option>
-                      {stations.map(station => (
-                        <option key={station.stationId} value={String(station.stationId)}>
-                          {station.name} - {station.location}
-                        </option>
-                      ))}
-                    </select>
-
-                    {stations.length === 0 && !loading && (
-                      <div className="error-message error-visible warning" role="alert">
-                        <span>
-                          Không tìm thấy điểm thuê. Nếu bạn đang dùng bản preview, frontend không thể truy cập API localhost.
-                          Chạy frontend cục bộ hoặc cấu hình VITE_STATION_API_URL tới URL công khai để lấy dữ liệu.
-                        </span>
-                      </div>
-                    )}
-
-                  </div>
+                  <BookingStep1_SelectStation 
+                    stations={stations}
+                    selectedStation={selectedStation}
+                    onSelectStation={setSelectedStation}
+                  />
                 )}
 
-                {/* Step 1: Select Vehicle Model */}
+                {/* Step 1 */}
                 {step === 1 && (
-                  <div className="field">
-                    <label htmlFor="model" className="label">Chọn mẫu xe</label>
-                    <select
-                      id="model"
-                      className="select"
-                      value={String(selectedModel?.modelId ?? '')}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        const model = models.find(m => String(m.modelId) === val || m.modelId === Number(val) || (`${m.manufacturer} ${m.modelName}`) === val)
-                        setSelectedModel(model || null)
-                        setSelectedVehicle(null)
-                      }}
-                    >
-                      <option value="">-- Chọn mẫu xe --</option>
-                      {models.map(model => (
-                        <option key={model.modelId} value={String(model.modelId)}>
-                          {model.manufacturer} {model.modelName} - ${model.rentFeeForHour}/giờ
-                        </option>
-                      ))}
-                    </select>
-
-                    {selectedModel && (
-                      <div style={{ marginTop: '2rem' }}>
-                        <label htmlFor="vehicle" className="label">Chọn chiếc xe cụ thể</label>
-                        <select
-                          id="vehicle"
-                          className="select"
-                          value={String(selectedVehicle?.vehicleId ?? '')}
-                          onChange={(e) => {
-                            const val = e.target.value
-                            const vehicle = filteredVehicles.find(v => String(v.vehicleId) === val || v.vehicleId === Number(val))
-                            setSelectedVehicle(vehicle || null)
-                          }}
-                        >
-                          <option value="">-- Chọn xe --</option>
-                          {filteredVehicles.map(vehicle => (
-                            <option key={vehicle.vehicleId} value={String(vehicle.vehicleId)}>
-                              {vehicle.color} - {vehicle.status}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
+                  <BookingStep2_SelectModel 
+                    models={models}
+                    vehicles={vehicles}
+                    selectedModel={selectedModel}
+                    onSelectModel={setSelectedModel}
+                  />
                 )}
 
-                {/* Step 2: Schedule & Confirmation */}
+                {/* Step 2 */}
                 {step === 2 && (
-                  <div className="booking-grid">
-                    <div className="field">
-                      <label htmlFor="pickup-date" className="label">Thời gian nhận xe</label>
-                      <input 
-                        id="pickup-date"
-                        type="datetime-local" 
-                        className="input"
-                        value={pickupDate}
-                        onChange={(e) => setPickupDate(e.target.value)}
-                      />
-                    </div>
-                    <div className="field">
-                      <label htmlFor="dropoff-date" className="label">Thời gian trả xe</label>
-                      <input 
-                        id="dropoff-date"
-                        type="datetime-local" 
-                        className="input"
-                        value={dropoffDate}
-                        onChange={(e) => setDropoffDate(e.target.value)}
-                      />
-                    </div>
-
-                    {previewError && (
-                      <div className="error-message error-visible grid-span-full">
-                        <span>{previewError}</span>
-                      </div>
-                    )}
-
-                    {!preview && !previewLoading && (
-                      <div className="field grid-span-full text-center">
-                        <CTA as="button" onClick={handlePreview} disabled={!((selectedVehicle || (selectedModel && filteredVehicles.length>0)) && pickupDate && dropoffDate)}>
-                          Xem trước chi phí
-                        </CTA>
-                      </div>
-                    )}
-
-                    {previewLoading && (
-                      <div className="field grid-span-full text-center">
-                        <p>Đang tính toán...</p>
-                      </div>
-                    )}
-
-                    {preview && (
-                      <div className="summary grid-span-full">
-                        <h3 className="card-title">Tóm tắt đơn hàng</h3>
-                        <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span className="card-subtext">Địa điểm:</span>
-                            <span className="card-subtext" style={{ fontWeight: 'bold' }}>{selectedStation?.name}</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span className="card-subtext">Xe:</span>
-                            <span className="card-subtext" style={{ fontWeight: 'bold' }}>{selectedModel?.manufacturer} {selectedModel?.modelName}</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span className="card-subtext">Giá thuê:</span>
-                            <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.totalRentalCost?.toFixed(2)}</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span className="card-subtext">Tiền cọc:</span>
-                            <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.depositAmount?.toFixed(2)}</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span className="card-subtext">Phí dịch vụ:</span>
-                            <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.serviceFee?.toFixed(2)}</span>
-                          </div>
-                          <hr style={{ margin: '1rem 0' }} />
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <h4 style={{ color: '#ff4d30', fontSize: '1.8rem' }}>Tổng cộng:</h4>
-                            <h4 style={{ color: '#ff4d30', fontSize: '1.8rem' }}>${preview.totalPaymentAmount?.toFixed(2)}</h4>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {bookingError && (
-                      <div className="error-message error-visible grid-span-full">
-                        <span>{bookingError}</span>
-                      </div>
-                    )}
-                  </div>
+                  <BookingStep3_Schedule
+                    selectedStation={selectedStation}
+                    selectedModel={selectedModel}
+                    pickupDate={pickupDate}
+                    dropoffDate={dropoffDate}
+                    onPickupDateChange={setPickupDate}
+                    onDropoffDateChange={setDropoffDate}
+                    preview={preview}
+                    previewLoading={previewLoading}
+                    previewError={previewError}
+                    bookingLoading={bookingLoading}
+                    bookingError={bookingError}
+                    onPreview={handlePreview}
+                    onConfirmBooking={handleConfirmBooking}
+                  />
                 )}
 
                 <div className="row-between" style={{ marginTop: '2rem' }}>
-                  <CTA as="button" variant="ghost" onClick={back}>Quay lại</CTA>
+                  <CTA as="button" variant="ghost" onClick={handleBack}>Quay lại</CTA>
                   {step < steps.length - 1 ? (
-                    <CTA as="button" onClick={next}>Tiếp tục</CTA>
+                    <CTA as="button" onClick={handleNext}>Tiếp tục</CTA>
                   ) : (
                     <CTA as="button" onClick={handleConfirmBooking} disabled={!preview || bookingLoading}>
                       {bookingLoading ? 'Đang xử lý...' : 'Xác nhận & Thanh toán'}
