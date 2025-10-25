@@ -24,13 +24,30 @@ export default function Payment() {
         }
 
         const pendingBooking = localStorage.getItem('pending_booking')
+        console.log('[Payment] Retrieved pending_booking:', pendingBooking)
+
         if (!pendingBooking) {
-          setError('Không tìm thấy thông tin đơn hàng')
-          window.location.hash = 'booking-new'
+          console.error('[Payment] No pending_booking found in localStorage')
+          setError('Không tìm thấy thông tin đơn hàng. Vui lòng bắt đầu lại.')
+          setTimeout(() => {
+            window.location.hash = 'booking-new'
+          }, 1000)
           return
         }
 
-        const bookingData = JSON.parse(pendingBooking)
+        let bookingData
+        try {
+          bookingData = JSON.parse(pendingBooking)
+          console.log('[Payment] Parsed booking data:', bookingData)
+        } catch (parseErr) {
+          console.error('[Payment] Error parsing booking data:', parseErr)
+          setError('Dữ liệu đơn hàng không hợp lệ. Vui lòng bắt đầu lại.')
+          setTimeout(() => {
+            window.location.hash = 'booking-new'
+          }, 1000)
+          return
+        }
+
         setBooking(bookingData)
         setToken(authToken)
 
@@ -205,46 +222,57 @@ export default function Payment() {
                 <div className="card-body">
                   <h3 className="card-title">Tóm tắt đơn hàng</h3>
                   
-                  {booking && (
+                  {booking ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.5rem' }}>
                       <div>
                         <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Mã đơn hàng</h4>
-                        <p style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#ff4d30' }}>#{booking.orderId}</p>
+                        <p style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#ff4d30' }}>{booking.orderId ? `#${booking.orderId}` : 'N/A'}</p>
                       </div>
 
                       <div>
                         <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Xe</h4>
-                        <p className="card-subtext">{booking.vehicleInfo?.model}</p>
-                        <p className="card-subtext">Màu: {booking.vehicleInfo?.color}</p>
+                        <p className="card-subtext" style={{ marginBottom: '0.5rem' }}>{booking.vehicleInfo?.model || 'N/A'}</p>
+                        <p className="card-subtext">Màu: {booking.vehicleInfo?.color || 'N/A'}</p>
                       </div>
 
                       <div>
                         <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Điểm thuê</h4>
-                        <p className="card-subtext">{booking.vehicleInfo?.station}</p>
+                        <p className="card-subtext">{booking.vehicleInfo?.station || 'N/A'}</p>
                       </div>
 
                       <div>
                         <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Thời gian</h4>
-                        <p className="card-subtext">
-                          Nhận: {new Date(booking.dates?.from).toLocaleString('vi-VN')}
-                        </p>
-                        <p className="card-subtext">
-                          Trả: {new Date(booking.dates?.to).toLocaleString('vi-VN')}
-                        </p>
+                        {booking.dates?.from && (
+                          <p className="card-subtext">
+                            Nhận: {new Date(booking.dates.from).toLocaleString('vi-VN')}
+                          </p>
+                        )}
+                        {booking.dates?.to && (
+                          <p className="card-subtext">
+                            Trả: {new Date(booking.dates.to).toLocaleString('vi-VN')}
+                          </p>
+                        )}
                       </div>
 
                       <hr style={{ margin: '1rem 0' }} />
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h4 style={{ fontSize: '1.8rem', color: '#ff4d30' }}>Tổng thanh toán:</h4>
+                      <div style={{ backgroundColor: '#f9f9f9', padding: '1rem', borderRadius: '0.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                          <span style={{ fontSize: '1.4rem', color: '#666' }}>Chi phí thuê:</span>
+                          <span style={{ fontSize: '1.4rem', fontWeight: '500' }}>${(booking.totalAmount || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem' }}>
+                        <h4 style={{ fontSize: '1.8rem', color: '#ff4d30', margin: 0 }}>Tổng thanh toán:</h4>
                         <h2 style={{ fontSize: '2.4rem', color: '#ff4d30', margin: 0 }}>
-                          ${booking.totalAmount?.toFixed(2)}
+                          ${(booking.totalAmount || 0).toFixed(2)}
                         </h2>
                       </div>
 
                       {booking.expiresAt && (
-                        <p style={{ 
-                          fontSize: '1.4rem', 
+                        <p style={{
+                          fontSize: '1.4rem',
                           color: '#d32f2f',
                           backgroundColor: '#ffebee',
                           padding: '1rem',
@@ -254,6 +282,10 @@ export default function Payment() {
                           ⏰ Thanh toán trước: {new Date(booking.expiresAt).toLocaleString('vi-VN')}
                         </p>
                       )}
+                    </div>
+                  ) : (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
+                      <p>Không có dữ liệu đơn hàng. Vui lòng thử lại.</p>
                     </div>
                   )}
                 </div>

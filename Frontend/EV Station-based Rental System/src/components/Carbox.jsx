@@ -2,6 +2,7 @@ import { useState } from "react";
 
 function CarBox({ model }) {
   const [imageLoading, setImageLoading] = useState(true);
+  const apiBaseUrl = (import.meta.env.VITE_VEHICLE_API_URL || import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
   if (!model) {
     return null;
@@ -9,7 +10,13 @@ function CarBox({ model }) {
 
   // Get image URL from API or use placeholder
   const placeholderImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23ff4d30' width='400' height='300'/%3E%3C/svg%3E";
-  const imageUrl = model.imageUrls && model.imageUrls.length > 0 ? model.imageUrls[0] : placeholderImg;
+  let imageUrl = placeholderImg;
+
+  if (model.imageUrls && model.imageUrls.length > 0) {
+    const imagePath = model.imageUrls[0];
+    // Construct full URL: combine API base URL with relative image path
+    imageUrl = imagePath.startsWith('http') ? imagePath : `${apiBaseUrl}/${imagePath}`;
+  }
 
   return (
     <div className="box-cars">

@@ -1017,6 +1017,7 @@ body {
   border-bottom: 2px solid #706f7b;
   border-right: 2px solid #706f7b;
   border-left: 2px solid #706f7b;
+  color: black;
 }
 .pick-description__table__col span:nth-child(1) {
   border-right: 2px solid #706f7b;
@@ -1063,7 +1064,7 @@ body {
 
 .colored-button {
   background-color: #ff4d30 !important;
-  color: white;
+  color: black;
 }
 
 .loader {

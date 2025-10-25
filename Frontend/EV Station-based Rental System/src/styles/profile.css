@@ -560,3 +560,80 @@
     padding: 0 1.5rem !important;
   }
 }
+
+/* Additional styles for StaffVerification and other pages */
+
+/* Muted text for labels and placeholders */
+.muted {
+  color: #706f7b;
+  font-size: 1.4rem;
+  font-weight: 500;
+}
+
+/* Bold text for values and emphasis */
+.strong {
+  color: #010103;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* Card header styling */
+.card-header {
+  padding: 2rem 3rem;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f9f9f9;
+}
+
+@media (max-width: 768px) {
+  .card-header {
+    padding: 1.5rem 2rem;
+  }
+}
+
+.card-header .card-title {
+  margin-bottom: 0;
+  font-size: 2.2rem;
+}
+
+/* Media image styling */
+.media-img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Basic button styling */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  font-family: "Poppins", sans-serif;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  background-color: #f9f9f9;
+  color: #010103;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  background-color: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn[aria-pressed="true"] {
+  background-color: #ff4d30;
+  color: white;
+  border-color: #ff4d30;
+}

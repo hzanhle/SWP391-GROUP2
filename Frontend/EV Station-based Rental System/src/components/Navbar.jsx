@@ -44,6 +44,10 @@ function Navbar() {
   };
 
   const userName = user?.userName || user?.username || 'User';
+  const roleId = Number((user && (user.roleId ?? user.RoleId)) ?? 0);
+  const isStaff = roleId === 2;
+  const isAdmin = roleId === 3;
+  const isMember = roleId === 1 || (roleId === 0 && user);
 
   return (
     <>
@@ -54,40 +58,53 @@ function Navbar() {
             <i className="fa-solid fa-xmark"></i>
           </div>
           <ul className="mobile-navbar__links">
-            <li>
-              <a onClick={openNav} href="#" style={{color: "inherit"}}>
-                Home
-              </a>
-            </li>
-            <li>
-              <a onClick={openNav} href="#about" style={{color: "inherit"}}>
-                About
-              </a>
-            </li>
-            <li>
-              <a onClick={openNav} href="#vehicles" style={{color: "inherit"}}>
-                Vehicles
-              </a>
-            </li>
-            <li>
-              <a onClick={openNav} href="#testimonials" style={{color: "inherit"}}>
-                Testimonials
-              </a>
-            </li>
-            <li>
-              <a onClick={openNav} href="#stations" style={{color: "inherit"}}>
-                Stations
-              </a>
-            </li>
-            <li>
-              <a onClick={openNav} href="#contact" style={{color: "inherit"}}>
-                Contact
-              </a>
-            </li>
+            {!isStaff && (
+              <>
+                <li>
+                  <a onClick={openNav} href="#" style={{color: "inherit"}}>
+                    Home
+                  </a>
+                </li>
+                <li>
+                  <a onClick={openNav} href="#about" style={{color: "inherit"}}>
+                    About
+                  </a>
+                </li>
+                <li>
+                  <a onClick={openNav} href="#vehicles" style={{color: "inherit"}}>
+                    Vehicles
+                  </a>
+                </li>
+                <li>
+                  <a onClick={openNav} href="#testimonials" style={{color: "inherit"}}>
+                    Testimonials
+                  </a>
+                </li>
+                <li>
+                  <a onClick={openNav} href="#stations" style={{color: "inherit"}}>
+                    Stations
+                  </a>
+                </li>
+                <li>
+                  <a onClick={openNav} href="#contact" style={{color: "inherit"}}>
+                    Contact
+                  </a>
+                </li>
+              </>
+            )}
+            {isStaff && (
+              <>
+                <li>
+                  <a onClick={openNav} href="#staff-verify" style={{color: "inherit"}}>
+                    Verification
+                  </a>
+                </li>
+              </>
+            )}
             {user && (
               <>
                 <li>
-                  <a onClick={openNav} href="#profile" style={{color: "inherit"}}>
+                  <a onClick={openNav} href={isStaff ? "#profile" : "#profile"} style={{color: "inherit"}}>
                     My Account
                   </a>
                 </li>
@@ -110,41 +127,52 @@ function Navbar() {
             </a>
           </div>
           <ul className="navbar__links">
-            <li>
-              <a className="home-link" href="#" onClick={() => window.location.hash = ""}>
-                Home
-              </a>
-            </li>
-            <li>
-              {" "}
-              <a className="about-link" href="#about">
-                About
-              </a>
-            </li>
-            <li>
-              {" "}
-              <a className="models-link" href="#vehicles">
-                Vehicles
-              </a>
-            </li>
-            <li>
-              {" "}
-              <a className="testi-link" href="#testimonials">
-                Testimonials
-              </a>
-            </li>
-            <li>
-              {" "}
-              <a className="stations-link" href="#stations">
-                Stations
-              </a>
-            </li>
-            <li>
-              {" "}
-              <a className="contact-link" href="#contact">
-                Contact
-              </a>
-            </li>
+            {!isStaff && (
+              <>
+                <li>
+                  <a className="home-link" href="#" onClick={() => window.location.hash = ""}>
+                    Home
+                  </a>
+                </li>
+                <li>
+                  {" "}
+                  <a className="about-link" href="#about">
+                    About
+                  </a>
+                </li>
+                <li>
+                  {" "}
+                  <a className="models-link" href="#vehicles">
+                    Vehicles
+                  </a>
+                </li>
+                <li>
+                  {" "}
+                  <a className="testi-link" href="#testimonials">
+                    Testimonials
+                  </a>
+                </li>
+                <li>
+                  {" "}
+                  <a className="stations-link" href="#stations">
+                    Stations
+                  </a>
+                </li>
+                <li>
+                  {" "}
+                  <a className="contact-link" href="#contact">
+                    Contact
+                  </a>
+                </li>
+              </>
+            )}
+            {isStaff && (
+              <li>
+                <a className="verification-link" href="#staff-verify">
+                  Verification
+                </a>
+              </li>
+            )}
           </ul>
 
           <div className="navbar__right">

@@ -361,23 +361,26 @@ export default function BookingNew() {
         paymentMethod: 'VNPay',
       }, token)
       
-      if (!orderRes.data || !orderRes.data.orderId) {
+      if (!orderRes.data || !orderRes.data.OrderId) {
         setBookingError('Không thể tạo đơn hàng. Vui lòng thử lại.')
         return
       }
 
-      const orderId = orderRes.data.orderId
-      
+      const orderId = orderRes.data.OrderId
+
+      // Log full response for debugging
+      console.log('[BookingNew] Full order response:', orderRes.data)
+
       // Store booking info for payment page
       const stationName = selectedStation.Name || selectedStation.name
       const manufacturer = selectedModel.Manufacturer || selectedModel.manufacturer
       const modelName = selectedModel.ModelName || selectedModel.modelName
       const vehicleColor = vehicleToUse.Color || vehicleToUse.color
 
-      localStorage.setItem('pending_booking', JSON.stringify({
+      const bookingDataToStore = {
         orderId,
-        totalAmount: orderRes.data.totalAmount,
-        expiresAt: orderRes.data.expiresAt,
+        totalAmount: orderRes.data.TotalAmount,
+        expiresAt: orderRes.data.ExpiresAt,
         vehicleInfo: {
           station: stationName,
           model: `${manufacturer} ${modelName}`,
@@ -387,8 +390,15 @@ export default function BookingNew() {
           from: pickupDate,
           to: dropoffDate,
         },
-      }))
-      
+      }
+
+      console.log('[BookingNew] Storing booking data:', bookingDataToStore)
+      localStorage.setItem('pending_booking', JSON.stringify(bookingDataToStore))
+
+      // Verify storage
+      const stored = localStorage.getItem('pending_booking')
+      console.log('[BookingNew] Verified stored data:', stored)
+
       console.log('[BookingNew] Booking created successfully, navigating to payment...')
       // Navigate to payment page
       window.location.hash = 'payment'

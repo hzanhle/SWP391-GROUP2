@@ -55,7 +55,15 @@ export default function Login() {
         const roleId = Number((user && (user.roleId ?? user.RoleId)) ?? 0)
         const roleName = String((user && (user.roleName ?? user.RoleName)) || '').toLowerCase()
         const isAdmin = roleId === 3 || roleName === 'admin'
-        window.location.hash = isAdmin ? '#admin' : ''
+        const isStaff = roleId === 2 || roleName === 'staff'
+
+        if (isAdmin) {
+          window.location.hash = '#admin'
+        } else if (isStaff) {
+          window.location.hash = '#staff-verify'
+        } else {
+          window.location.hash = ''
+        }
       } else {
         window.location.hash = ''
       }
