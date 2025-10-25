@@ -1,0 +1,288 @@
+### Fee System Testing Guide
+### This file contains API requests to test the Fee Calculation System
+### Use with VS Code REST Client extension or Visual Studio
+
+### Variables
+@baseUrl = http://localhost:5049
+@userServiceUrl = http://localhost:5109
+@adminToken = YOUR_ADMIN_TOKEN_HERE
+@employeeToken = YOUR_EMPLOYEE_TOKEN_HERE
+@memberToken = YOUR_MEMBER_TOKEN_HERE
+
+###############################################################################
+### STEP 1: Login to get authentication tokens
+###############################################################################
+
+### Login as Admin (update credentials as needed)
+POST {{userServiceUrl}}/api/User/login
+Content-Type: application/json
+
+{
+  "email": "admin@evstation.com",
+  "password": "Admin123!"
+}
+
+### Login as Employee/Staff
+POST {{userServiceUrl}}/api/User/login
+Content-Type: application/json
+
+{
+  "email": "staff@evstation.com",
+  "password": "Staff123!"
+}
+
+### Login as Member/Customer
+POST {{userServiceUrl}}/api/User/login
+Content-Type: application/json
+
+{
+  "email": "customer@evstation.com",
+  "password": "Customer123!"
+}
+
+###############################################################################
+### STEP 2: Test Automatic Fee Calculation (Staff/Admin only)
+###############################################################################
+
+### Test Case 1: Calculate fees with LATE RETURN only
+### Scenario: Customer returns 3 hours late, no damages, within mileage limit
+POST {{baseUrl}}/api/Fee/calculate
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "orderId": 1,
+  "actualReturnDate": "2025-01-15T13:00:00Z",
+  "returnMileage": 5150,
+  "pickupMileage": 5000
+}
+
+###
+
+### Test Case 2: Calculate fees with LATE RETURN + EXCESS MILEAGE
+### Scenario: 2 hours late + 250 km excess (over 300 km included for 3-day rental)
+POST {{baseUrl}}/api/Fee/calculate
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "orderId": 2,
+  "actualReturnDate": "2025-01-15T12:00:00Z",
+  "returnMileage": 5550,
+  "pickupMileage": 5000
+}
+
+###
+
+### Test Case 3: Calculate fees with DAMAGES
+### Scenario: Vehicle returned on time but with damages documented in return inspection
+### NOTE: This requires a return inspection with damages to be created first
+POST {{baseUrl}}/api/Fee/calculate
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "orderId": 3,
+  "actualReturnDate": "2025-01-15T10:00:00Z",
+  "returnMileage": 5200,
+  "pickupMileage": 5000
+}
+
+###
+
+### Test Case 4: Calculate ALL FEES (Late + Damage + Excess Mileage)
+### Scenario: Worst case - late return, damages, and excess mileage
+POST {{baseUrl}}/api/Fee/calculate
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "orderId": 4,
+  "actualReturnDate": "2025-01-15T18:00:00Z",
+  "returnMileage": 5600,
+  "pickupMileage": 5000
+}
+
+###
+
+### Test Case 5: Within Grace Period (NO LATE FEE)
+### Scenario: Only 30 minutes late (within 60-minute grace period)
+POST {{baseUrl}}/api/Fee/calculate
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "orderId": 5,
+  "actualReturnDate": "2025-01-15T10:30:00Z",
+  "returnMileage": 5100,
+  "pickupMileage": 5000
+}
+
+###############################################################################
+### STEP 3: Test Manual Fee Addition (Staff/Admin only)
+###############################################################################
+
+### Add CLEANING fee manually
+POST {{baseUrl}}/api/Fee/add
+Content-Type: application/json
+Authorization: Bearer {{employeeToken}}
+
+{
+  "orderId": 1,
+  "feeType": "Cleaning",
+  "amount": 50000,
+  "description": "Deep cleaning required - vehicle heavily soiled with mud"
+}
+
+###
+
+### Add DAMAGE fee manually (if not using automatic calculation)
+POST {{baseUrl}}/api/Fee/add
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "orderId": 1,
+  "feeType": "Damage",
+  "amount": 150000,
+  "description": "Scratched left side panel - manual assessment"
+}
+
+###
+
+### Add OTHER fee manually
+POST {{baseUrl}}/api/Fee/add
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "orderId": 1,
+  "feeType": "Other",
+  "amount": 25000,
+  "description": "Lost vehicle key - replacement cost"
+}
+
+###############################################################################
+### STEP 4: Retrieve Fees (All authenticated users)
+###############################################################################
+
+### Get all fees for a specific order
+GET {{baseUrl}}/api/Fee/order/1
+Authorization: Bearer {{memberToken}}
+
+###
+
+### Get specific fee by ID
+GET {{baseUrl}}/api/Fee/1
+Authorization: Bearer {{memberToken}}
+
+###
+
+### Get total fees for an order
+GET {{baseUrl}}/api/Fee/order/1/total
+Authorization: Bearer {{memberToken}}
+
+###############################################################################
+### STEP 5: Fee Management (Staff/Admin only)
+###############################################################################
+
+### Mark fee as paid
+PUT {{baseUrl}}/api/Fee/1/mark-paid
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Delete unpaid fee (only unpaid fees can be deleted)
+DELETE {{baseUrl}}/api/Fee/2
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Try to delete paid fee (should fail)
+DELETE {{baseUrl}}/api/Fee/1
+Authorization: Bearer {{adminToken}}
+
+###############################################################################
+### STEP 6: Error Testing
+###############################################################################
+
+### Test unauthorized access (no token)
+POST {{baseUrl}}/api/Fee/calculate
+Content-Type: application/json
+
+{
+  "orderId": 1,
+  "actualReturnDate": "2025-01-15T13:00:00Z"
+}
+
+###
+
+### Test member trying to add fee (should fail - Employee/Admin only)
+POST {{baseUrl}}/api/Fee/add
+Content-Type: application/json
+Authorization: Bearer {{memberToken}}
+
+{
+  "orderId": 1,
+  "feeType": "Cleaning",
+  "amount": 50000,
+  "description": "Test"
+}
+
+###
+
+### Test invalid order ID
+POST {{baseUrl}}/api/Fee/calculate
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "orderId": 99999,
+  "actualReturnDate": "2025-01-15T13:00:00Z",
+  "returnMileage": 5150,
+  "pickupMileage": 5000
+}
+
+###
+
+### Test invalid fee amount (must be > 0)
+POST {{baseUrl}}/api/Fee/add
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "orderId": 1,
+  "feeType": "Cleaning",
+  "amount": -100,
+  "description": "Invalid negative amount"
+}
+
+###############################################################################
+### TESTING NOTES
+###############################################################################
+
+# Expected Fee Calculation Results (based on default settings):
+#
+# FeeSettings (from appsettings.json):
+# - LateReturnGracePeriodMinutes: 60
+# - LateReturnPenaltyMultiplier: 1.5
+# - ExcessMileageFeePerKm: 0.5
+# - IncludedKmPerDay: 100
+#
+# Test Case 1 (3 hours late):
+#   - Grace period: 60 minutes
+#   - Chargeable: 2 hours
+#   - If daily rate = 100,000, hourly = 4,166.67
+#   - Late fee = 4,166.67 × 2 × 1.5 = 12,500
+#
+# Test Case 2 (550 km for 3-day rental):
+#   - Included: 3 × 100 = 300 km
+#   - Excess: 550 - 300 = 250 km
+#   - Excess fee = 250 × 0.5 = 125
+#
+# HTTP Status Codes:
+# - 200 OK: Successful operation
+# - 400 Bad Request: Invalid data or business rule violation
+# - 401 Unauthorized: Missing or invalid token
+# - 403 Forbidden: Insufficient permissions
+# - 404 Not Found: Resource doesn't exist

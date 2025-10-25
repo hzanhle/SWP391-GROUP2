@@ -1,0 +1,233 @@
+###############################################################################
+# .NET Core / C# / ASP.NET Core
+###############################################################################
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.VisualState.xml
+TestResult.xml
+*.trx
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+###############################################################################
+# Environment & Configuration Files
+###############################################################################
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.env
+
+# ASP.NET Configuration (contains sensitive data)
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+appsettings.*.json
+!appsettings.example.json
+
+###############################################################################
+# Database & Entity Framework
+###############################################################################
+
+# DbContext files (often auto-generated or contain connection strings)
+*DbContext.cs
+MyDbContext.cs
+
+# Entity Framework Migrations (auto-generated)
+**/Migrations/
+Migrations/
+
+# Database files
+*.mdf
+*.ldf
+*.ndf
+
+###############################################################################
+# React / Node.js / Frontend
+###############################################################################
+
+# Dependencies
+node_modules/
+jspm_packages/
+
+# Production build
+dist/
+build/
+.next/
+out/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory
+coverage/
+*.lcov
+.nyc_output
+
+# Misc
+.DS_Store
+*.pem
+.cache
+
+# Vite
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+###############################################################################
+# Compiled Files
+###############################################################################
+
+*.dll
+*.exe
+*.pdb
+*.cache
+*.ilk
+*.obj
+*.pch
+*.exp
+*.lib
+*.sbr
+*.sdf
+*.opensdf
+*.unsuccessfulbuild
+
+###############################################################################
+# Temporary Files
+###############################################################################
+
+*.tmp
+*.temp
+*~
+*.swp
+*.swo
+*.bak
+*.orig
+
+###############################################################################
+# OS Generated Files
+###############################################################################
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+
+###############################################################################
+# Application Specific
+###############################################################################
+
+# Uploaded files (user content)
+**/wwwroot/uploads/
+**/uploads/
+
+# Swagger JSON (auto-generated)
+swagger.json
+
+# HTTP test files (optional - uncomment if you don't want to track these)
+# *.http
+
+# Backup files
+*.backup
+
+###############################################################################
+# Security & Secrets
+###############################################################################
+
+# Keep these files local only
+*.key
+*.pfx
+*.p12
+secrets.json
+credentials.json
+
+# JWT Secret keys
+jwtsettings.json
