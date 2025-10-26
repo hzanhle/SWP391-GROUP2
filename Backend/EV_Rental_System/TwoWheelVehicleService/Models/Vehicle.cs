@@ -25,6 +25,15 @@ namespace TwoWheelVehicleService.Models
         [StringLength(20, ErrorMessage = "Trạng thái không được vượt quá 20 ký tự")]
         public string Status { get; set; }
 
+        [Range(0, 100)]
+        public int CurrentBatteryLevel { get; set; } = 100;
+
+        public TechnicalStatus CurrentTechnicalStatus { get; set; } = TechnicalStatus.Good;
+
+        public DateTime? LastStatusUpdate { get; set; }
+
+        public int? LastUpdatedBy { get; set; }
+
         public Vehicle() { }
 
         public Vehicle(int vehicleId, int modelId, int stationId, Model? model, string color)
