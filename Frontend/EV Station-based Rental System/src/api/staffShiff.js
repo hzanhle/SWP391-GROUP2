@@ -16,14 +16,25 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
   }
 
   let res
-  try { res = await fetch(url, init) } catch (err) {
+  try {
+    res = await fetch(url, init)
+  } catch (err) {
     const error = new Error(`Network error: failed to reach API at ${STATION_BASE_URL}. If you are running the API locally, the hosted preview cannot access localhost. Use a public URL or run the frontend locally.`)
-    error.cause = err; error.status = 0; error.data = null; throw error
+    error.cause = err
+    error.status = 0
+    error.data = null
+    throw error
   }
 
   const isJson = res.headers.get('content-type')?.includes('application/json')
   const data = isJson ? await res.json().catch(() => null) : null
-  if (!res.ok) { const error = new Error((data && (data.message || data.Message)) || `${res.status} ${res.statusText}`); error.status = res.status; error.data = data; throw error }
+  if (!res.ok) {
+    const errorMessage = (data && (data.message || data.Message)) || `${res.status} ${res.statusText}`
+    const error = new Error(errorMessage)
+    error.status = res.status
+    error.data = data
+    throw error
+  }
   return { status: res.status, data }
 }
 

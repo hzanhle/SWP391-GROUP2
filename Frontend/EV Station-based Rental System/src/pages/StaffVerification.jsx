@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import api from '../api/client'
+import '../styles/staff.css'
 
 function joinUrl(base, path) {
   if (!path) return ''
@@ -127,11 +128,11 @@ export default function StaffVerification() {
   return (
     <div data-figma-layer="Staff Verification Page">
       <Navbar />
-      <main>
+      <main style={{ paddingTop: '80px' }}>
         <section id="staff-verify" className="section" aria-labelledby="staff-title">
           <div className="container">
             <div className="section-header">
-              <h1 id="staff-title" className="section-title">Xác thực giấy tờ người dùng</h1>
+              <h1 id="staff-title" className="section-title">Xác thực giấy tờ ng��ời dùng</h1>
               <p className="section-subtitle">Nhập User ID để xem Căn cước công dân và Giấy phép lái xe, đối chiếu và xác thực.</p>
             </div>
 
