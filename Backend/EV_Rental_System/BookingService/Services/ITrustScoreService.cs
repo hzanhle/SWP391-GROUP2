@@ -26,6 +26,18 @@ namespace BookingService.Services
         Task UpdateScoreOnNoShowAsync(int userId, int orderId);
 
         /**
+         * Cập nhật (trừ) điểm khi trả xe muộn.
+         * Penalty: -5 điểm mỗi giờ trễ (sau grace period).
+         */
+        Task UpdateScoreOnLateReturnAsync(int userId, int orderId, decimal overtimeHours);
+
+        /**
+         * Cập nhật (trừ) điểm khi có hư hỏng xe.
+         * Penalty: -10 điểm (minor) hoặc -30 điểm (major, >= 1M VND).
+         */
+        Task UpdateScoreOnDamageAsync(int userId, int orderId, decimal damageAmount);
+
+        /**
          * Lấy toàn bộ object TrustScore (ví dụ: cho trang admin).
          */
         Task<TrustScore?> GetFullTrustScoreAsync(int userId);

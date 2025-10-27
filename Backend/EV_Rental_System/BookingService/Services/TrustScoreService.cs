@@ -1,5 +1,7 @@
 ﻿using BookingService.Models;
+using BookingService.Models.ModelSettings;
 using BookingService.Repositories;
+using Microsoft.Extensions.Options;
 namespace BookingService.Services
 {
     public class TrustScoreService : ITrustScoreService
@@ -14,13 +16,16 @@ namespace BookingService.Services
 
         private readonly ITrustScoreRepository _trustScoreRepo;
         private readonly ILogger<TrustScoreService> _logger;
+        private readonly BillingSettings _billingSettings;
 
         public TrustScoreService(
             ITrustScoreRepository trustScoreRepo,
-            ILogger<TrustScoreService> logger)
+            ILogger<TrustScoreService> logger,
+            IOptions<BillingSettings> billingSettings)
         {
             _trustScoreRepo = trustScoreRepo;
             _logger = logger;
+            _billingSettings = billingSettings.Value;
         }
 
         /**
@@ -118,6 +123,58 @@ namespace BookingService.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating score on no-show for User {UserId}", userId);
+                throw;
+            }
+        }
+
+        public async Task UpdateScoreOnLateReturnAsync(int userId, int orderId, decimal overtimeHours)
+        {
+            try
+            {
+                var trustScore = await GetOrCreateTrustScoreAsync(userId, orderId);
+
+                // Calculate penalty: -5 points per hour late (rounded up)
+                int penalty = -(int)Math.Ceiling(overtimeHours) * _billingSettings.LateReturnPenaltyPerHour;
+
+                trustScore.Score += penalty;
+                trustScore.OrderId = orderId;
+                trustScore.CreatedAt = DateTime.UtcNow;
+
+                await _trustScoreRepo.UpdateScoreAsync(trustScore);
+                _logger.LogInformation(
+                    "Applied Late Return Penalty ({Penalty}) for User {UserId}, Overtime: {OvertimeHours}h. New score: {Score}",
+                    penalty, userId, overtimeHours, trustScore.Score);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating score on late return for User {UserId}", userId);
+                throw;
+            }
+        }
+
+        public async Task UpdateScoreOnDamageAsync(int userId, int orderId, decimal damageAmount)
+        {
+            try
+            {
+                var trustScore = await GetOrCreateTrustScoreAsync(userId, orderId);
+
+                // Determine penalty based on damage amount
+                int penalty = damageAmount >= _billingSettings.MajorDamageThreshold
+                    ? -_billingSettings.MajorDamagePenalty  // Major damage: -30 points
+                    : -_billingSettings.MinorDamagePenalty;  // Minor damage: -10 points
+
+                trustScore.Score += penalty;
+                trustScore.OrderId = orderId;
+                trustScore.CreatedAt = DateTime.UtcNow;
+
+                await _trustScoreRepo.UpdateScoreAsync(trustScore);
+                _logger.LogInformation(
+                    "Applied Damage Penalty ({Penalty}) for User {UserId}, Damage: {DamageAmount} VND. New score: {Score}",
+                    penalty, userId, damageAmount, trustScore.Score);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating score on damage for User {UserId}", userId);
                 throw;
             }
         }
