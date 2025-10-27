@@ -10,6 +10,7 @@ namespace TwoWheelVehicleService
         public DbSet<Model> Models { get; set; }
         public DbSet<Vehicle> Vehicles { get; set; }
         public DbSet<Image> Images { get; set; }
+        public DbSet<VehicleStatusHistory> VehicleStatusHistories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
