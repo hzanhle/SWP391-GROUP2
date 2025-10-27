@@ -51,5 +51,20 @@ namespace BookingService.Services
          * Lấy điểm trung bình của toàn hệ thống.
          */
         Task<double> GetAverageScoreAsync();
+
+        /**
+         * Admin manually adjusts a user's trust score with reason.
+         */
+        Task ManuallyAdjustScoreAsync(int userId, int changeAmount, string reason, int adjustedByAdminId);
+
+        /**
+         * Get trust score change history for a user.
+         */
+        Task<List<TrustScoreHistory>> GetUserScoreHistoryAsync(int userId);
+
+        /**
+         * Get recent trust score changes for a user (last N entries).
+         */
+        Task<List<TrustScoreHistory>> GetRecentUserScoreHistoryAsync(int userId, int count = 10);
     }
 }

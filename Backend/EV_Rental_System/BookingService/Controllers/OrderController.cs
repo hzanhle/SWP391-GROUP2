@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using BookingService.DTOs;
 using BookingService.Services;
+using BookingService.Repositories;
 using Microsoft.AspNetCore.Authorization;
 
 namespace BookingService.Controllers
@@ -11,14 +12,26 @@ namespace BookingService.Controllers
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
+        private readonly ISettlementRepository _settlementRepo;
+        private readonly ITrustScoreHistoryRepository _trustScoreHistoryRepo;
+        private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<OrderController> _logger;
+        private readonly IConfiguration _configuration;
 
         public OrderController(
             IOrderService orderService,
-            ILogger<OrderController> logger)
+            ISettlementRepository settlementRepo,
+            ITrustScoreHistoryRepository trustScoreHistoryRepo,
+            IHttpClientFactory httpClientFactory,
+            ILogger<OrderController> logger,
+            IConfiguration configuration)
         {
             _orderService = orderService;
+            _settlementRepo = settlementRepo;
+            _trustScoreHistoryRepo = trustScoreHistoryRepo;
+            _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -255,6 +268,177 @@ namespace BookingService.Controllers
                 _logger.LogError(ex, "Error completing rental for Order {OrderId}", orderId);
                 return StatusCode(500, new { Message = "Lỗi hệ thống." });
             }
+        }
+
+        /// <summary>
+        /// User views their own rental history
+        /// Returns all completed rentals for the authenticated user
+        /// </summary>
+        [HttpGet("my-history")]
+        [Authorize(Roles = "Member")]
+        public async Task<IActionResult> GetMyRentalHistory()
+        {
+            try
+            {
+                // Get userId from JWT token
+                var userIdClaim = User.FindFirst("userId") ?? User.FindFirst("sub");
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { Message = "Invalid user token" });
+                }
+
+                var orders = await _orderService.GetOrdersByUserIdAsync(userId);
+
+                // Filter to only show completed rentals
+                var completedOrders = orders
+                    .Where(o => o.Status == Models.OrderStatus.Completed)
+                    .OrderByDescending(o => o.CreatedAt)
+                    .ToList();
+
+                // Map to RentalHistoryItemResponse DTOs
+                var history = new List<RentalHistoryItemResponse>();
+
+                foreach (var order in completedOrders)
+                {
+                    // Get settlement data
+                    var settlement = await _settlementRepo.GetByOrderIdAsync(order.OrderId);
+
+                    // Get trust score impact for this order
+                    var trustScoreHistory = await _trustScoreHistoryRepo.GetByOrderIdAsync(order.OrderId);
+                    var trustScoreImpact = trustScoreHistory.Sum(h => h.ChangeAmount);
+
+                    // Fetch vehicle name from TwoWheelVehicleService
+                    var vehicleName = await GetVehicleNameAsync(order.VehicleId);
+
+                    history.Add(new RentalHistoryItemResponse
+                    {
+                        OrderId = order.OrderId,
+                        VehicleId = order.VehicleId,
+                        VehicleName = vehicleName ?? $"Vehicle #{order.VehicleId}",
+                        FromDate = order.FromDate,
+                        ToDate = order.ToDate,
+                        ActualReturnTime = settlement?.ActualReturnTime,
+                        TotalCost = order.TotalCost,
+                        DepositAmount = order.DepositAmount,
+                        Status = order.Status.ToString(),
+                        IsLate = settlement?.OvertimeHours > 0,
+                        HasDamage = settlement?.DamageCharge > 0,
+                        TrustScoreImpact = trustScoreImpact,
+                        OvertimeFee = settlement?.OvertimeFee,
+                        DamageCharge = settlement?.DamageCharge,
+                        DepositRefundAmount = settlement?.DepositRefundAmount,
+                        AdditionalPaymentRequired = settlement?.AdditionalPaymentRequired,
+                        CreatedAt = order.CreatedAt
+                    });
+                }
+
+                return Ok(history);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting rental history for current user");
+                return StatusCode(500, new { Message = "Lỗi khi lấy lịch sử thuê xe." });
+            }
+        }
+
+        /// <summary>
+        /// Admin/Employee views any user's rental history
+        /// </summary>
+        [HttpGet("history/user/{userId}")]
+        [Authorize(Roles = "Admin,Employee")]
+        public async Task<IActionResult> GetUserRentalHistory(int userId)
+        {
+            try
+            {
+                var orders = await _orderService.GetOrdersByUserIdAsync(userId);
+
+                // Show all completed orders for admin
+                var completedOrders = orders
+                    .Where(o => o.Status == Models.OrderStatus.Completed)
+                    .OrderByDescending(o => o.CreatedAt)
+                    .ToList();
+
+                // Map to RentalHistoryItemResponse DTOs
+                var history = new List<RentalHistoryItemResponse>();
+
+                foreach (var order in completedOrders)
+                {
+                    // Get settlement data
+                    var settlement = await _settlementRepo.GetByOrderIdAsync(order.OrderId);
+
+                    // Get trust score impact for this order
+                    var trustScoreHistory = await _trustScoreHistoryRepo.GetByOrderIdAsync(order.OrderId);
+                    var trustScoreImpact = trustScoreHistory.Sum(h => h.ChangeAmount);
+
+                    // Fetch vehicle name from TwoWheelVehicleService
+                    var vehicleName = await GetVehicleNameAsync(order.VehicleId);
+
+                    history.Add(new RentalHistoryItemResponse
+                    {
+                        OrderId = order.OrderId,
+                        VehicleId = order.VehicleId,
+                        VehicleName = vehicleName ?? $"Vehicle #{order.VehicleId}",
+                        FromDate = order.FromDate,
+                        ToDate = order.ToDate,
+                        ActualReturnTime = settlement?.ActualReturnTime,
+                        TotalCost = order.TotalCost,
+                        DepositAmount = order.DepositAmount,
+                        Status = order.Status.ToString(),
+                        IsLate = settlement?.OvertimeHours > 0,
+                        HasDamage = settlement?.DamageCharge > 0,
+                        TrustScoreImpact = trustScoreImpact,
+                        OvertimeFee = settlement?.OvertimeFee,
+                        DamageCharge = settlement?.DamageCharge,
+                        DepositRefundAmount = settlement?.DepositRefundAmount,
+                        AdditionalPaymentRequired = settlement?.AdditionalPaymentRequired,
+                        CreatedAt = order.CreatedAt
+                    });
+                }
+
+                return Ok(history);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting rental history for User {UserId}", userId);
+                return StatusCode(500, new { Message = "Lỗi khi lấy lịch sử thuê xe." });
+            }
+        }
+
+        /// <summary>
+        /// Helper method to fetch vehicle name from TwoWheelVehicleService
+        /// </summary>
+        private async Task<string?> GetVehicleNameAsync(int vehicleId)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var twoWheelServiceUrl = _configuration["ServiceUrls:TwoWheelVehicleService"]
+                    ?? "http://localhost:5051";
+
+                var response = await client.GetAsync($"{twoWheelServiceUrl}/api/vehicles/{vehicleId}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var vehicleData = await response.Content.ReadFromJsonAsync<VehicleResponse>();
+                    return vehicleData?.ModelName;
+                }
+
+                _logger.LogWarning("Failed to fetch vehicle name for VehicleId {VehicleId}", vehicleId);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching vehicle name for VehicleId {VehicleId}", vehicleId);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Temporary DTO for vehicle response
+        /// </summary>
+        private class VehicleResponse
+        {
+            public string? ModelName { get; set; }
         }
     }
 }

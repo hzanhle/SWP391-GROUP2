@@ -10,13 +10,19 @@ namespace AdminDashboardService.ExternalModels.BookingServiceModels
         public int VehicleId { get; set; }
         public DateTime FromDate { get; set; }
         public DateTime ToDate { get; set; }
-        public int TotalDays { get; set; }
-        public decimal ModelPrice { get; set; }
+
+        public int OnlineContractId { get; set; }
+        public int PaymentId { get; set; }
+
+        public decimal HourlyRate { get; set; }
         public decimal TotalCost { get; set; }
         public decimal DepositAmount { get; set; }
-        public string Status { get; set; } = "Pending";
+        public int InitialTrustScore { get; set; }
+
+        public string Status { get; set; } = "Pending"; // Stored as string in DB (from enum)
+        public DateTime? ExpiresAt { get; set; }
         public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
+
         public Payment? Payment { get; set; }
         public OnlineContract? OnlineContract { get; set; }
     }

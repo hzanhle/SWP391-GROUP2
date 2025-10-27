@@ -67,6 +67,7 @@ builder.Services.Configure<PdfSettings>(builder.Configuration.GetSection("PdfSet
 builder.Services.Configure<ContractSettings>(builder.Configuration.GetSection("ContractSettings"));
 builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
 builder.Services.Configure<AwsS3Settings>(builder.Configuration.GetSection("AwsS3Settings"));
+builder.Services.Configure<BillingSettings>(builder.Configuration.GetSection("BillingSettings"));
 
 
 // ====================== Repositories ======================
@@ -77,6 +78,8 @@ builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITrustScoreRepository, TrustScoreRepository>();
 builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
+builder.Services.AddScoped<ISettlementRepository, SettlementRepository>();
+builder.Services.AddScoped<ITrustScoreHistoryRepository, TrustScoreHistoryRepository>();
 
 // ====================== Services ======================
 builder.Services.AddScoped<IAwsS3Service, AwsS3Service>();
@@ -89,6 +92,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddSingleton<IPdfConverterService, PuppeteerPdfService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+builder.Services.AddScoped<ISettlementService, SettlementService>();
 
 // ====================== Build App ======================
 var app = builder.Build();
@@ -205,7 +209,7 @@ static void ValidateConfiguration(IConfiguration config)
     }
 
     // Required sections
-    var required = new[] {"EmailSettings", "VNPaySettings", "PdfSettings", "ContractSettings", "OrderSettings" };
+    var required = new[] {"EmailSettings", "VNPaySettings", "PdfSettings", "ContractSettings", "OrderSettings", "BillingSettings" };
     foreach (var section in required)
     {
         if (!config.GetSection(section).Exists())
