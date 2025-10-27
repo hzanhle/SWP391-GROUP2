@@ -1,15 +1,21 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { 
+  Box, Container, Card, CardContent, CardHeader, Typography, Button, TextField, Dialog,
+  DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, Stack, Grid, Paper,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton
+} from '@mui/material'
+import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material'
 import AdminLayout from '../components/admin/AdminLayout'
 import * as staffApi from '../api/staffShiff'
-import '../styles/admin.css'
 
 export default function AdminStaffShift() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth.token') : ''
   const [shifts, setShifts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [form, setForm] = useState({ userId: '', stationId: '', shiftDate: '', startTime: '', endTime: '' })
   const [submitting, setSubmitting] = useState(false)
+  const [openDialog, setOpenDialog] = useState(false)
+  const [form, setForm] = useState({ userId: '', stationId: '', shiftDate: '', startTime: '', endTime: '' })
 
   useEffect(() => {
     let mounted = true
@@ -22,7 +28,9 @@ export default function AdminStaffShift() {
         setError('')
       } catch (e) {
         setError(e.message || 'Không tải được ca làm việc')
-      } finally { if (mounted) setLoading(false) }
+      } finally { 
+        if (mounted) setLoading(false) 
+      }
     })()
     return () => { mounted = false }
   }, [token])
@@ -42,10 +50,13 @@ export default function AdminStaffShift() {
       const created = res.data?.data || res.data
       setShifts(prev => [created, ...prev])
       setForm({ userId: '', stationId: '', shiftDate: '', startTime: '', endTime: '' })
+      setOpenDialog(false)
       setError('')
     } catch (e) {
       setError(e.message || 'Tạo ca thất bại')
-    } finally { setSubmitting(false) }
+    } finally { 
+      setSubmitting(false) 
+    }
   }
 
   async function handleDelete(id) {
@@ -60,88 +71,149 @@ export default function AdminStaffShift() {
 
   return (
     <AdminLayout active="staffshift">
-      <section className="section">
-        <div className="container">
-          <div className="section-header">
-            <h1 className="section-title">Ca làm việc nhân viên</h1>
-            <p className="section-subtitle">Quản lý ca làm việc của nhân viên - Tạo / Xóa / Xem</p>
-          </div>
+      <Box sx={{ py: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+        <Container maxWidth="lg">
+          <Stack spacing={3}>
+            {/* Header */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
+                  Ca làm việc nhân viên
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+  Quản lý ca làm việc - Tạo / Xóa / Xem
+</Typography>
+              </Box>
+              <Button 
+                variant="contained" 
+                startIcon={<AddIcon />}
+                onClick={() => setOpenDialog(true)}
+              >
+                Thêm ca
+              </Button>
+            </Box>
 
-          {error ? <div role="alert" className="card card-body">{error}</div> : null}
+            {/* Error Alert */}
+            {error && (
+              <Alert severity="error" onClose={() => setError('')}>
+                {error}
+              </Alert>
+            )}
 
-          <div className="card card-body" style={{ marginBottom: '1rem' }}>
-            <h3 className="sub-title">Tạo ca mới</h3>
-            <form onSubmit={handleCreate} className="staffshift-form">
-              <div className="form-grid">
-                <label className="field">
-                  <span className="label">UserId</span>
-                  <input className="input" value={form.userId} onChange={e => setForm({ ...form, userId: e.target.value })} />
-                </label>
-                <label className="field">
-                  <span className="label">StationId</span>
-                  <input className="input" value={form.stationId} onChange={e => setForm({ ...form, stationId: e.target.value })} />
-                </label>
-                <label className="field">
-                  <span className="label">Shift Date</span>
-                  <input type="date" className="input" value={form.shiftDate} onChange={e => setForm({ ...form, shiftDate: e.target.value })} />
-                </label>
-                <label className="field">
-                  <span className="label">Start Time</span>
-                  <input type="time" className="input" value={form.startTime} onChange={e => setForm({ ...form, startTime: e.target.value })} />
-                </label>
-                <label className="field">
-                  <span className="label">End Time</span>
-                  <input type="time" className="input" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })} />
-                </label>
-              </div>
-              <div style={{ marginTop: '1rem' }}>
-                <button className="btn btn-primary" type="submit" disabled={submitting}>{submitting ? 'Đang tạo...' : 'Tạo ca'}</button>
-              </div>
-            </form>
-          </div>
-
-          {loading ? (
-            <div className="card card-body">Đang tải ca làm việc...</div>
-          ) : (
-            <div className="card card-body">
-              <h3 className="sub-title">Danh sách ca</h3>
-              <div className="table-responsive">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Nhân viên</th>
-                      <th>Trạm</th>
-                      <th>Ngày</th>
-                      <th>Thời gian</th>
-                      <th>Trạng thái</th>
-                      <th>Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+            {/* Loading State */}
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600 }}>ID</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Nhân viên</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Trạm</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Ngày</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Giờ bắt đầu</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Giờ kết thúc</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="center">Hành động</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
                     {(shifts || []).map(s => (
-                      <tr key={s.id ?? s.Id}>
-                        <td>{s.id ?? s.Id}</td>
-                        <td>{s.userFullName ?? s.UserFullName ?? s.userId ?? s.UserId}</td>
-                        <td>{s.station?.name ?? s.Station?.Name ?? s.stationName ?? s.StationName ?? (s.stationId ?? s.StationId)}</td>
-                        <td>{(s.shiftDate || s.ShiftDate || '').split('T')[0]}</td>
-                        <td>{(s.startTime || s.StartTime) || ''} - {(s.endTime || s.EndTime) || ''}</td>
-                        <td>{s.status ?? s.Status ?? ''}</td>
-                        <td>
-                          <button className="btn btn-danger" onClick={() => handleDelete(s.id ?? s.Id)}>Xóa</button>
-                        </td>
-                      </tr>
+                      <TableRow key={s.id ?? s.Id} hover>
+                        <TableCell>{s.id ?? s.Id}</TableCell>
+                        <TableCell>{s.userFullName ?? s.UserFullName ?? s.userId ?? s.UserId}</TableCell>
+                        <TableCell>{s.station?.name ?? s.Station?.Name ?? s.stationName ?? s.StationName ?? (s.stationId ?? s.StationId)}</TableCell>
+                        <TableCell>{(s.shiftDate || s.ShiftDate || '').split('T')[0]}</TableCell>
+                        <TableCell>{(s.startTime || s.StartTime) || '-'}</TableCell>
+                        <TableCell>{(s.endTime || s.EndTime) || '-'}</TableCell>
+                        <TableCell align="center">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleDelete(s.id ?? s.Id)}
+                            color="error"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                    {!(shifts || []).length ? (
-                      <tr><td colSpan={7}>Không c�� ca</td></tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
+                    {!(shifts || []).length && (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+  Không có ca làm việc
+</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+
+            {/* Create Shift Dialog */}
+            <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>Tạo ca làm việc mới</DialogTitle>
+              <DialogContent sx={{ pt: 2 }}>
+                <Stack spacing={2}>
+                  <TextField
+                    fullWidth
+                    label="User ID"
+                    type="number"
+                    value={form.userId}
+                    onChange={e => setForm({ ...form, userId: e.target.value })}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Station ID"
+                    type="number"
+                    value={form.stationId}
+                    onChange={e => setForm({ ...form, stationId: e.target.value })}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Ngày"
+                    type="date"
+                    value={form.shiftDate}
+                    onChange={e => setForm({ ...form, shiftDate: e.target.value })}
+                    slotProps={{
+                      inputLabel: { shrink: true }
+                    }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Giờ bắt đầu"
+                    type="time"
+                    value={form.startTime}
+                    onChange={e => setForm({ ...form, startTime: e.target.value })}
+                    slotProps={{
+                      inputLabel: { shrink: true }
+                    }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Giờ kết thúc"
+                    type="time"
+                    value={form.endTime}
+                    onChange={e => setForm({ ...form, endTime: e.target.value })}
+                    slotProps={{
+                      inputLabel: { shrink: true }
+                    }}
+                  />
+                </Stack>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => { setOpenDialog(false); setForm({ userId: '', stationId: '', shiftDate: '', startTime: '', endTime: '' }) }}>
+                  Hủy
+                </Button>
+                <Button onClick={handleCreate} variant="contained" disabled={submitting}>
+                  {submitting ? 'Đang tạo...' : 'Tạo ca'}
+                </Button>
+              </DialogActions>
+            </Dialog>
+          </Stack>
+        </Container>
+      </Box>
     </AdminLayout>
-  )
+  );
 }

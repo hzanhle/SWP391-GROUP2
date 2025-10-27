@@ -1,7 +1,7 @@
 import React, { useId, useMemo, useRef, useState } from 'react'
 
 function isImage(file) {
-  return file && /^image\//.test(file.type)
+  return file && /^image\//.test(file.type);
 }
 
 export default function DocumentUploader({ label, hint, accept = 'image/*,application/pdf', value, onChange, required = false }) {
