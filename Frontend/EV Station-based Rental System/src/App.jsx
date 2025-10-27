@@ -20,6 +20,8 @@ import StaffVerification from './pages/StaffVerification'
 import AdminModels from './pages/AdminModels'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminStaffShift from './pages/AdminStaffShift'
+import StaffShift from './pages/StaffShift'
+import StaffVehicle from './pages/StaffVehicle'
 
 function getRoleId() {
   try {
@@ -40,11 +42,24 @@ function resolveRoute() {
     if (!hash && path.toLowerCase() === 'admin') return 'admin'
     if (hash.startsWith('admin')) return hash.replace('#', '')
     // If admin tries to access member pages, redirect to admin
-    if (['home', 'stations', 'vehicles', 'booking', 'booking-new', 'payment', 'check-in', 'return', 'history', 'profile', 'profile-docs'].includes(hash)) {
+    if (['home', 'stations', 'vehicles', 'booking', 'booking-new', 'payment', 'check-in', 'return', 'history', 'profile', 'profile-docs', 'staff-shifts', 'staff-vehicles'].includes(hash)) {
       return 'admin'
     }
     // Default for admin: show admin dashboard
     return 'admin'
+  }
+
+  // Auto-redirect staff to shifts
+  if (token && roleId === 2) {
+    if (hash.startsWith('staff')) return hash.replace('#', '')
+    // If staff tries to access member pages, redirect to staff shifts
+    if (['home', 'stations', 'vehicles', 'booking', 'booking-new', 'payment', 'check-in', 'return', 'history', 'profile-docs'].includes(hash)) {
+      return 'staff-shifts'
+    }
+    // Allow staff to access profile
+    if (hash === 'profile') return 'profile'
+    // Default for staff: show shifts
+    return 'staff-shifts'
   }
 
   if (!hash && path.toLowerCase() === 'admin') return 'admin'
@@ -67,6 +82,8 @@ function resolveRoute() {
     case 'staff-verify': return 'staff-verify'
     case 'admin-models': return 'admin-models'
     case 'admin-staffshift': return 'admin-staffshift'
+    case 'staff-shifts': return 'staff-shifts'
+    case 'staff-vehicles': return 'staff-vehicles'
     case 'admin': return 'admin'
     default: return 'home'
   }
@@ -83,10 +100,12 @@ export default function App() {
 
   // Check if current route is admin route
   const isAdminRoute = ['admin', 'admin-users', 'admin-models', 'admin-staffshift', 'staff-verify'].includes(routeData)
+  // Check if current route is staff route
+  const isStaffRoute = ['staff-shifts', 'staff-vehicles'].includes(routeData)
 
   return (
     <>
-      {!isAdminRoute && <Navbar />}
+      {!isAdminRoute && !isStaffRoute && <Navbar />}
       {routeData === 'signup' && <Signup />}
       {routeData === 'login' && <Login />}
       {routeData === 'forgot-password' && <ForgotPassword />}
@@ -106,6 +125,8 @@ export default function App() {
       {routeData === 'admin-models' && <AdminModels />}
       {routeData === 'admin-staffshift' && <AdminStaffShift />}
       {routeData === 'staff-verify' && <StaffVerification />}
+      {routeData === 'staff-shifts' && <StaffShift />}
+      {routeData === 'staff-vehicles' && <StaffVehicle />}
       {routeData === 'home' && <Home />}
     </>
   )

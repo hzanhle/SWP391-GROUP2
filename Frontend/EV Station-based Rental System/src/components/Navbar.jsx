@@ -95,6 +95,16 @@ function Navbar() {
             {isStaff && (
               <>
                 <li>
+                  <a onClick={openNav} href="#staff-shifts" style={{color: "inherit"}}>
+                    My Shifts
+                  </a>
+                </li>
+                <li>
+                  <a onClick={openNav} href="#staff-vehicles" style={{color: "inherit"}}>
+                    Vehicle Management
+                  </a>
+                </li>
+                <li>
                   <a onClick={openNav} href="#staff-verify" style={{color: "inherit"}}>
                     Verification
                   </a>
@@ -167,11 +177,23 @@ function Navbar() {
               </>
             )}
             {isStaff && (
-              <li>
-                <a className="verification-link" href="#staff-verify">
-                  Verification
-                </a>
-              </li>
+              <>
+                <li>
+                  <a className="shifts-link" href="#staff-shifts">
+                    My Shifts
+                  </a>
+                </li>
+                <li>
+                  <a className="vehicles-link" href="#staff-vehicles">
+                    Vehicles
+                  </a>
+                </li>
+                <li>
+                  <a className="verification-link" href="#staff-verify">
+                    Verification
+                  </a>
+                </li>
+              </>
             )}
           </ul>
 

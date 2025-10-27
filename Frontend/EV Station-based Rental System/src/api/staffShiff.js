@@ -43,6 +43,28 @@ export function getShiftsByUser(userId, token) {
   return request(`/api/StaffShift/user/${userId}`, { token })
 }
 
+export function getMyShifts(fromDate, toDate, token) {
+  const params = new URLSearchParams()
+  if (fromDate) params.append('fromDate', fromDate)
+  if (toDate) params.append('toDate', toDate)
+  const queryString = params.toString()
+  const path = queryString ? `/api/StaffShift/my-shifts?${queryString}` : '/api/StaffShift/my-shifts'
+  return request(path, { token })
+}
+
+export function checkIn(payload, token) {
+  return request('/api/StaffShift/check-in', { method: 'POST', body: payload, token })
+}
+
+export function checkOut(payload, token) {
+  return request('/api/StaffShift/check-out', { method: 'POST', body: payload, token })
+}
+
+export function getTimesheet(month, year, token) {
+  const params = new URLSearchParams({ month, year })
+  return request(`/api/StaffShift/timesheet?${params.toString()}`, { token })
+}
+
 export function createShift(payload, token) {
   return request('/api/StaffShift', { method: 'POST', body: payload, token })
 }
@@ -55,4 +77,4 @@ export function deleteShift(id, token) {
   return request(`/api/StaffShift/${id}`, { method: 'DELETE', token })
 }
 
-export default { getAllShifts, getShiftById, getShiftsByStation, getShiftsByUser, createShift, updateShift, deleteShift }
+export default { getAllShifts, getShiftById, getShiftsByStation, getShiftsByUser, getMyShifts, checkIn, checkOut, getTimesheet, createShift, updateShift, deleteShift }
