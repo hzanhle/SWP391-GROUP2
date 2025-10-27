@@ -15,6 +15,8 @@ export default function BookingStep3_Schedule({
   bookingError,
   onPreview,
   onConfirmBooking,
+  termsAccepted,
+  setTermsAccepted,
 }) {
   return (
     <div className="booking-grid">
@@ -93,6 +95,23 @@ export default function BookingStep3_Schedule({
               <h4 style={{ color: '#ff4d30', fontSize: '1.8rem', margin: 0 }}>${preview.totalPaymentAmount?.toFixed(2)}</h4>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Terms & Conditions checkbox - required before proceeding to payment */}
+      {preview && (
+        <div className="field grid-span-full" style={{ marginTop: '1rem' }}>
+          <label className="row" style={{ alignItems: 'center', gap: '0.75rem' }}>
+            <input
+              type="checkbox"
+              checked={!!termsAccepted}
+              onChange={(e) => setTermsAccepted?.(e.target.checked)}
+              aria-label="Đồng ý điều khoản"
+            />
+            <span style={{ fontSize: '1rem' }}>
+              Tôi đã đọc và đồng ý với <a href="#terms" style={{ color: '#0066cc' }}>Điều khoản &amp; Dịch vụ</a>
+            </span>
+          </label>
         </div>
       )}
 

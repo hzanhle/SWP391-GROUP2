@@ -19,6 +19,7 @@ import AdminUsers from './pages/AdminUsers'
 import StaffVerification from './pages/StaffVerification'
 import AdminModels from './pages/AdminModels'
 import AdminDashboard from './pages/AdminDashboard'
+import AdminStaffShift from './pages/AdminStaffShift'
 
 function getRoleId() {
   try {
@@ -65,6 +66,7 @@ function resolveRoute() {
     case 'admin-users': return 'admin-users'
     case 'staff-verify': return 'staff-verify'
     case 'admin-models': return 'admin-models'
+    case 'admin-staffshift': return 'admin-staffshift'
     case 'admin': return 'admin'
     default: return 'home'
   }
@@ -80,7 +82,7 @@ export default function App() {
   }, [])
 
   // Check if current route is admin route
-  const isAdminRoute = ['admin', 'admin-users', 'admin-models', 'staff-verify'].includes(routeData)
+  const isAdminRoute = ['admin', 'admin-users', 'admin-models', 'admin-staffshift', 'staff-verify'].includes(routeData)
 
   return (
     <>
@@ -102,6 +104,7 @@ export default function App() {
       {routeData === 'admin' && <AdminDashboard />}
       {routeData === 'admin-users' && <AdminUsers />}
       {routeData === 'admin-models' && <AdminModels />}
+      {routeData === 'admin-staffshift' && <AdminStaffShift />}
       {routeData === 'staff-verify' && <StaffVerification />}
       {routeData === 'home' && <Home />}
     </>

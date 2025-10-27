@@ -31,6 +31,7 @@ export default function BookingNew() {
   const [dropoffDate, setDropoffDate] = useState('')
   
   const [preview, setPreview] = useState(null)
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState(null)
   
@@ -518,6 +519,8 @@ export default function BookingNew() {
                     bookingError={bookingError}
                     onPreview={handlePreview}
                     onConfirmBooking={handleConfirmBooking}
+                    termsAccepted={termsAccepted}
+                    setTermsAccepted={setTermsAccepted}
                   />
                 )}
 
@@ -526,7 +529,7 @@ export default function BookingNew() {
                   {step < steps.length - 1 ? (
                     <CTA as="button" onClick={handleNext}>Tiếp tục</CTA>
                   ) : (
-                    <CTA as="button" onClick={handleConfirmBooking} disabled={!preview || bookingLoading}>
+                    <CTA as="button" onClick={handleConfirmBooking} disabled={!preview || bookingLoading || !termsAccepted}>
                       {bookingLoading ? 'Đang xử lý...' : 'Xác nhận & Thanh toán'}
                     </CTA>
                   )}

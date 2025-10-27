@@ -26,6 +26,7 @@ export default function AdminLayout({ children, active = 'overview' }) {
     { key: 'analytics', label: 'Analytics', href: '#admin', icon: 'models' },
     { key: 'users', label: 'Clients', href: '#admin-users', icon: 'users' },
     { key: 'models', label: 'Tasks', href: '#admin-models', icon: 'models' },
+    { key: 'staffshift', label: 'Staff Shifts', href: '#admin-staffshift', icon: 'users' },
   ]), [])
 
   const secondary = useMemo(() => ([

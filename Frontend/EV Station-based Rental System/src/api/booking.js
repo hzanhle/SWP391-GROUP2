@@ -138,6 +138,24 @@ export function completeRental(orderId, token) {
   })
 }
 
+// Create contract after payment
+export function createContract(contractData, token) {
+  return request('/api/contracts/create', {
+    method: 'POST',
+    body: contractData,
+    token,
+  })
+}
+
+// Submit feedback after return
+export function submitFeedback(feedbackPayload, token) {
+  return request('/api/feedback', {
+    method: 'POST',
+    body: feedbackPayload,
+    token,
+  })
+}
+
 export default {
   request,
   getOrderPreview,
@@ -149,4 +167,6 @@ export default {
   confirmPayment,
   startRental,
   completeRental,
+  createContract,
+  submitFeedback,
 }
