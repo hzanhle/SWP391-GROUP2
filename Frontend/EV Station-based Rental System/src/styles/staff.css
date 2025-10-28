@@ -192,7 +192,7 @@
 }
 
 .staff-user-name {
-  font-size: 0.875rem;
+  font-size: 1.6rem;
   font-weight: 600;
   color: var(--staff-text-primary);
   font-family: "Rubik", sans-serif;
@@ -202,7 +202,7 @@
 }
 
 .staff-user-role {
-  font-size: 0.75rem;
+  font-size: 1.6rem;
   color: var(--staff-text-secondary);
   font-family: "Rubik", sans-serif;
 }
@@ -224,7 +224,7 @@
   padding: 0.5rem 0.75rem;
   border-radius: 0.375rem;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 1.6rem;
   font-weight: 600;
   font-family: "Rubik", sans-serif;
   transition: all 0.3s ease;
@@ -331,7 +331,7 @@
 }
 
 .card-title {
-  font-size: 1.125rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--staff-text-primary);
   font-family: "Poppins", sans-serif;
@@ -340,7 +340,7 @@
 }
 
 .card-subtext {
-  font-size: 0.875rem;
+  font-size: 1.6rem;
   color: var(--staff-text-secondary);
   font-family: "Rubik", sans-serif;
   margin: 0;
@@ -354,7 +354,7 @@
   background-color: var(--staff-bg-primary);
   color: var(--staff-text-secondary);
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 1.6rem;
   font-weight: 600;
   font-family: "Rubik", sans-serif;
   transition: all 0.3s ease;
@@ -434,7 +434,7 @@
 
 .label {
   display: block;
-  font-size: 0.875rem;
+  font-size: 1.6rem;
   font-weight: 600;
   color: var(--staff-text-primary);
   font-family: "Rubik", sans-serif;
@@ -454,7 +454,7 @@ textarea {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--staff-border);
   border-radius: 0.375rem;
-  font-size: 0.875rem;
+  font-size: 1.6rem;
   font-family: "Rubik", sans-serif;
   color: var(--staff-text-primary);
   background-color: var(--staff-bg-primary);
@@ -493,7 +493,7 @@ textarea:focus {
   font-weight: 600;
   color: var(--staff-text-primary);
   font-family: "Poppins", sans-serif;
-  font-size: 0.875rem;
+  font-size: 1.6rem;
 }
 
 .staff-main table td {
@@ -565,7 +565,7 @@ textarea:focus {
 /* Utility Classes */
 .muted {
   color: var(--staff-text-secondary);
-  font-size: 0.875rem;
+  font-size: 1.6rem;
   font-family: "Rubik", sans-serif;
 }
 

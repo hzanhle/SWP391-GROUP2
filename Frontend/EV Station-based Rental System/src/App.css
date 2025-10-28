@@ -102,7 +102,7 @@
   border-radius: 8px;
   text-decoration: none;
   color: #94a3b8;
-  font-size: 14px;
+  font-size: 1.6rem;
   font-weight: 500;
   transition: all 0.2s;
 }
@@ -152,7 +152,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 1.4rem;
 }
 
 .admin-user-info {
@@ -161,7 +161,7 @@
 }
 
 .admin-user-name {
-  font-size: 13px;
+  font-size: 1.3rem;
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
@@ -170,7 +170,7 @@
 }
 
 .admin-user-role {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: #64748b;
 }
 
@@ -183,7 +183,7 @@
   border: none;
   background: transparent;
   color: #ef4444;
-  font-size: 14px;
+  font-size: 1.6rem;
   font-weight: 500;
   border-radius: 8px;
   cursor: pointer;

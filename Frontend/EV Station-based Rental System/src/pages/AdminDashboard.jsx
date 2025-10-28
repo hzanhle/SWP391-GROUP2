@@ -64,7 +64,10 @@ export default function AdminDashboard() {
     const months = Array.from({ length: 12 }, (_, i) => i + 1)
     const map = new Map((revenue || []).map(r => [Number(r.month ?? r.Month), Number(r.totalRevenue ?? r.TotalRevenue ?? 0)]))
     const values = months.map(m => map.get(m) ?? 0)
-    return { months, values }
+    return {
+      months: months.map(m => String(m)).filter(m => m !== null && m !== undefined),
+      values: values.filter(v => v !== null && v !== undefined)
+    }
   }, [revenue])
 
   if (forbidden) {
@@ -109,7 +112,15 @@ export default function AdminDashboard() {
                 <Card className="admin-card">
                   <CardHeader title="Doanh thu theo tháng" />
                   <CardContent>
-                    <LineChart height={280} series={[{ data: revenueSeries.values, label: 'Doanh thu' }]} xAxis={[{ scaleType: 'point', data: revenueSeries.months.map(m => `T${m}`) }]} />
+                    {revenueSeries && revenueSeries.values.length > 0 ? (
+                      <LineChart
+                        height={280}
+                        series={[{ data: revenueSeries.values.filter(v => v !== null && v !== undefined), label: 'Doanh thu' }]}
+                        xAxis={[{ scaleType: 'point', data: revenueSeries.months.map((m, idx) => `T${m}`).filter(label => label !== null && label !== undefined) }]}
+                      />
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -118,7 +129,16 @@ export default function AdminDashboard() {
                 <Card className="admin-card">
                   <CardHeader title="Top xe sử dụng" />
                   <CardContent>
-                    <BarChart height={280} yAxis={[{ scaleType: 'band', data: (topVehicles || []).map(v => v.modelName || v.ModelName || v.name || v.Name) }]} series={[{ data: (topVehicles || []).map(v => Number(v.usageCount ?? v.UsageCount ?? v.count ?? 0)), label: 'Lượt thuê' }]} layout="horizontal" />
+                    {topVehicles && topVehicles.length > 0 ? (
+                      <BarChart
+                        height={280}
+                        yAxis={[{ scaleType: 'band', data: (topVehicles || []).map((v, idx) => (v.modelName || v.ModelName || v.name || v.Name || `Vehicle ${idx + 1}`)).filter(name => name !== null && name !== undefined) }]}
+                        series={[{ data: (topVehicles || []).map(v => Number(v.usageCount ?? v.UsageCount ?? v.count ?? 0)), label: 'Lượt thuê' }]}
+                        layout="horizontal"
+                      />
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -127,7 +147,15 @@ export default function AdminDashboard() {
                 <Card className="admin-card">
                   <CardHeader title="Tăng trưởng người dùng" />
                   <CardContent>
-                    <LineChart height={260} series={[{ data: (userGrowth || []).map(u => Number(u.count ?? u.Count ?? 0)), label: 'Users' }]} xAxis={[{ scaleType: 'point', data: (userGrowth || []).map(u => u.label || u.Label || u.month || u.Month) }]} />
+                    {userGrowth && userGrowth.length > 0 ? (
+                      <LineChart
+                        height={260}
+                        series={[{ data: (userGrowth || []).map(u => Number(u.count ?? u.Count ?? 0)), label: 'Users' }]}
+                        xAxis={[{ scaleType: 'point', data: (userGrowth || []).map((u, idx) => String(u.label || u.Label || u.month || u.Month || `Month ${idx + 1}`)).filter(label => label !== null && label !== undefined) }]}
+                      />
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -136,7 +164,24 @@ export default function AdminDashboard() {
                 <Card className="admin-card">
                   <CardHeader title="Trạng thái trạm" />
                   <CardContent>
-                    <PieChart height={260} series={[{ data: ((() => { const items = Array.isArray(stations) ? stations : []; const on = items.filter(s => s.isOperational ?? s.IsOperational).length; const off = items.length - on; return [ { id: 0, value: on, label: 'Hoạt động' }, { id: 1, value: off, label: 'Bảo trì' }, ]; })()) }]} />
+                    {stations && stations.length > 0 ? (
+                      <PieChart
+                        height={260}
+                        series={[{
+                          data: ((() => {
+                            const items = Array.isArray(stations) ? stations : [];
+                            const on = items.filter(s => s.isOperational ?? s.IsOperational).length;
+                            const off = items.length - on;
+                            return [
+                              { id: 0, value: on, label: 'Hoạt động' },
+                              { id: 1, value: off, label: 'Bảo trì' },
+                            ];
+                          })()).filter(item => item && item.value !== null && item.value !== undefined)
+                        }]}
+                      />
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

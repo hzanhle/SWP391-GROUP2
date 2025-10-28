@@ -182,7 +182,7 @@ body {
   padding: 1rem 1.5rem;
   border: none;
   border-radius: 3px;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   font-family: "Rubik", sans-serif;
   font-weight: 500;
   cursor: pointer;
@@ -431,7 +431,7 @@ body {
   height: auto;
   position: relative;
   z-index: 4;
-  color: white;
+  color: #010103;
   border-radius: 5px;
   background-image: url("/src/images/book-car/book-bg.png");
   background-position: center center;
@@ -439,7 +439,6 @@ body {
   background-size: cover;
   display: flex;
   flex-direction: column;
-  color: #010103;
 }
 @media (max-width: 400px) {
   .book-content__box {
@@ -483,7 +482,7 @@ body {
   color: #ff4d30;
 }
 .book-content__box .box-form__car-type select {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   color: #ababab;
   font-family: "Rubik", sans-serif;
   border: 1px solid #ccd7e6;
@@ -706,7 +705,7 @@ body {
   }
 }
 .booking-modal__car-info__dates span h6 {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   margin-bottom: 0.2rem;
 }
 .booking-modal__car-info__dates span p {
@@ -750,7 +749,7 @@ body {
 .input-time {
   text-align: center;
   width: 8rem;
-  font-size: 14px;
+  font-size: 1.6rem;
   cursor: pointer;
 }
 
@@ -802,7 +801,7 @@ body {
   padding: 14px 15px;
   background-color: #dbdbdb;
   color: #555;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 500;
   outline: none;
   border: none;
@@ -1018,6 +1017,7 @@ body {
   border-right: 2px solid #706f7b;
   border-left: 2px solid #706f7b;
   color: black;
+  font-size: 1.6rem;
 }
 .pick-description__table__col span:nth-child(1) {
   border-right: 2px solid #706f7b;
