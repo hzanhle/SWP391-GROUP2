@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace BookingService.Models
 {
@@ -7,7 +8,8 @@ namespace BookingService.Models
         Pending,      // Chờ thanh toán
         Completed,    // Thanh toán thành công
         Failed,       // Thanh toán thất bại
-        Refunded      // Đã hoàn tiền (nếu cancel)
+        Cancelled,    // Đã hủy (do timeout hoặc user cancel)
+        Refunded      // Đã hoàn tiền (nếu cancel sau khi completed)
     }
 
     public class Payment
@@ -33,18 +35,30 @@ namespace BookingService.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
+        /// <summary>
+        /// Thời điểm hết hạn thanh toán (để background job hủy nếu quá thời gian)
+        /// </summary>
+        public DateTime? ExpiresAt { get; set; }
+
+        // === Helper Properties ===
+        [NotMapped]
+        public bool IsExpired => ExpiresAt.HasValue && DateTime.UtcNow > ExpiresAt.Value;
+
+        [NotMapped]
+        public TimeSpan? TimeRemaining => ExpiresAt.HasValue && !IsExpired
+            ? ExpiresAt.Value - DateTime.UtcNow
+            : null;
+
         // === Constructors ===
         public Payment() { }
 
         // Constructor chính - Nhận đầy đủ thông tin cần thiết
-        public Payment(int orderId, decimal amount, string paymentMethod)
+        public Payment(int orderId, decimal amount, string paymentMethod, int expirationMinutes = 15)
         {
             if (orderId <= 0)
                 throw new ArgumentException("OrderId must be greater than 0", nameof(orderId));
-
             if (amount <= 0)
                 throw new ArgumentException("Amount must be greater than 0", nameof(amount));
-
             if (string.IsNullOrWhiteSpace(paymentMethod))
                 throw new ArgumentException("PaymentMethod cannot be empty", nameof(paymentMethod));
 
@@ -53,6 +67,7 @@ namespace BookingService.Models
             PaymentMethod = paymentMethod;
             Status = PaymentStatus.Pending;
             CreatedAt = DateTime.UtcNow;
+            ExpiresAt = DateTime.UtcNow.AddMinutes(expirationMinutes);
         }
 
         // === Domain Methods ===
@@ -60,7 +75,6 @@ namespace BookingService.Models
         {
             if (Status == PaymentStatus.Completed)
                 throw new InvalidOperationException($"Payment {PaymentId} is already completed.");
-
             if (string.IsNullOrWhiteSpace(transactionId))
                 throw new ArgumentException("TransactionId cannot be empty", nameof(transactionId));
 
@@ -81,6 +95,18 @@ namespace BookingService.Models
             UpdatedAt = DateTime.UtcNow;
         }
 
+        public void MarkAsCancelled(string? reason = null)
+        {
+            if (Status == PaymentStatus.Completed)
+                throw new InvalidOperationException($"Cannot cancel completed payment {PaymentId}.");
+            if (Status == PaymentStatus.Cancelled)
+                throw new InvalidOperationException($"Payment {PaymentId} is already cancelled.");
+
+            Status = PaymentStatus.Cancelled;
+            PaymentGatewayResponse = reason;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
         public void MarkAsRefunded(string? reason = null)
         {
             if (Status != PaymentStatus.Completed)
@@ -95,7 +121,9 @@ namespace BookingService.Models
         public bool IsCompleted() => Status == PaymentStatus.Completed;
         public bool IsPending() => Status == PaymentStatus.Pending;
         public bool IsFailed() => Status == PaymentStatus.Failed;
+        public bool IsCancelled() => Status == PaymentStatus.Cancelled;
         public bool IsRefunded() => Status == PaymentStatus.Refunded;
         public bool CanBeRefunded() => Status == PaymentStatus.Completed;
+        public bool CanBeCancelled() => Status == PaymentStatus.Pending;
     }
 }

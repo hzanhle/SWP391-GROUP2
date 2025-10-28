@@ -113,6 +113,41 @@ namespace BookingService
                 entity.HasIndex(n => n.Created);
                 entity.HasIndex(n => new { n.DataType, n.DataId });
             });
+
+            modelBuilder.Entity<Feedback>(entity =>
+            {
+                entity.HasKey(f => f.FeedbackId);
+
+                entity.Property(f => f.Rating)
+                    .IsRequired();
+
+                entity.Property(f => f.Comments)
+                    .HasMaxLength(1000);
+
+                entity.Property(f => f.Created)
+                    .HasColumnType("datetime2")
+                    .IsRequired();
+
+                // 1-1 với Order
+                entity.HasOne(f => f.Order)
+                    .WithOne(o => o.Feedback)
+                    .HasForeignKey<Feedback>(f => f.OrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Indexes
+                entity.HasIndex(f => f.OrderId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Feedbacks_OrderId");
+
+                entity.HasIndex(f => f.UserId)
+                    .HasDatabaseName("IX_Feedbacks_UserId");
+
+                entity.HasIndex(f => new { f.UserId, f.Created })
+                    .HasDatabaseName("IX_Feedbacks_UserId_CreatedAt");
+
+                entity.HasIndex(f => f.Rating)
+                    .HasDatabaseName("IX_Feedbacks_Rating");
+            });
         }
     }
 }
