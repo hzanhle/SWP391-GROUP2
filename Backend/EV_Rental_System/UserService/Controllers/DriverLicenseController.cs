@@ -19,6 +19,9 @@ namespace UserService.Controllers
             _jwtService = jwtService;
         }
 
+        // ============================================
+        // 🔹 Helper: lấy UserId từ JWT
+        // ============================================
         private int GetUserIdFromToken()
         {
             var token = Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
@@ -32,6 +35,9 @@ namespace UserService.Controllers
             return int.Parse(userId);
         }
 
+        // ============================================
+        // 🔹 Helper: trả về lỗi model
+        // ============================================
         private IActionResult HandleInvalidModel()
         {
             var errors = ModelState
@@ -45,12 +51,15 @@ namespace UserService.Controllers
 
             return BadRequest(new ResponseDTO
             {
+                IsSuccess = false,
                 Message = "Dữ liệu không hợp lệ",
                 Data = errors
             });
         }
 
+        // ============================================
         // ✅ Member: gửi yêu cầu thêm bằng lái
+        // ============================================
         [Authorize(Roles = "Member")]
         [HttpPost]
         public async Task<IActionResult> CreateDriverLicense([FromForm] DriverLicenseRequest request)
@@ -61,24 +70,45 @@ namespace UserService.Controllers
             try
             {
                 var userId = GetUserIdFromToken();
-                var response = await _driverLicenseService.AddDriverLicense(request, userId);
-                return Ok(response);
+                var result = await _driverLicenseService.AddDriverLicense(request, userId);
+
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Thêm bằng lái thành công",
+                    Data = result
+                });
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(new { error = ex.Message });
+                return Unauthorized(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message
+                });
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { error = ex.Message });
+                return BadRequest(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = "Internal server error.", details = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
+        // ============================================
         // ✅ Member: cập nhật lại bằng lái của mình
+        // ============================================
         [Authorize(Roles = "Member")]
         [HttpPut]
         public async Task<IActionResult> UpdateDriverLicense([FromForm] DriverLicenseRequest request)
@@ -90,19 +120,35 @@ namespace UserService.Controllers
             {
                 var userId = GetUserIdFromToken();
                 await _driverLicenseService.UpdateDriverLicense(request, userId);
-                return Ok(new { message = "Driver license update request sent successfully." });
+
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Yêu cầu cập nhật bằng lái đã được gửi thành công"
+                });
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(new { error = ex.Message });
+                return Unauthorized(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
+        // ============================================
         // ✅ Admin + Employee: xóa hồ sơ bằng lái
+        // ============================================
         [Authorize(Roles = "Admin,Employee")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDriverLicense(int id)
@@ -110,15 +156,27 @@ namespace UserService.Controllers
             try
             {
                 await _driverLicenseService.DeleteDriverLicense(id);
-                return Ok(new { message = "Driver license deleted successfully." });
+
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Xóa hồ sơ bằng lái thành công"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
+        // ============================================
         // ✅ Admin + Employee + Member: xem hồ sơ
+        // ============================================
         [Authorize(Roles = "Admin,Employee,Member")]
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetDriverLicenseByUserId(int userId)
@@ -127,17 +185,35 @@ namespace UserService.Controllers
             {
                 var driverLicense = await _driverLicenseService.GetDriverLicenseByUserId(userId);
                 if (driverLicense == null)
-                    return NotFound(new { message = "Driver license not found." });
+                {
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Không tìm thấy hồ sơ bằng lái."
+                    });
+                }
 
-                return Ok(driverLicense);
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Lấy thông tin bằng lái thành công",
+                    Data = driverLicense
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
+        // ============================================
         // ✅ Admin + Employee: duyệt hoặc từ chối hồ sơ
+        // ============================================
         [Authorize(Roles = "Admin,Employee")]
         [HttpPost("set-status/{userId}/{isApproved}")]
         public async Task<IActionResult> SetStatus(int userId, bool isApproved)
@@ -145,11 +221,22 @@ namespace UserService.Controllers
             try
             {
                 var notification = await _driverLicenseService.SetStatus(userId, isApproved);
-                return Ok(notification);
+
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Cập nhật trạng thái hồ sơ bằng lái thành công",
+                    Data = notification
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
     }

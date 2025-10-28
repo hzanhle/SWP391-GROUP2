@@ -7,7 +7,6 @@ namespace BookingService.DTOs
     /// </summary>
     public class OrderRequest
     {
-        public int UserId { get; set; }
         public int VehicleId { get; set; }
         public DateTime FromDate { get; set; }
         public DateTime ToDate { get; set; }

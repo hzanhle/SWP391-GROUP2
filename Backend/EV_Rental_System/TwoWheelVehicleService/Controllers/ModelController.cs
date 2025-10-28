@@ -26,11 +26,21 @@ namespace TwoWheelVehicleService.Controllers
             try
             {
                 var models = await _modelService.GetAllModelsAsync();
-                return Ok(models);
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Lấy danh sách model thành công",
+                    Data = models
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -41,11 +51,21 @@ namespace TwoWheelVehicleService.Controllers
             try
             {
                 var models = await _modelService.GetActiveModelsAsync();
-                return Ok(models);
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Lấy danh sách model active thành công",
+                    Data = models
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -57,13 +77,27 @@ namespace TwoWheelVehicleService.Controllers
             {
                 var model = await _modelService.GetModelByIdAsync(id);
                 if (model == null)
-                    return NotFound(new ResponseDTO { Message = "Model not found" });
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Model không tồn tại"
+                    });
 
-                return Ok(model);
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Lấy model thành công",
+                    Data = model
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -73,32 +107,38 @@ namespace TwoWheelVehicleService.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateModel([FromForm] ModelRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new { Field = x.Key, Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray() })
+                    .ToList();
+
+                return BadRequest(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
+
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState
-                        .Where(x => x.Value.Errors.Any())
-                        .Select(x => new
-                        {
-                            Field = x.Key,
-                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                        })
-                        .ToList();
-
-                    return BadRequest(new ResponseDTO
-                    {
-                        Message = "Invalid data",
-                        Data = errors
-                    });
-                }
-
                 await _modelService.AddModelAsync(request);
-                return Ok(new ResponseDTO { Message = "Model created successfully" });
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Tạo model thành công"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -111,15 +151,28 @@ namespace TwoWheelVehicleService.Controllers
             try
             {
                 await _modelService.UpdateModelAsync(id, request);
-                return Ok(new ResponseDTO { Message = "Model updated successfully" });
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Cập nhật model thành công"
+                });
             }
             catch (ArgumentException)
             {
-                return NotFound(new ResponseDTO { Message = "Model not found" });
+                return NotFound(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Model không tồn tại"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -133,14 +186,27 @@ namespace TwoWheelVehicleService.Controllers
             {
                 var existing = await _modelService.GetModelByIdAsync(id);
                 if (existing == null)
-                    return NotFound(new ResponseDTO { Message = "Model not found" });
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Model không tồn tại"
+                    });
 
                 await _modelService.DeleteModelAsync(id);
-                return Ok(new ResponseDTO { Message = "Model deleted successfully" });
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Xóa model thành công"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -153,11 +219,20 @@ namespace TwoWheelVehicleService.Controllers
             try
             {
                 await _modelService.ToggleStatusAsync(id);
-                return Ok(new ResponseDTO { Message = "Model status changed successfully" });
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Đổi trạng thái model thành công"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
     }

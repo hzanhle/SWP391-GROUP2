@@ -5,8 +5,9 @@
         public int FeedbackId { get; set; }
         public int UserId { get; set; }
         public int OrderId { get; set; }
+        public Order? Order { get; set; }  // Navigation property đến Order
         public int VehicleId { get; set; }
-        public double VehicleRating { get; set; }
+        public double Rating { get; set; }
         public string? Comments { get; set; }
         public DateTime Created { get; set; } = DateTime.UtcNow;
 
@@ -19,7 +20,7 @@
             UserId = userId;
             OrderId = orderId;
             VehicleId = vehicleId;
-            VehicleRating = vehicleRating;
+            Rating = vehicleRating;
             Comments = comments;
         }
     }

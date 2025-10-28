@@ -25,7 +25,7 @@ namespace BookingService.Models
 
         public int PaymentId { get; set; }
         public Payment? Payment { get; set; }
-
+        public Feedback? Feedback { get; set; }
         public decimal HourlyRate { get; set; }
         public decimal TotalCost { get; set; }
         public decimal DepositAmount { get; set; }

@@ -39,8 +39,8 @@ namespace TwoWheelVehicleService.Controllers
 
                 return Ok(new ResponseDTO
                 {
-                    Success = true,
-                    Message = $"Retrieved {vehicles.Count} vehicles successfully",
+                    IsSuccess = true,
+                    Message = $"Retrieved {vehicles.Count} vehicles IsSuccessfully",
                     Data = vehicles
                 });
             }
@@ -49,7 +49,7 @@ namespace TwoWheelVehicleService.Controllers
                 _logger.LogError(ex, "Error fetching vehicles");
                 return StatusCode(500, new ResponseDTO
                 {
-                    Success = false,
+                    IsSuccess = false,
                     Message = "Failed to fetch vehicles: " + ex.Message,
                     Data = null
                 });
@@ -68,7 +68,7 @@ namespace TwoWheelVehicleService.Controllers
                 {
                     return BadRequest(new ResponseDTO
                     {
-                        Success = false,
+                        IsSuccess = false,
                         Message = "Invalid request data",
                         Data = ModelState
                     });
@@ -84,8 +84,8 @@ namespace TwoWheelVehicleService.Controllers
 
                 return Ok(new ResponseDTO
                 {
-                    Success = true,
-                    Message = "Vehicle status updated successfully",
+                    IsSuccess = true,
+                    Message = "Vehicle status updated IsSuccessfully",
                     Data = response
                 });
             }
@@ -98,7 +98,7 @@ namespace TwoWheelVehicleService.Controllers
                 {
                     return NotFound(new ResponseDTO
                     {
-                        Success = false,
+                        IsSuccess = false,
                         Message = ex.Message,
                         Data = null
                     });
@@ -106,7 +106,7 @@ namespace TwoWheelVehicleService.Controllers
 
                 return StatusCode(500, new ResponseDTO
                 {
-                    Success = false,
+                    IsSuccess = false,
                     Message = "Failed to update vehicle status: " + ex.Message,
                     Data = null
                 });
@@ -125,7 +125,7 @@ namespace TwoWheelVehicleService.Controllers
 
                 return Ok(new ResponseDTO
                 {
-                    Success = true,
+                    IsSuccess = true,
                     Message = $"Retrieved {history.StatusHistory.Count} history records",
                     Data = history
                 });
@@ -138,7 +138,7 @@ namespace TwoWheelVehicleService.Controllers
                 {
                     return NotFound(new ResponseDTO
                     {
-                        Success = false,
+                        IsSuccess = false,
                         Message = ex.Message,
                         Data = null
                     });
@@ -146,7 +146,7 @@ namespace TwoWheelVehicleService.Controllers
 
                 return StatusCode(500, new ResponseDTO
                 {
-                    Success = false,
+                    IsSuccess = false,
                     Message = "Failed to fetch vehicle history: " + ex.Message,
                     Data = null
                 });
@@ -167,8 +167,8 @@ namespace TwoWheelVehicleService.Controllers
 
                 return Ok(new ResponseDTO
                 {
-                    Success = true,
-                    Message = "Stats retrieved successfully",
+                    IsSuccess = true,
+                    Message = "Stats retrieved IsSuccessfully",
                     Data = stats
                 });
             }
@@ -177,7 +177,7 @@ namespace TwoWheelVehicleService.Controllers
                 _logger.LogError(ex, "Error calculating vehicle stats");
                 return StatusCode(500, new ResponseDTO
                 {
-                    Success = false,
+                    IsSuccess = false,
                     Message = "Failed to calculate stats: " + ex.Message,
                     Data = null
                 });
@@ -196,7 +196,7 @@ namespace TwoWheelVehicleService.Controllers
                 {
                     return NotFound(new ResponseDTO
                     {
-                        Success = false,
+                        IsSuccess = false,
                         Message = $"Vehicle not found: {vehicleId}",
                         Data = null
                     });
@@ -204,8 +204,8 @@ namespace TwoWheelVehicleService.Controllers
 
                 return Ok(new ResponseDTO
                 {
-                    Success = true,
-                    Message = "Vehicle retrieved successfully",
+                    IsSuccess = true,
+                    Message = "Vehicle retrieved IsSuccessfully",
                     Data = vehicleDto
                 });
             }
@@ -214,7 +214,7 @@ namespace TwoWheelVehicleService.Controllers
                 _logger.LogError(ex, $"Error getting vehicle {vehicleId}");
                 return StatusCode(500, new ResponseDTO
                 {
-                    Success = false,
+                    IsSuccess = false,
                     Message = ex.Message,
                     Data = null
                 });
