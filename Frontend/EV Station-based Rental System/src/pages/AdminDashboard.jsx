@@ -45,11 +45,11 @@ export default function AdminDashboard() {
           getUserGrowth(token),
         ])
         if (!mounted) return
-        setSummary(s.data?.data || s.data || null)
-        setRevenue(Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : []))
-        setTopVehicles(Array.isArray(v.data?.data) ? v.data.data : (Array.isArray(v.data) ? v.data : []))
-        setStations(Array.isArray(st.data?.data) ? st.data.data : (Array.isArray(st.data) ? st.data : []))
-        setUserGrowth(Array.isArray(ug.data?.data) ? ug.data.data : (Array.isArray(ug.data) ? ug.data : []))
+        setSummary(s.data || null)
+        setRevenue(Array.isArray(r.data) ? r.data : [])
+        setTopVehicles(Array.isArray(v.data) ? v.data : [])
+        setStations(Array.isArray(st.data) ? st.data : [])
+        setUserGrowth(Array.isArray(ug.data) ? ug.data : [])
         setError('')
       } catch (e) {
         setError(e.message || 'Không tải được dữ liệu dashboard')

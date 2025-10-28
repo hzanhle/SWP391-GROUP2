@@ -33,7 +33,7 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
   }
 
   const isJson = res.headers.get('content-type')?.includes('application/json')
-  const data = isJson ? await res.json().catch(() => null) : null
+  let data = isJson ? await res.json().catch(() => null) : null
 
   if (!res.ok) {
     const message = (data && (data.message || data.Message)) || `${res.status} ${res.statusText}`
@@ -42,6 +42,12 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
     error.data = data
     throw error
   }
+
+  // Unwrap nested data if present
+  if (data && typeof data === 'object' && (data.data !== undefined || data.Data !== undefined)) {
+    data = data.data !== undefined ? data.data : data.Data
+  }
+
   return { status: res.status, data }
 }
 
@@ -216,6 +222,42 @@ export function updateModel(id, model, token) {
 export function deleteModel(id, token) {
   return request(`/api/Model/${id}`, {
     method: 'DELETE',
+    token
+  })
+}
+
+/**
+ * Check vehicle availability for a date range
+ */
+export function checkVehicleAvailability(payload, token) {
+  return request('/api/Vehicle/check-availability', {
+    method: 'POST',
+    body: {
+      vehicleId: payload.vehicleId,
+      fromDate: payload.fromDate,
+      toDate: payload.toDate,
+    },
+    token
+  })
+}
+
+/**
+ * Get available vehicles by model
+ */
+export function getAvailableVehiclesByModel(modelId, fromDate, toDate, token) {
+  const params = new URLSearchParams()
+  params.append('modelId', String(modelId))
+  params.append('fromDate', fromDate)
+  params.append('toDate', toDate)
+  return request(`/api/Vehicle/available-by-model/${modelId}?${params.toString()}`, { token })
+}
+
+/**
+ * Toggle vehicle active status
+ */
+export function toggleVehicleActive(id, token) {
+  return request(`/api/Vehicle/${id}/toggle`, {
+    method: 'PATCH',
     token
   })
 }

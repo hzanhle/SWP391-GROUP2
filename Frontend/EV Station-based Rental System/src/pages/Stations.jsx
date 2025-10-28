@@ -2,7 +2,6 @@ import React from 'react'
 import { useEffect, useState } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import SearchBar from '../components/SearchBar'
 import StationCard from '../components/StationCard'
 import { getAllStations } from '../api/station'
 
@@ -33,27 +32,7 @@ export default function Stations() {
     <div data-figma-layer="Stations Page">
       <Navbar />
       <main>
-        <SearchBar />
-        <section id="stations-list" className="section" aria-labelledby="stations-title">
-          <div className="container">
-            <div className="section-header">
-              <h2 id="stations-title" className="section-title">Điểm thuê gần bạn</h2>
-              <p className="section-subtitle">Chọn điểm để xem xe có sẵn và đặt xe.</p>
-            </div>
-
-            {error ? (
-              <div role="alert" className="card card-body">
-                <p className="card-subtext">{error}</p>
-              </div>
-            ) : (
-              <div className="vehicle-grid">
-                {stations.map((s) => (
-                  <StationCard key={`${s.name}-${s.address}`} {...s} />
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+      
       </main>
       <Footer />
     </div>
