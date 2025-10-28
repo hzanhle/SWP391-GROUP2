@@ -27,6 +27,7 @@ namespace TwoWheelVehicleService.Services
                     StationId = vehicle.StationId,
                     Color = vehicle.Color,
                     Status = "Available",
+                    LicensePlate = vehicle.LicensePlate,
                     IsActive = true
                 };
 
@@ -190,6 +191,7 @@ namespace TwoWheelVehicleService.Services
                 existingVehicle.Color = vehicle.Color;
                 existingVehicle.Status = vehicle.Status;
                 existingVehicle.IsActive = vehicle.IsActive;
+                existingVehicle.LicensePlate = vehicle.LicensePlate;
 
                 await _vehicleRepository.UpdateVehicle(existingVehicle);
                 _logger.LogInformation("✅ Vehicle updated successfully: {@Vehicle}", existingVehicle);

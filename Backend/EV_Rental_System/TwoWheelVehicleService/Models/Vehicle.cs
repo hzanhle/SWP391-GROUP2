@@ -13,6 +13,8 @@ namespace TwoWheelVehicleService.Models
         [Required(ErrorMessage = "StationId không được để trống")]
         public int StationId { get; set; }
 
+        [Required(ErrorMessage = "Biển số xe không được để trống")]
+        public string LicensePlate { get; set; }
         public Model? Model { get; set; }
 
         [Required(ErrorMessage = "Màu xe không được để trống")]
@@ -36,13 +38,14 @@ namespace TwoWheelVehicleService.Models
 
         public Vehicle() { }
 
-        public Vehicle(int vehicleId, int modelId, int stationId, Model? model, string color)
+        public Vehicle(int vehicleId, string licensePlate, int modelId, int stationId, Model? model, string color)
         {
             VehicleId = vehicleId;
             ModelId = modelId;
             StationId = stationId;
             Model = model;
             Color = color;
+            LicensePlate = licensePlate;
         }
     }
 }
