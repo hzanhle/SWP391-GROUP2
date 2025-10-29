@@ -72,7 +72,7 @@ export default function BookingDetail() {
     if (currentStatus === 'Confirmed' || currentStatus === 'Pending') {
       return (
         <>
-          <CTA as="a" href="#check-in" variant="primary">Check-in nhận xe</CTA>
+          <CTA as="a" href={`#check-in?orderId=${order?.orderId || order?.OrderId}`} variant="primary">Check-in nhận xe</CTA>
           <CTA as="a" href="#booking-new" variant="secondary">Đặt xe mới</CTA>
         </>
       )

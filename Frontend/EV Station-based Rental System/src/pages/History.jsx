@@ -48,11 +48,84 @@ export default function History() {
     const statusMap = {
       'Pending': 'yellow',
       'Confirmed': 'blue',
-      'Active': 'green',
+      'InProgress': 'green',
       'Completed': 'green',
       'Cancelled': 'red',
     }
     return statusMap[status] || 'gray'
+  }
+
+  const getActionButton = (order) => {
+    const status = order.status || order.Status
+    const orderId = order.orderId || order.OrderId
+
+    if (status === 'Pending') {
+      return (
+        <CTA
+          as="button"
+          onClick={() => {
+            localStorage.removeItem('InProgressOrder')
+            localStorage.setItem('pending_booking', JSON.stringify(order))
+            window.location.hash = 'payment'
+          }}
+          variant="primary"
+        >
+          Thanh toán
+        </CTA>
+      )
+    }
+
+    if (status === 'Confirmed') {
+      return (
+        <CTA
+          as="a"
+          href={`#check-in?orderId=${orderId}`}
+          variant="primary"
+        >
+          Check-in
+        </CTA>
+      )
+    }
+
+    if (status === 'InProgress') {
+      return (
+        <CTA
+          as="a"
+          href={`#return?orderId=${orderId}`}
+          variant="primary"
+        >
+          Trả xe
+        </CTA>
+      )
+    }
+
+    if (status === 'Completed') {
+      return (
+        <CTA
+          as="a"
+          href="#feedback"
+          variant="primary"
+        >
+          Đánh giá
+        </CTA>
+      )
+    }
+
+    return (
+      <CTA
+        as="button"
+        onClick={() => {
+          const orderId = order.orderId || order.OrderId
+          console.log('[History] Viewing order:', orderId)
+          localStorage.removeItem('InProgressOrder')
+          localStorage.setItem('pending_booking', JSON.stringify(order))
+          window.location.hash = `booking?orderId=${orderId}`
+        }}
+        variant="secondary"
+      >
+        Xem
+      </CTA>
+    )
   }
 
   return (
@@ -112,19 +185,7 @@ export default function History() {
                             <span className={`badge ${getStatusBadgeClass(order.status || order.Status)}`}>
                               {order.status || order.Status || 'Unknown'}
                             </span>
-                            <CTA
-                              as="button"
-                              onClick={() => {
-                                const orderId = order.orderId || order.OrderId
-                                console.log('[History] Viewing order:', orderId)
-                                localStorage.removeItem('activeOrder')
-                                localStorage.setItem('pending_booking', JSON.stringify(order))
-                                window.location.hash = `booking?orderId=${orderId}`
-                              }}
-                              variant="secondary"
-                            >
-                              Xem
-                            </CTA>
+                            {getActionButton(order)}
                           </div>
                         </div>
                       </li>

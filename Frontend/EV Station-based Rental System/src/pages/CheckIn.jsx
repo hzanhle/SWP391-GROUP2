@@ -23,8 +23,11 @@ export default function CheckIn() {
       setLoading(true)
       setError(null)
 
-      const params = new URLSearchParams(window.location.search)
-      const orderIdParam = params.get('orderId')
+      // Parse orderId from hash URL (e.g., #check-in?orderId=123)
+      const hash = window.location.hash.substring(1)
+      const hashParams = new URLSearchParams(hash.split('?')[1] || '')
+      const orderIdParam = hashParams.get('orderId')
+
       const activeOrder = localStorage.getItem('active_order')
       const pending = JSON.parse(localStorage.getItem('pending_booking') || '{}')
       const orderId = Number(orderIdParam || activeOrder || pending.orderId)
