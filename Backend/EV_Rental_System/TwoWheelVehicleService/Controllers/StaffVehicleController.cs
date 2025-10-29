@@ -7,7 +7,7 @@ namespace TwoWheelVehicleService.Controllers
 {
     [ApiController]
     [Route("api/staff/vehicles")]
-    [Authorize(Roles = "Staff,Admin")]
+    [Authorize(Roles = "Employee,Admin")]
     public class StaffVehicleController : ControllerBase
     {
         private readonly IVehicleService _vehicleService;
