@@ -213,17 +213,17 @@ namespace BookingService.Controllers
                             orderId, transactionNo
                         );
 
-                        return Ok(new
-                        {
-                            success = true,
-                            message = "Thanh toán thành công",
-                            data = new { orderId, transactionNo, amount = actualAmount, bankCode }
-                        });
+                        // Get FE URL from environment or config
+                        var feUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
+                        var redirectUrl = $"{feUrl}#payment?success=true&orderId={orderId}";
+                        return Redirect(redirectUrl);
                     }
                     else
                     {
                         _logger.LogError("Failed to mark payment completed for Order {OrderId}", orderId);
-                        return StatusCode(500, new { success = false, message = "Lỗi cập nhật payment" });
+                        var feUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
+                        var redirectUrl = $"{feUrl}#payment?success=false&orderId={orderId}&error=payment_update_failed";
+                        return Redirect(redirectUrl);
                     }
                 }
                 else
@@ -242,12 +242,9 @@ namespace BookingService.Controllers
                         orderId, responseCode, errorMessage
                     );
 
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = errorMessage,
-                        data = new { orderId, responseCode }
-                    });
+                    var feUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
+                    var redirectUrl = $"{feUrl}#payment?success=false&orderId={orderId}&error={errorMessage}";
+                    return Redirect(redirectUrl);
                 }
             }
             catch (Exception ex)

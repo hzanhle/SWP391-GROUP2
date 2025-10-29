@@ -105,7 +105,7 @@ export default function History() {
                             <p className="card-subtext">
                               {new Date(order.fromDate || order.FromDate).toLocaleDateString('vi-VN')} •
                               {order.vehicle?.model || order.Vehicle?.Model || 'N/A'} •
-                              ${Number(order.totalAmount || order.TotalAmount || 0).toFixed(2)}
+                              ${Number(order.totalCost || order.TotalCost || 0).toFixed(2)}
                             </p>
                           </div>
                           <div className="row">
@@ -116,6 +116,8 @@ export default function History() {
                               as="button"
                               onClick={() => {
                                 const orderId = order.orderId || order.OrderId
+                                console.log('[History] Viewing order:', orderId)
+                                localStorage.removeItem('activeOrder')
                                 localStorage.setItem('pending_booking', JSON.stringify(order))
                                 window.location.hash = `booking?orderId=${orderId}`
                               }}

@@ -45,19 +45,19 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
 }
 
 export function getAllShifts(token) {
-  return request('/api/StaffShift', { token })
+  return request('/api/admin/staffshift', { token })
 }
 
 export function getShiftById(id, token) {
-  return request(`/api/StaffShift/${id}`, { token })
+  return request(`/api/admin/staffshift/${id}`, { token })
 }
 
 export function getShiftsByStation(stationId, token) {
-  return request(`/api/StaffShift/station/${stationId}`, { token })
+  return request(`/api/admin/staffshift/station/${stationId}`, { token })
 }
 
 export function getShiftsByUser(userId, token) {
-  return request(`/api/StaffShift/user/${userId}`, { token })
+  return request(`/api/admin/staffshift/user/${userId}`, { token })
 }
 
 export function getMyShifts(fromDate, toDate, token) {
@@ -65,33 +65,33 @@ export function getMyShifts(fromDate, toDate, token) {
   if (fromDate) params.append('fromDate', fromDate)
   if (toDate) params.append('toDate', toDate)
   const queryString = params.toString()
-  const path = queryString ? `/api/StaffShift/my-shifts?${queryString}` : '/api/StaffShift/my-shifts'
+  const path = queryString ? `/api/staffshift/my-shifts?${queryString}` : '/api/staffshift/my-shifts'
   return request(path, { token })
 }
 
 export function checkIn(payload, token) {
-  return request('/api/StaffShift/check-in', { method: 'POST', body: payload, token })
+  return request('/api/staffshift/check-in', { method: 'POST', body: payload, token })
 }
 
 export function checkOut(payload, token) {
-  return request('/api/StaffShift/check-out', { method: 'POST', body: payload, token })
+  return request('/api/staffshift/check-out', { method: 'POST', body: payload, token })
 }
 
 export function getTimesheet(month, year, token) {
   const params = new URLSearchParams({ month, year })
-  return request(`/api/StaffShift/timesheet?${params.toString()}`, { token })
+  return request(`/api/admin/staffshift/timesheet?${params.toString()}`, { token })
 }
 
 export function createShift(payload, token) {
-  return request('/api/StaffShift', { method: 'POST', body: payload, token })
+  return request('/api/admin/staffshift', { method: 'POST', body: payload, token })
 }
 
 export function updateShift(id, payload, token) {
-  return request(`/api/StaffShift/${id}`, { method: 'PUT', body: payload, token })
+  return request(`/api/admin/staffshift/${id}`, { method: 'PUT', body: payload, token })
 }
 
 export function deleteShift(id, token) {
-  return request(`/api/StaffShift/${id}`, { method: 'DELETE', token })
+  return request(`/api/admin/staffshift/${id}`, { method: 'DELETE', token })
 }
 
 export default { getAllShifts, getShiftById, getShiftsByStation, getShiftsByUser, getMyShifts, checkIn, checkOut, getTimesheet, createShift, updateShift, deleteShift }

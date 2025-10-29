@@ -392,15 +392,22 @@ export default function BookingNew() {
       const manufacturer = selectedModel.Manufacturer || selectedModel.manufacturer
       const modelName = selectedModel.ModelName || selectedModel.modelName
       const vehicleColor = vehicleToUse.Color || vehicleToUse.color
+      const licensePlate = vehicleToUse.LicensePlate || vehicleToUse.licensePlate || 'N/A'
+      const vehicleType = selectedModel.VehicleType || selectedModel.vehicleType || 'Xe điện'
 
       const bookingDataToStore = {
         orderId,
-        totalAmount: orderRes.data.TotalAmount,
+        totalCost: orderRes.data.TotalCost,
+        depositCost: orderRes.data.DepositCost || 0,
+        serviceFee: orderRes.data.ServiceFee || 0,
         expiresAt: orderRes.data.ExpiresAt,
         vehicleInfo: {
+          vehicleId: Number(vehicleId),
           station: stationName,
           model: `${manufacturer} ${modelName}`,
           color: vehicleColor,
+          licensePlate: licensePlate,
+          type: vehicleType,
         },
         dates: {
           from: pickupDate,

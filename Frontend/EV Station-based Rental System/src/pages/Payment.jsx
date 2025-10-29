@@ -35,7 +35,7 @@ export default function Payment() {
 
         if (!pendingBooking) {
           console.error('[Payment] No pending_booking found in localStorage')
-          setError('Không tìm thấy thông tin đơn hàng. Vui lòng bắt đầu lại.')
+          setError('Không tìm thấy thông tin đơn hàng. Vui lòng b���t đầu lại.')
           setTimeout(() => {
             window.location.hash = 'booking-new'
           }, 1000)
@@ -72,50 +72,61 @@ export default function Payment() {
               console.log('[Payment] SignalR PaymentSuccess received', data)
               const incomingOrderId = Number(data?.OrderId || data?.orderId)
               const transactionId = data?.TransactionId || data?.transactionId
-              if (!incomingOrderId || incomingOrderId !== bookingData.orderId) return
+              if (!incomingOrderId || incomingOrderId !== bookingData.orderId) {
+                console.log('[Payment] Ignoring PaymentSuccess for different order')
+                return
+              }
+
+              console.log('[Payment] Creating contract for order', bookingData.orderId)
 
               // Create contract on backend
               const userJson = localStorage.getItem('auth.user') || '{}'
               const user = JSON.parse(userJson)
 
               const contractData = {
-                orderId: bookingData.orderId,
-                paidAt: new Date().toISOString(),
-                customerName: user.fullName || user.fullname || user.name || user.fullName || '',
-                customerEmail: user.email || '',
-                customerPhone: user.phone || user.phoneNumber || '',
-                customerIdCard: user.idCard || user.id_card || user.identityNumber || '',
-                customerAddress: user.address || '',
-                customerDateOfBirth: user.dateOfBirth || user.dob || '',
-                vehicleModel: bookingData.vehicleInfo?.model || '',
-                licensePlate: bookingData.vehicleInfo?.licensePlate || '',
-                vehicleColor: bookingData.vehicleInfo?.color || '',
-                vehicleType: bookingData.vehicleInfo?.type || '',
-                fromDate: bookingData.dates?.from,
-                toDate: bookingData.dates?.to,
-                totalRentalCost: bookingData.totalAmount || 0,
-                depositAmount: bookingData.depositAmount || 0,
-                serviceFee: bookingData.serviceFee || 0,
-                totalPaymentAmount: bookingData.totalAmount || 0,
-                transactionId: transactionId || '',
-                paymentMethod: 'VNPay',
-                paymentDate: new Date().toISOString(),
+                OrderId: bookingData.orderId,
+                PaidAt: new Date().toISOString(),
+                CustomerName: user.fullName || user.fullname || user.name || 'Khách hàng',
+                CustomerEmail: user.email || '',
+                CustomerPhone: user.phone || user.phoneNumber || '',
+                CustomerIdCard: user.idCard || user.id_card || user.identityNumber || '',
+                CustomerAddress: user.address || '',
+                CustomerDateOfBirth: user.dateOfBirth || user.dob || '',
+                VehicleModel: bookingData.vehicleInfo?.model || 'N/A',
+                LicensePlate: bookingData.vehicleInfo?.licensePlate || 'N/A',
+                VehicleColor: bookingData.vehicleInfo?.color || 'N/A',
+                VehicleType: bookingData.vehicleInfo?.type || 'N/A',
+                FromDate: new Date(bookingData.dates?.from).toISOString(),
+                ToDate: new Date(bookingData.dates?.to).toISOString(),
+                TotalRentalCost: Number(bookingData.totalCost || 0),
+                DepositCost: Number(bookingData.depositCost || 0),
+                ServiceFee: Number(bookingData.serviceFee || 0),
+                TotalPaymentCost: Number(bookingData.totalCost || 0),
+                TransactionId: transactionId || '',
+                PaymentMethod: 'VNPay',
+                PaymentDate: new Date().toISOString(),
               }
+
+              console.log('[Payment] Contract data prepared:', contractData)
 
               const res = await bookingApi.createContract(contractData, authToken)
               console.log('[Payment] Contract creation response:', res)
 
               if (res && res.data) {
+                const contractUrl = res.data.downloadUrl || res.data.DownloadUrl || ''
                 setContractDetails(res.data)
-                setContractUrl(res.data.downloadUrl || res.data.DownloadUrl || '')
-                // mark active order
+                setContractUrl(contractUrl)
+                console.log('[Payment] Contract URL received:', contractUrl)
                 localStorage.removeItem('pending_booking')
                 localStorage.setItem('active_order', String(bookingData.orderId))
+              } else {
+                console.warn('[Payment] No contract URL in response')
               }
 
               setPaymentStatus('success')
             } catch (err) {
-              console.error('Error handling PaymentSuccess event:', err)
+              console.error('[Payment] Error handling PaymentSuccess event:', err)
+              setPaymentStatus('success')
             }
           })
 
@@ -280,12 +291,23 @@ export default function Payment() {
                     Mã đơn hàng: <strong>#{booking?.orderId}</strong>
                   </p>
                   <p className="card-subtext" style={{ marginBottom: '1rem' }}>
-                    Tổng tiền: <strong style={{ fontSize: '1.8rem', color: '#ff4d30' }}>${booking?.totalAmount?.toFixed(2)}</strong>
+                    Tổng tiền: <strong style={{ fontSize: '1.8rem', color: '#ff4d30' }}>${booking?.totalCost?.toFixed(2)}</strong>
                   </p>
 
                   {contractUrl ? (
-                    <div style={{ display: 'grid', gap: '1rem', justifyContent: 'center' }}>
-                      <a href={contractUrl} target="_blank" rel="noreferrer" className="btn" style={{ padding: '0.75rem 1.5rem' }}>Tải hợp đồng</a>
+                    <div style={{ display: 'grid', gap: '1.5rem' }}>
+                      <div style={{ backgroundColor: '#f5f5f5', padding: '2rem', borderRadius: '8px' }}>
+                        <h3 style={{ marginBottom: '1rem', fontSize: '1.4rem', fontWeight: '600' }}>📄 Hợp đồng thuê xe</h3>
+                        <iframe
+                          src={`${contractUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                          style={{ width: '100%', height: '600px', border: '1px solid #ddd', borderRadius: '4px' }}
+                          title="Contract PDF"
+                        />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                          <a href={contractUrl} download target="_blank" rel="noreferrer" className="btn" style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>⬇️ Tải xuống</a>
+                          <a href={contractUrl} target="_blank" rel="noreferrer" className="btn" style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>👁️ Xem đầy đủ</a>
+                        </div>
+                      </div>
                       <CTA as="button" onClick={handleStartTrip} variant="primary">Bắt đầu chuyến</CTA>
                       <CTA as="button" onClick={() => setShowFeedback(true)} variant="ghost">Để lại đánh giá sau khi trả xe</CTA>
                     </div>
@@ -401,14 +423,14 @@ export default function Payment() {
                       <div style={{ backgroundColor: '#f9f9f9', padding: '1rem', borderRadius: '0.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                           <span style={{ fontSize: '1.4rem', color: '#666' }}>Chi phí thuê:</span>
-                          <span style={{ fontSize: '1.4rem', fontWeight: '500' }}>${(booking.totalAmount || 0).toFixed(2)}</span>
+                          <span style={{ fontSize: '1.4rem', fontWeight: '500' }}>${(booking.totalCost || 0).toFixed(2)}</span>
                         </div>
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem' }}>
                         <h4 style={{ fontSize: '1.8rem', color: '#ff4d30', margin: 0 }}>Tổng thanh toán:</h4>
                         <h2 style={{ fontSize: '2.4rem', color: '#ff4d30', margin: 0 }}>
-                          ${(booking.totalAmount || 0).toFixed(2)}
+                          ${(booking.totalCost || 0).toFixed(2)}
                         </h2>
                       </div>
 
@@ -489,7 +511,7 @@ export default function Payment() {
                   }}>
                     <h4 style={{ marginBottom: '1rem', fontSize: '1.6rem', color: '#333' }}>ℹ️ Lưu ý</h4>
                     <ul style={{ marginLeft: '1.5rem', lineHeight: '1.8' }}>
-                      <li>Bạn sẽ được chuyển hướng đến trang thanh toán VNPay</li>
+                      <li>Bạn sẽ được chuyển hướng đến trang thanh to��n VNPay</li>
                       <li>Vui lòng không đóng trình duyệt khi đang thanh toán</li>
                       <li>Sau khi thanh toán thành công, hệ thống sẽ tự động xác nhận đơn hàng</li>
                     </ul>

@@ -235,5 +235,60 @@ namespace TwoWheelVehicleService.Controllers
                 });
             }
         }
+
+        // ============================ IMAGE SERVING ============================
+
+        [AllowAnonymous]
+        [HttpGet("image/{filename}")]
+        public IActionResult GetModelImage(string filename)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(filename))
+                    return BadRequest(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Tên file không hợp lệ"
+                    });
+
+                var env = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
+                var imagePath = Path.Combine(env.ContentRootPath, "Data", "Vehicles", "Models", filename);
+
+                if (!System.IO.File.Exists(imagePath))
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Hình ảnh không tồn tại"
+                    });
+
+                var fileContent = System.IO.File.ReadAllBytes(imagePath);
+                var contentType = GetContentType(imagePath);
+
+                return File(fileContent, contentType);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
+            }
+        }
+
+        private string GetContentType(string path)
+        {
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            return ext switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                ".svg" => "image/svg+xml",
+                _ => "application/octet-stream"
+            };
+        }
     }
 }

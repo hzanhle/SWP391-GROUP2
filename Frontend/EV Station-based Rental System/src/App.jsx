@@ -22,6 +22,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import AdminStaffShift from './pages/AdminStaffShift'
 import StaffShift from './pages/StaffShift'
 import StaffVehicle from './pages/StaffVehicle'
+import Feedback from './pages/Feedback'
 
 function getRoleId() {
   try {
@@ -37,12 +38,16 @@ function resolveRoute() {
   const roleId = getRoleId()
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth.token') : ''
 
+  
+  // Extract base route (without query parameters)
+  const baseHash = hash.split('?')[0]
+
   // Auto-redirect admin to dashboard
   if (token && roleId === 3) {
     if (!hash && path.toLowerCase() === 'admin') return 'admin'
-    if (hash.startsWith('admin')) return hash.replace('#', '')
+      if (baseHash.startsWith('admin')) return baseHash
     // If admin tries to access member pages, redirect to admin
-    if (['home', 'stations', 'vehicles', 'booking', 'booking-new', 'payment', 'check-in', 'return', 'history', 'profile', 'profile-docs', 'staff-shifts', 'staff-vehicles'].includes(hash)) {
+    if (['home', 'stations', 'vehicles', 'booking', 'booking-new', 'payment', 'check-in', 'return', 'history', 'profile', 'profile-docs', 'staff-shifts', 'staff-vehicles'].includes(baseHash)) {
       return 'admin'
     }
     // Default for admin: show admin dashboard
@@ -56,14 +61,14 @@ function resolveRoute() {
     if (['home', 'stations', 'vehicles', 'booking', 'booking-new', 'payment', 'check-in', 'return', 'history', 'profile-docs'].includes(hash)) {
       return 'staff-shifts'
     }
-    // Allow staff to access profile
-    if (hash === 'profile') return 'profile'
+    // Allow staff to access profile and feedback
+    if (baseHash === 'profile') return hash
     // Default for staff: show shifts
     return 'staff-shifts'
   }
 
   if (!hash && path.toLowerCase() === 'admin') return 'admin'
-  switch (hash) {
+  switch (baseHash) {
     case 'signup': return 'signup'
     case 'login': return 'login'
     case 'forgot-password': return 'forgot-password'
@@ -78,6 +83,7 @@ function resolveRoute() {
     case 'check-in': return 'check-in'
     case 'return': return 'return'
     case 'history': return 'history'
+    case 'feedback': return 'feedback'
     case 'admin-users': return 'admin-users'
     case 'staff-verify': return 'staff-verify'
     case 'admin-models': return 'admin-models'
@@ -120,6 +126,7 @@ export default function App() {
       {routeData === 'check-in' && <CheckIn />}
       {routeData === 'return' && <Return />}
       {routeData === 'history' && <History />}
+      {routeData === 'feedback' && <Feedback />}
       {routeData === 'admin' && <AdminDashboard />}
       {routeData === 'admin-users' && <AdminUsers />}
       {routeData === 'admin-models' && <AdminModels />}

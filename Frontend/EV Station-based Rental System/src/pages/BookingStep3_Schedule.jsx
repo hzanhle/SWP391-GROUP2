@@ -83,7 +83,7 @@ export default function BookingStep3_Schedule({
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span className="card-subtext">Tiền cọc:</span>
-              <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.depositAmount?.toFixed(2)}</span>
+              <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.depositCost?.toFixed(2)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span className="card-subtext">Phí dịch vụ:</span>
@@ -92,7 +92,7 @@ export default function BookingStep3_Schedule({
             <hr style={{ margin: '1rem 0' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <h4 style={{ color: '#ff4d30', fontSize: '1.8rem', margin: 0 }}>Tổng cộng:</h4>
-              <h4 style={{ color: '#ff4d30', fontSize: '1.8rem', margin: 0 }}>${preview.totalPaymentAmount?.toFixed(2)}</h4>
+              <h4 style={{ color: '#ff4d30', fontSize: '1.8rem', margin: 0 }}>${preview.totalPaymentCost?.toFixed(2)}</h4>
             </div>
           </div>
         </div>

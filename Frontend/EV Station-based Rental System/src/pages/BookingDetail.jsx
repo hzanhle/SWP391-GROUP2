@@ -13,11 +13,15 @@ export default function BookingDetail() {
     const fetchOrderDetails = async () => {
       try {
         setLoading(true)
-        const params = new URLSearchParams(window.location.search)
-        const orderIdParam = params.get('orderId')
-        const activeOrder = localStorage.getItem('active_order')
+        // Extract query params from hash (e.g., #booking?orderId=123)
+        const hash = window.location.hash.substring(1)
+        const hashParams = new URLSearchParams(hash.split('?')[1] || '')
+        const orderIdParam = hashParams.get('orderId')
         const pendingBooking = JSON.parse(localStorage.getItem('pending_booking') || '{}')
-        const orderId = Number(orderIdParam || activeOrder || pendingBooking.orderId)
+        const activeOrder = localStorage.getItem('active_order')
+        const orderId = Number(orderIdParam || pendingBooking.orderId || activeOrder)
+
+        console.log('[BookingDetail] Hash:', hash, 'OrderIdParam:', orderIdParam, 'PendingOrderId:', pendingBooking.orderId, 'ActiveOrder:', activeOrder, 'FinalOrderId:', orderId)
 
         if (!orderId || isNaN(orderId)) {
           setError('Không tìm thấy mã đơn hàng')
@@ -43,6 +47,13 @@ export default function BookingDetail() {
     }
 
     fetchOrderDetails()
+
+    // Listen for hash changes to refetch when user navigates to different order
+    const handleHashChange = () => {
+      fetchOrderDetails()
+    }
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
   const getStatusBadgeClass = (status) => {
@@ -208,7 +219,7 @@ export default function BookingDetail() {
                   <div>
                     <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Tổng tiền</p>
                     <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.6rem', fontWeight: '500', color: '#ff4d30' }}>
-                      ${Number(order?.totalAmount || order?.TotalAmount || 0).toFixed(2)}
+                      ${Number(order?.totalCost || order?.TotalCost || 0).toFixed(2)}
                     </p>
                   </div>
                   <div>

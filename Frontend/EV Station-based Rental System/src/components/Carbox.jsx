@@ -14,8 +14,12 @@ function CarBox({ model }) {
 
   if (model.imageUrls && model.imageUrls.length > 0) {
     const imagePath = model.imageUrls[0];
-    // Construct full URL: combine API base URL with relative image path
-    imageUrl = imagePath.startsWith('http') ? imagePath : `${apiBaseUrl}/${imagePath}`;
+    if (imagePath.startsWith('http')) {
+      imageUrl = imagePath;
+    } else {
+      const filename = imagePath.split('/').pop();
+      imageUrl = `${apiBaseUrl}/api/Model/image/${filename}`;
+    }
   }
 
   return (
