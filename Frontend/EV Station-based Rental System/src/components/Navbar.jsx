@@ -204,6 +204,26 @@ function Navbar() {
                 <div className="navbar__notifications">
                   <NotificationBell />
                 </div>
+                {isMember && (
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <a href="#booking" className="navbar-link" title="Đơn hàng">
+                      <i className="fa-solid fa-file-invoice"></i>
+                      <span>Đơn hàng</span>
+                    </a>
+                    <a href="#history" className="navbar-link" title="Lịch sử">
+                      <i className="fa-solid fa-history"></i>
+                      <span>Lịch sử</span>
+                    </a>
+                    <a href="#check-in" className="navbar-link" title="Check-in">
+                      <i className="fa-solid fa-sign-in-alt"></i>
+                      <span>Check-in</span>
+                    </a>
+                    <a href="#feedback" className="navbar-link" title="Phản hồi">
+                      <i className="fa-solid fa-comment"></i>
+                      <span>Phản hồi</span>
+                    </a>
+                  </div>
+                )}
                 <a href="#profile" className="navbar__profile-btn">
                   <i className="fa-solid fa-user"></i>
                   <span>Profile</span>

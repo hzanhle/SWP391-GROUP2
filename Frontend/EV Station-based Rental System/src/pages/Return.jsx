@@ -72,7 +72,7 @@ export default function Return() {
     <div data-figma-layer="Return Vehicle Page">
       <Navbar />
       <main>
-        <section id="return" className="section" aria-labelledby="return-title">
+        <section id="return" className="section page-offset" aria-labelledby="return-title">
           <div className="container">
             <div className="section-header">
               <h1 id="return-title" className="section-title">Trả xe</h1>

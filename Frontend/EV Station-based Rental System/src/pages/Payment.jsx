@@ -3,6 +3,8 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import * as bookingApi from '../api/booking'
+import * as signalR from '@microsoft/signalr'
+import FeedbackForm from '../components/FeedbackForm'
 
 export default function Payment() {
   const [booking, setBooking] = useState(null)
@@ -12,8 +14,13 @@ export default function Payment() {
   const [paymentError, setPaymentError] = useState(null)
   const [token, setToken] = useState(null)
   const [paymentStatus, setPaymentStatus] = useState(null)
+  const [contractDetails, setContractDetails] = useState(null)
+  const [contractUrl, setContractUrl] = useState('')
+  const [showFeedback, setShowFeedback] = useState(false)
 
   useEffect(() => {
+    let connection = null
+
     async function init() {
       try {
         const authToken = localStorage.getItem('auth.token')
@@ -51,7 +58,80 @@ export default function Payment() {
         setBooking(bookingData)
         setToken(authToken)
 
-        // Check URL params for payment callback
+        // Setup SignalR connection to listen for PaymentSuccess
+        try {
+          const base = (import.meta.env.VITE_BOOKING_API_URL || '').replace(/\/$/, '')
+          const hubUrl = `${base}/orderTimerHub`
+          connection = new signalR.HubConnectionBuilder()
+            .withUrl(hubUrl, { accessTokenFactory: () => authToken })
+            .withAutomaticReconnect()
+            .build()
+
+          connection.on('PaymentSuccess', async (data) => {
+            try {
+              console.log('[Payment] SignalR PaymentSuccess received', data)
+              const incomingOrderId = Number(data?.OrderId || data?.orderId)
+              const transactionId = data?.TransactionId || data?.transactionId
+              if (!incomingOrderId || incomingOrderId !== bookingData.orderId) return
+
+              // Create contract on backend
+              const userJson = localStorage.getItem('auth.user') || '{}'
+              const user = JSON.parse(userJson)
+
+              const contractData = {
+                orderId: bookingData.orderId,
+                paidAt: new Date().toISOString(),
+                customerName: user.fullName || user.fullname || user.name || user.fullName || '',
+                customerEmail: user.email || '',
+                customerPhone: user.phone || user.phoneNumber || '',
+                customerIdCard: user.idCard || user.id_card || user.identityNumber || '',
+                customerAddress: user.address || '',
+                customerDateOfBirth: user.dateOfBirth || user.dob || '',
+                vehicleModel: bookingData.vehicleInfo?.model || '',
+                licensePlate: bookingData.vehicleInfo?.licensePlate || '',
+                vehicleColor: bookingData.vehicleInfo?.color || '',
+                vehicleType: bookingData.vehicleInfo?.type || '',
+                fromDate: bookingData.dates?.from,
+                toDate: bookingData.dates?.to,
+                totalRentalCost: bookingData.totalAmount || 0,
+                depositAmount: bookingData.depositAmount || 0,
+                serviceFee: bookingData.serviceFee || 0,
+                totalPaymentAmount: bookingData.totalAmount || 0,
+                transactionId: transactionId || '',
+                paymentMethod: 'VNPay',
+                paymentDate: new Date().toISOString(),
+              }
+
+              const res = await bookingApi.createContract(contractData, authToken)
+              console.log('[Payment] Contract creation response:', res)
+
+              if (res && res.data) {
+                setContractDetails(res.data)
+                setContractUrl(res.data.downloadUrl || res.data.DownloadUrl || '')
+                // mark active order
+                localStorage.removeItem('pending_booking')
+                localStorage.setItem('active_order', String(bookingData.orderId))
+              }
+
+              setPaymentStatus('success')
+            } catch (err) {
+              console.error('Error handling PaymentSuccess event:', err)
+            }
+          })
+
+          await connection.start()
+          // Join group for this order so we only receive events for it
+          try {
+            await connection.invoke('JoinOrderGroup', String(bookingData.orderId))
+            console.log('[Payment] Joined SignalR order group', bookingData.orderId)
+          } catch (joinErr) {
+            console.warn('Could not join SignalR group', joinErr)
+          }
+        } catch (hubErr) {
+          console.warn('SignalR not available or failed to connect:', hubErr)
+        }
+
+        // Check URL params for payment callback (fallback)
         const params = new URLSearchParams(window.location.search)
         const paymentSuccess = params.get('success')
         const orderId = params.get('orderId')
@@ -72,6 +152,19 @@ export default function Payment() {
     }
 
     init()
+
+    return () => {
+      try {
+        if (connection) {
+          const pendingBooking = JSON.parse(localStorage.getItem('pending_booking') || '{}')
+          const orderId = pendingBooking?.orderId
+          if (orderId && connection.invoke) connection.invoke('LeaveOrderGroup', String(orderId)).catch(() => {})
+          connection.stop().catch(() => {})
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
   }, [])
 
   async function handleCreatePayment() {
@@ -102,10 +195,50 @@ export default function Payment() {
   }
 
   function handleConfirmSuccess() {
-    // Clear the pending booking
-    localStorage.removeItem('pending_booking')
     // Navigate to booking details
     window.location.hash = 'booking'
+  }
+
+  async function handleStartTrip() {
+    try {
+      if (!booking) return
+      const authToken = token || localStorage.getItem('auth.token')
+      const orderId = booking.orderId
+      await bookingApi.startRental(orderId, authToken)
+      // After starting rental, navigate to booking detail
+      window.location.hash = 'booking'
+    } catch (err) {
+      console.error('Error starting trip:', err)
+      setPaymentError(err.message || 'Không thể bắt đầu chuyến')
+    }
+  }
+
+  async function handleSubmitFeedback({ rating, comments }) {
+    try {
+      const authToken = token || localStorage.getItem('auth.token')
+      const userId = Number(JSON.parse(localStorage.getItem('auth.user') || '{}')?.userId || 0)
+      const orderId = booking?.orderId
+      const vehicleId = booking?.vehicleInfo?.vehicleId || 0
+      if (!orderId || !userId) throw new Error('Missing order or user id')
+      await bookingApi.submitFeedback({
+        UserId: userId,
+        userId: userId,
+        OrderId: orderId,
+        orderId: orderId,
+        VehicleId: vehicleId,
+        vehicleId: vehicleId,
+        VehicleRating: rating,
+        vehicleRating: rating,
+        Comments: comments,
+        comments: comments,
+      }, authToken)
+      setShowFeedback(false)
+      // After feedback, navigate to booking list
+      window.location.hash = 'booking'
+    } catch (err) {
+      console.error('Error submitting feedback:', err)
+      throw err
+    }
   }
 
   function handleRetry() {
@@ -118,7 +251,7 @@ export default function Payment() {
       <div data-figma-layer="Payment Page">
         <Navbar />
         <main>
-          <section className="section">
+          <section className="section page-offset">
             <div className="container">
               <div className="text-center" style={{ padding: '4rem 0' }}>
                 <p style={{ fontSize: '1.8rem' }}>Đang tải...</p>
@@ -136,7 +269,7 @@ export default function Payment() {
       <div data-figma-layer="Payment Success Page">
         <Navbar />
         <main>
-          <section className="section">
+          <section className="section page-offset">
             <div className="container">
               <div className="card">
                 <div className="card-body" style={{ textAlign: 'center', padding: '4rem' }}>
@@ -146,19 +279,29 @@ export default function Payment() {
                     Đơn hàng của bạn đã được xác nhận. <br />
                     Mã đơn hàng: <strong>#{booking?.orderId}</strong>
                   </p>
-                  <p className="card-subtext" style={{ marginBottom: '2rem' }}>
-                    Tổng tiền: <strong style={{ fontSize: '1.8rem', color: '#ff4d30' }}>
-                      ${booking?.totalAmount?.toFixed(2)}
-                    </strong>
+                  <p className="card-subtext" style={{ marginBottom: '1rem' }}>
+                    Tổng tiền: <strong style={{ fontSize: '1.8rem', color: '#ff4d30' }}>${booking?.totalAmount?.toFixed(2)}</strong>
                   </p>
-                  <CTA as="button" onClick={handleConfirmSuccess} variant="primary">
-                    Xem chi tiết đơn hàng
-                  </CTA>
+
+                  {contractUrl ? (
+                    <div style={{ display: 'grid', gap: '1rem', justifyContent: 'center' }}>
+                      <a href={contractUrl} target="_blank" rel="noreferrer" className="btn" style={{ padding: '0.75rem 1.5rem' }}>Tải hợp đồng</a>
+                      <CTA as="button" onClick={handleStartTrip} variant="primary">Bắt đầu chuyến</CTA>
+                      <CTA as="button" onClick={() => setShowFeedback(true)} variant="ghost">Để lại đánh giá sau khi trả xe</CTA>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="card-subtext">Hợp đồng đang được tạo — bạn sẽ nhận email và link tải khi hoàn tất.</p>
+                      <CTA as="button" onClick={handleConfirmSuccess} variant="primary">Xem chi tiết đơn hàng</CTA>
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>
           </section>
         </main>
+        <FeedbackForm open={showFeedback} onClose={() => setShowFeedback(false)} onSubmit={handleSubmitFeedback} />
         <Footer />
       </div>
     )
@@ -169,7 +312,7 @@ export default function Payment() {
       <div data-figma-layer="Payment Failed Page">
         <Navbar />
         <main>
-          <section className="section">
+          <section className="section page-offset">
             <div className="container">
               <div className="card">
                 <div className="card-body" style={{ textAlign: 'center', padding: '4rem' }}>
@@ -203,7 +346,7 @@ export default function Payment() {
     <div data-figma-layer="Payment Page">
       <Navbar />
       <main>
-        <section className="section">
+        <section className="section page-offset">
           <div className="container">
             <div className="section-header">
               <h1 className="section-title">Thanh toán</h1>
@@ -217,7 +360,6 @@ export default function Payment() {
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
-              {/* Order Summary */}
               <div className="card">
                 <div className="card-body">
                   <h3 className="card-title">Tóm tắt đơn hàng</h3>
@@ -291,7 +433,6 @@ export default function Payment() {
                 </div>
               </div>
 
-              {/* Payment Method */}
               <div className="card">
                 <div className="card-body">
                   <h3 className="card-title">Phương thức thanh toán</h3>

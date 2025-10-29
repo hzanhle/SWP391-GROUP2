@@ -59,7 +59,7 @@ export default function History() {
     <div data-figma-layer="History Page">
       <Navbar />
       <main>
-        <section id="history" className="section" aria-labelledby="history-title">
+        <section id="history" className="section page-offset" aria-labelledby="history-title">
           <div className="container">
             <div className="section-header">
               <h1 id="history-title" className="section-title">Lịch sử thuê</h1>
@@ -112,7 +112,17 @@ export default function History() {
                             <span className={`badge ${getStatusBadgeClass(order.status || order.Status)}`}>
                               {order.status || order.Status || 'Unknown'}
                             </span>
-                            <CTA as="a" href={`#booking?orderId=${order.orderId || order.OrderId}`} variant="secondary">Xem</CTA>
+                            <CTA
+                              as="button"
+                              onClick={() => {
+                                const orderId = order.orderId || order.OrderId
+                                localStorage.setItem('pending_booking', JSON.stringify(order))
+                                window.location.hash = `booking?orderId=${orderId}`
+                              }}
+                              variant="secondary"
+                            >
+                              Xem
+                            </CTA>
                           </div>
                         </div>
                       </li>

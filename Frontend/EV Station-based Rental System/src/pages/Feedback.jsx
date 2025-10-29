@@ -122,7 +122,7 @@ export default function Feedback() {
     <div data-figma-layer="Feedback Page">
       <Navbar />
       <main>
-        <section id="feedback" className="section" aria-labelledby="feedback-title">
+        <section id="feedback" className="section page-offset" aria-labelledby="feedback-title">
           <div className="container">
             <div className="section-header">
               <h1 id="feedback-title" className="section-title">Phản hồi đơn hàng</h1>

@@ -86,7 +86,7 @@ export default function CheckIn() {
     <div data-figma-layer="Check-in Page">
       <Navbar />
       <main>
-        <section id="check-in" className="section" aria-labelledby="checkin-title">
+        <section id="check-in" className="section page-offset" aria-labelledby="checkin-title">
           <div className="container">
             <div className="section-header">
               <h1 id="checkin-title" className="section-title">Check-in nhận xe</h1>
