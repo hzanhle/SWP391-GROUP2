@@ -31,6 +31,7 @@ export default function BookingNew() {
   const [dropoffDate, setDropoffDate] = useState('')
   
   const [preview, setPreview] = useState(null)
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState(null)
   
@@ -215,22 +216,18 @@ export default function BookingNew() {
       setPreviewError('Vui lòng chọn điểm thuê xe')
       return
     }
-
     if (!selectedModel) {
       setPreviewError('Vui lòng chọn mẫu xe')
       return
     }
-
     if (!pickupDate) {
       setPreviewError('Vui lòng nhập thời gian nhận xe')
       return
     }
-
     if (!dropoffDate) {
-      setPreviewError('Vui lòng nhập thời gian tr��� xe')
+      setPreviewError('Vui lòng nhập thời gian trả xe')
       return
     }
-
     if (new Date(pickupDate) >= new Date(dropoffDate)) {
       setPreviewError('Thời gian trả xe phải sau thời gian nhận xe')
       return
@@ -239,53 +236,72 @@ export default function BookingNew() {
     try {
       setPreviewLoading(true)
 
-      const previewUserId = Number(localStorage.getItem('auth.userId')) || Number(user?.userId || user?.UserId || user?.id || user?.Id)
-      if (!previewUserId || isNaN(previewUserId)) {
-        setPreviewError('Không thể xác định ID người dùng. Vui lòng đăng nhập lại.')
+      // 1) Lấy xe khả dụng đầu tiên theo model đã chọn
+      const chosenVehicle = getFirstAvailableVehicle()
+      if (!chosenVehicle) {
+        setPreviewError('Không có xe khả dụng cho mẫu này. Vui lòng chọn mẫu khác.')
         return
       }
 
-      if (vehicles.length === 0) {
-        setPreviewError('Không có xe khả dụng lúc này. Vui lòng thử lại sau.')
-        return
-      }
-
-      const vehicleToUse = getFirstAvailableVehicle()
-      if (!vehicleToUse) {
-        setPreviewError('Không thể tìm xe cho mẫu này. Vui lòng thử lại hoặc chọn mẫu khác.')
-        return
-      }
-
-      const vehicleId = vehicleToUse.VehicleId || vehicleToUse.vehicleId || vehicleToUse.id
-      if (!vehicleId || isNaN(Number(vehicleId))) {
+      const vehicleId = Number(chosenVehicle.VehicleId || chosenVehicle.vehicleId || chosenVehicle.id)
+      if (!vehicleId || Number.isNaN(vehicleId)) {
         setPreviewError('Thông tin xe không hợp lệ. Vui lòng thử lại.')
         return
       }
 
-      const rentFee = Number(selectedModel.RentFeeForHour || selectedModel.rentFeeForHour || 0)
-      const modelCost = Number(selectedModel.ModelCost || selectedModel.modelCost || 0)
+      // 2) Check availability (nếu API lỗi vẫn cho xem preview)
+      const fromISO = new Date(pickupDate).toISOString()
+      const toISO = new Date(dropoffDate).toISOString()
 
-      if (rentFee <= 0) {
-        setPreviewError('Giá thuê không hợp lệ. Vui lòng thử lại hoặc chọn mẫu khác.')
+      try {
+        const availabilityRes = await vehicleApi.checkVehicleAvailability({
+          vehicleId,
+          fromDate: fromISO,
+          toDate: toISO,
+        }, token)
+
+        if (availabilityRes?.data && availabilityRes.data.isAvailable === false) {
+          setPreviewError(`Xe không khả dụng trong khoảng thời gian này. ${availabilityRes.data?.reason || 'Vui lòng chọn thời gian khác.'}`)
+          return
+        }
+      } catch (availErr) {
+        console.warn('[BookingNew] Availability check failed, continue preview:', availErr)
+      }
+
+      // 3) Lấy userId an toàn
+      const previewUserId =
+        Number(localStorage.getItem('auth.userId')) ||
+        Number(user?.userId || user?.UserId || user?.id || user?.Id)
+
+      if (!previewUserId || Number.isNaN(previewUserId)) {
+        setPreviewError('Không thể xác định ID người dùng. Vui lòng đăng nhập lại.')
         return
       }
 
-      if (modelCost <= 0) {
+      // 4) Giá tiền hợp lệ
+      const rentFee = Number(selectedModel.RentFeeForHour || selectedModel.rentFeeForHour || 0)
+      const modelCost = Number(selectedModel.ModelCost || selectedModel.modelCost || 0)
+      if (!(rentFee > 0)) {
+        setPreviewError('Giá thuê không hợp lệ. Vui lòng thử lại hoặc chọn mẫu khác.')
+        return
+      }
+      if (!(modelCost > 0)) {
         setPreviewError('Giá xe không hợp lệ. Vui lòng thử lại hoặc chọn mẫu khác.')
         return
       }
 
+      // 5) Gọi preview
       const previewRes = await bookingApi.getOrderPreview({
         userId: previewUserId,
-        vehicleId: Number(vehicleId),
-        fromDate: new Date(pickupDate).toISOString(),
-        toDate: new Date(dropoffDate).toISOString(),
+        vehicleId,
+        fromDate: fromISO,
+        toDate: toISO,
         rentFeeForHour: rentFee,
         modelPrice: modelCost,
         paymentMethod: 'VNPay',
       }, token)
 
-      if (!previewRes.data) {
+      if (!previewRes?.data) {
         setPreviewError('Không thể tính toán chi phí. Vui lòng thử lại.')
         return
       }
@@ -293,7 +309,7 @@ export default function BookingNew() {
       setPreview(previewRes.data)
     } catch (err) {
       console.error('Error getting preview:', err)
-      setPreviewError(err.message || 'Lỗi khi tính toán chi phí. Vui lòng thử lại.')
+      setPreviewError(err?.message || 'Lỗi khi tính toán chi phí. Vui lòng thử lại.')
     } finally {
       setPreviewLoading(false)
     }
@@ -376,15 +392,22 @@ export default function BookingNew() {
       const manufacturer = selectedModel.Manufacturer || selectedModel.manufacturer
       const modelName = selectedModel.ModelName || selectedModel.modelName
       const vehicleColor = vehicleToUse.Color || vehicleToUse.color
+      const licensePlate = vehicleToUse.LicensePlate || vehicleToUse.licensePlate || 'N/A'
+      const vehicleType = selectedModel.VehicleType || selectedModel.vehicleType || 'Xe điện'
 
       const bookingDataToStore = {
         orderId,
-        totalAmount: orderRes.data.TotalAmount,
+        totalCost: orderRes.data.TotalCost,
+        depositCost: orderRes.data.DepositCost || 0,
+        serviceFee: orderRes.data.ServiceFee || 0,
         expiresAt: orderRes.data.ExpiresAt,
         vehicleInfo: {
+          vehicleId: Number(vehicleId),
           station: stationName,
           model: `${manufacturer} ${modelName}`,
           color: vehicleColor,
+          licensePlate: licensePlate,
+          type: vehicleType,
         },
         dates: {
           from: pickupDate,
@@ -518,6 +541,8 @@ export default function BookingNew() {
                     bookingError={bookingError}
                     onPreview={handlePreview}
                     onConfirmBooking={handleConfirmBooking}
+                    termsAccepted={termsAccepted}
+                    setTermsAccepted={setTermsAccepted}
                   />
                 )}
 
@@ -526,7 +551,7 @@ export default function BookingNew() {
                   {step < steps.length - 1 ? (
                     <CTA as="button" onClick={handleNext}>Tiếp tục</CTA>
                   ) : (
-                    <CTA as="button" onClick={handleConfirmBooking} disabled={!preview || bookingLoading}>
+                    <CTA as="button" onClick={handleConfirmBooking} disabled={!preview || bookingLoading || !termsAccepted}>
                       {bookingLoading ? 'Đang xử lý...' : 'Xác nhận & Thanh toán'}
                     </CTA>
                   )}

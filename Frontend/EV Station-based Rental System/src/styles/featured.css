@@ -72,7 +72,7 @@
 }
 
 .station-card p {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   color: #706f7b;
   margin: 0;
 }
@@ -147,7 +147,7 @@
 }
 
 .station-card-location {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   color: #706f7b;
   margin: 0;
 }
@@ -164,7 +164,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   font-weight: bold;
 }
 
@@ -237,7 +237,7 @@
 .model-card-status {
   padding: 0.4rem 0.8rem;
   border-radius: 0.4rem;
-  font-size: 1.2rem;
+  font-size: 1.6rem;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -257,7 +257,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   color: #706f7b;
 }
 
@@ -279,7 +279,7 @@
 }
 
 .price-label {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   color: #706f7b;
   font-weight: 500;
 }
@@ -302,7 +302,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   font-weight: bold;
 }
 
@@ -365,7 +365,7 @@
 
   .station-card-name,
   .model-card-name {
-    font-size: 1.4rem;
+    font-size: 1.6rem;
   }
 
   .map-canvas {

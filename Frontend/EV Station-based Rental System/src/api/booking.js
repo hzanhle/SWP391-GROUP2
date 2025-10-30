@@ -31,7 +31,7 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
   }
 
   const isJson = res.headers.get('content-type')?.includes('application/json')
-  const data = isJson ? await res.json().catch(() => null) : null
+  let data = isJson ? await res.json().catch(() => null) : null
 
   if (!res.ok) {
     const message = (data && (data.message || data.Message)) || `${res.status} ${res.statusText}`
@@ -40,6 +40,12 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
     error.data = data
     throw error
   }
+
+  // Unwrap nested data if present
+  if (data && typeof data === 'object' && (data.data !== undefined || data.Data !== undefined)) {
+    data = data.data !== undefined ? data.data : data.Data
+  }
+
   return { status: res.status, data }
 }
 
@@ -138,6 +144,24 @@ export function completeRental(orderId, token) {
   })
 }
 
+// Create contract after payment
+export function createContract(contractData, token) {
+  return request('/api/contracts/create', {
+    method: 'POST',
+    body: contractData,
+    token,
+  })
+}
+
+// Submit feedback after return
+export function submitFeedback(feedbackPayload, token) {
+  return request('/api/feedback', {
+    method: 'POST',
+    body: feedbackPayload,
+    token,
+  })
+}
+
 export default {
   request,
   getOrderPreview,
@@ -149,4 +173,6 @@ export default {
   confirmPayment,
   startRental,
   completeRental,
+  createContract,
+  submitFeedback,
 }

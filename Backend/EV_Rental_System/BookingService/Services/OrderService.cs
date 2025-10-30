@@ -3,6 +3,7 @@ using BookingService.Models;
 using BookingService.Repositories;
 using BookingService.Services.SignalR;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace BookingService.Services
@@ -15,6 +16,7 @@ namespace BookingService.Services
         private readonly ITrustScoreService _trustScoreService;
         private readonly IHubContext<OrderTimerHub> _hubContext;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly MyDbContext _context;
         private readonly ILogger<OrderService> _logger;
         private readonly OrderSettings _orderSettings;
 
@@ -27,6 +29,7 @@ namespace BookingService.Services
             ITrustScoreService trustScoreService,
             IHubContext<OrderTimerHub> hubContext,
             IUnitOfWork unitOfWork,
+            MyDbContext context,
             ILogger<OrderService> logger,
             IOptions<OrderSettings> orderSettings)
         {
@@ -36,6 +39,7 @@ namespace BookingService.Services
             _trustScoreService = trustScoreService ?? throw new ArgumentNullException(nameof(trustScoreService));
             _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _orderSettings = orderSettings?.Value ?? throw new ArgumentNullException(nameof(orderSettings));
         }
@@ -45,17 +49,17 @@ namespace BookingService.Services
         /// <summary>
         /// Xem trước thông tin đơn hàng trước khi tạo
         /// </summary>
-        public async Task<OrderPreviewResponse> GetOrderPreviewAsync(OrderRequest request)
+        public async Task<OrderPreviewResponse> GetOrderPreviewAsync(OrderRequest request, int userId)
         {
             _logger.LogInformation(
                 "Getting order preview for User {UserId}, Vehicle {VehicleId}, from {FromDate} to {ToDate}",
-                request.UserId, request.VehicleId, request.FromDate, request.ToDate);
+                userId, request.VehicleId, request.FromDate, request.ToDate);
 
             // 1. Validate thời gian
             var validationResult = ValidateDateRange(request.FromDate, request.ToDate);
             if (!validationResult.IsValid)
             {
-                return CreatePreviewResponse(request, isAvailable: false, validationResult.Message);
+                return CreatePreviewResponse(request, isAvailable: false, validationResult.Message, userId);
             }
 
             // 2. Kiểm tra tính khả dụng của xe
@@ -66,7 +70,7 @@ namespace BookingService.Services
 
             // 3. Tính toán chi phí
             var costBreakdown = await CalculateOrderCostAsync(
-                request.UserId,
+                userId,
                 request.FromDate,
                 request.ToDate,
                 request.RentFeeForHour,
@@ -75,7 +79,7 @@ namespace BookingService.Services
             // 4. Trả về response
             return new OrderPreviewResponse
             {
-                UserId = request.UserId,
+                UserId = userId,
                 VehicleId = request.VehicleId,
                 FromDate = request.FromDate,
                 ToDate = request.ToDate,
@@ -85,7 +89,7 @@ namespace BookingService.Services
                 TotalPaymentAmount = costBreakdown.TotalAmount,
                 IsAvailable = isAvailable,
                 Message = isAvailable
-                    ? "Xe khả dụng. Vui lòng xác nhận đặt xe."
+                    ? "Xe kh��� dụng. Vui lòng xác nhận đặt xe."
                     : "Xe đã được đặt trong khoảng thời gian này. Vui lòng chọn thời gian khác."
             };
         }
@@ -97,11 +101,11 @@ namespace BookingService.Services
         /// <summary>
         /// Tạo đơn hàng mới với trạng thái Pending
         /// </summary>
-        public async Task<OrderResponse> CreateOrderAsync(OrderRequest request)
+        public async Task<OrderResponse> CreateOrderAsync(OrderRequest request, int userId)
         {
             _logger.LogInformation(
                 "Creating order for User {UserId}, Vehicle {VehicleId}",
-                request.UserId, request.VehicleId);
+                userId, request.VehicleId);
 
             try
             {
@@ -118,20 +122,21 @@ namespace BookingService.Services
 
                 // 3. Tính toán chi phí
                 var costBreakdown = await CalculateOrderCostAsync(
-                    request.UserId,
+                    userId,
                     request.FromDate,
                     request.ToDate,
                     request.RentFeeForHour,
                     request.ModelPrice);
 
                 // 4. Lấy Trust Score
-                var trustScore = await _trustScoreService.GetCurrentScoreAsync(request.UserId);
+                var trustScore = await _trustScoreService.GetCurrentScoreAsync(userId);
 
                 // 5. Tạo Order entity
                 var order = CreateOrderEntity(
                     request,
                     costBreakdown,
-                    trustScore);
+                    trustScore,
+                    userId);
 
                 // 6. Lưu Order
                 var createdOrder = await _orderRepo.CreateAsync(order);
@@ -146,7 +151,7 @@ namespace BookingService.Services
 
                 // 8. Tạo Notification record
                 await _notificationService.CreateNotificationAsync(
-                    userId: request.UserId,
+                    userId: userId,
                     title: "Đơn hàng đã tạo",
                     description: $"Đơn hàng #{createdOrder.OrderId} đã được tạo. Vui lòng thanh toán trong {_orderSettings.ExpiryMinutes} phút.",
                     dataType: "OrderCreated",
@@ -172,7 +177,7 @@ namespace BookingService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating order for User {UserId}", request.UserId);
+                _logger.LogError(ex, "Error creating order for User {UserId}", userId);
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
@@ -205,23 +210,30 @@ namespace BookingService.Services
                 var order = await GetOrderOrThrowAsync(orderId);
                 ValidateOrderStatusForPayment(order);
 
-                // 2. Cập nhật Order status
+                // 2. Cập nhật Order status (only modify, don't save yet)
                 order.Confirm();
-                await _orderRepo.UpdateAsync(order);
+                // ✅ FIX: Don't call UpdateAsync here - it calls SaveChangesAsync
+                // which conflicts with transaction. Just mark as modified.
+                _context.Entry(order).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
 
                 _logger.LogInformation("Order {OrderId} status updated to Confirmed", orderId);
 
-                // 3. Cập nhật Payment status
-                var paymentUpdated = await _paymentService.MarkPaymentCompletedAsync(
-                    orderId,
-                    transactionId,
-                    gatewayResponse);
-
-                if (!paymentUpdated)
+                // 3. Cập nhật Payment status (also only modify, don't save yet)
+                var payment = await _context.Payments
+                    .FirstOrDefaultAsync(p => p.OrderId == orderId);
+                if (payment == null)
                 {
-                    throw new InvalidOperationException(
-                        $"Failed to update payment status for Order {orderId}");
+                    throw new InvalidOperationException($"Payment not found for Order {orderId}");
                 }
+
+                // Idempotency check
+                if (!payment.IsCompleted())
+                {
+                    payment.MarkAsCompleted(transactionId, gatewayResponse);
+                    _context.Entry(payment).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                }
+
+                _logger.LogInformation("Payment {PaymentId} updated for Order {OrderId}", payment.PaymentId, orderId);
 
                 // ✅ ĐÃ XÓA PHẦN TẠO CONTRACT TỰ ĐỘNG:
                 // ❌ TRƯỚC ĐÂY:
@@ -578,10 +590,10 @@ namespace BookingService.Services
         private Order CreateOrderEntity(
             OrderRequest request,
             OrderCostBreakdown costBreakdown,
-            int trustScore)
+            int trustScore, int userId)
         {
             return new Order(
-                userId: request.UserId,
+                userId: userId,
                 vehicleId: request.VehicleId,
                 fromDate: request.FromDate,
                 toDate: request.ToDate,
@@ -609,11 +621,12 @@ namespace BookingService.Services
         private OrderPreviewResponse CreatePreviewResponse(
             OrderRequest request,
             bool isAvailable,
-            string message)
+            string message,
+            int userId)
         {
             return new OrderPreviewResponse
             {
-                UserId = request.UserId,
+                UserId = userId,
                 VehicleId = request.VehicleId,
                 FromDate = request.FromDate,
                 ToDate = request.ToDate,
@@ -644,6 +657,8 @@ namespace BookingService.Services
                 "SignalR PaymentSuccess sent to User {UserId} for Order {OrderId}, TransactionId: {TransactionId}",
                 userId, orderId, transactionId);
         }
+
+
 
         #endregion
     }

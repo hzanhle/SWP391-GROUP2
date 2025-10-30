@@ -1,334 +1,319 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import CTA from '../components/CTA'
-import DocumentUploader from '../components/DocumentUploader'
-import api from '../api/client'
-
-function loadUser() {
-  try { return JSON.parse(localStorage.getItem('auth.user') || '{}') } catch { return {} }
-}
-
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+import * as clientApi from '../api/client'
 
 export default function Profile() {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    address: '',
+  })
   const [submitting, setSubmitting] = useState(false)
-  const [form, setForm] = useState({ userName: '', fullName: '', email: '', phoneNumber: '' })
-
-  const [citizen, setCitizen] = useState({
-    CitizenId: '',
-    Sex: '',
-    CitiRegisDate: '',
-    CitiRegisOffice: '',
-    FullName: '',
-    Address: '',
-    DayOfBirth: '',
-  })
-  const [citizenFiles, setCitizenFiles] = useState({ front: null, back: null })
-  const [dl, setDl] = useState({
-    LicenseId: '',
-    LicenseType: '',
-    RegisterDate: '',
-    RegisterOffice: '',
-  })
-  const [dlFiles, setDlFiles] = useState({ front: null, back: null })
-  const [hasCitizen, setHasCitizen] = useState(false)
-  const [hasDL, setHasDL] = useState(false)
-  const [apiError, setApiError] = useState('')
 
   useEffect(() => {
-    const u = loadUser()
-    setForm({
-      userName: u.userName || u.username || '',
-      fullName: u.fullName || '',
-      email: u.email || '',
-      phoneNumber: u.phoneNumber || u.phone || '',
-    })
+    const fetchUserProfile = async () => {
+      try {
+        setLoading(true)
+        const authToken = localStorage.getItem('auth.token')
+        const authUser = localStorage.getItem('auth.user')
 
-    setCitizen((c) => ({ ...c, FullName: u.fullName || '' }))
+        if (!authToken || !authUser) {
+          setError('Vui lòng đăng nhập')
+          window.location.hash = 'login'
+          return
+        }
 
-    const token = localStorage.getItem('auth.token') || ''
-    const storedUserId = localStorage.getItem('auth.userId')
-    const userId = Number(storedUserId) || Number(u?.userId || u?.UserId || u?.id || u?.Id)
+        const userData = JSON.parse(authUser)
+        const userId = Number(userData?.userId || userData?.UserId || userData?.id || userData?.Id)
 
-    const runningOnHost = typeof window !== 'undefined' ? window.location.hostname : ''
-    const isLocalApi = API_BASE.startsWith('http://localhost') || API_BASE.startsWith('https://localhost')
-    const cannotReachLocalhost = isLocalApi && runningOnHost && runningOnHost !== 'localhost' && runningOnHost !== '127.0.0.1'
+        if (!userId || isNaN(userId)) {
+          setError('Không thể xác định ID người dùng')
+          return
+        }
 
-    if (cannotReachLocalhost) {
-      setApiError('Hosted preview cannot reach http://localhost APIs. Run the frontend locally or provide a public API URL in VITE_API_URL.')
-      return
+        const { data } = await clientApi.getUserById(userId, authToken)
+        setUser(data)
+        setFormData({
+          fullName: data?.fullName || data?.FullName || '',
+          email: data?.email || data?.Email || '',
+          phoneNumber: data?.phoneNumber || data?.PhoneNumber || '',
+          address: data?.address || data?.Address || '',
+        })
+        setError(null)
+      } catch (err) {
+        console.error('Error fetching profile:', err)
+        setError(err.message || 'Không tải được thông tin hồ sơ')
+      } finally {
+        setLoading(false)
+      }
     }
 
-    if (API_BASE && token && userId && !isNaN(userId)) {
-      Promise.allSettled([
-        api.getCitizenInfo(userId, token),
-        api.getDriverLicense(userId, token),
-      ]).then(([cit, dr]) => {
-        if (cit.status === 'fulfilled' && cit.value?.data) {
-          const d = cit.value.data
-          setHasCitizen(true)
-          setCitizen({
-            CitizenId: d.citizenId || d.CitizenId || '',
-            Sex: d.sex || d.Sex || '',
-            CitiRegisDate: (d.citiRegisDate || d.CitiRegisDate || '').toString().slice(0,10),
-            CitiRegisOffice: d.citiRegisOffice || d.CitiRegisOffice || '',
-            FullName: d.fullName || d.FullName || '',
-            Address: d.address || d.Address || '',
-            DayOfBirth: (d.dayOfBirth || d.DayOfBirth || '').toString().slice(0,10),
-          })
-        }
-        if (dr.status === 'fulfilled' && dr.value?.data) {
-          const d = dr.value.data
-          setHasDL(true)
-          setDl({
-            LicenseId: d.licenseId || d.LicenseId || '',
-            LicenseType: d.licenseType || d.LicenseType || '',
-            RegisterDate: (d.registerDate || d.RegisterDate || '').toString().slice(0,10),
-            RegisterOffice: d.registerOffice || d.RegisterOffice || '',
-          })
-        }
-        if (cit.status === 'rejected' || dr.status === 'rejected') {
-          const reason = cit.status === 'rejected' ? cit.reason : dr.reason
-          setApiError(reason?.message || 'Failed to fetch documents')
-        }
-      }).catch((e)=>{ setApiError(e?.message || 'Unexpected error') })
-    }
+    fetchUserProfile()
   }, [])
 
-  function onChange(e) {
+  const handleInputChange = (e) => {
     const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
   }
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (submitting) return
-    setSubmitting(true)
+    
     try {
-      const current = loadUser()
-      const next = { ...current, ...form }
-      localStorage.setItem('auth.user', JSON.stringify(next))
-      alert('Đã lưu hồ sơ')
-    } finally { setSubmitting(false) }
-  }
-
-  async function submitCitizen(e) {
-    e.preventDefault()
-    setApiError('')
-    const token = localStorage.getItem('auth.token') || ''
-    const u = loadUser()
-    const userId = u.id || u.Id
-    if (!API_BASE) { setApiError('Thiếu cấu hình VITE_API_URL'); return }
-    const runningOnHost = typeof window !== 'undefined' ? window.location.hostname : ''
-    const isLocalApi = API_BASE.startsWith('http://localhost') || API_BASE.startsWith('https://localhost')
-    const cannotReachLocalhost = isLocalApi && runningOnHost && runningOnHost !== 'localhost' && runningOnHost !== '127.0.0.1'
-    if (cannotReachLocalhost) { setApiError('Hosted preview cannot reach http://localhost APIs. Run the frontend locally or provide a public API URL in VITE_API_URL.'); return }
-    if (!token || !userId) { setApiError('Bạn cần đăng nhập để gửi thông tin'); return }
-
-    const payload = {
-      UserId: userId,
-      CitizenId: citizen.CitizenId,
-      Sex: citizen.Sex,
-      CitiRegisDate: citizen.CitiRegisDate,
-      CitiRegisOffice: citizen.CitiRegisOffice,
-      FullName: citizen.FullName,
-      Address: citizen.Address,
-      DayOfBirth: citizen.DayOfBirth,
-      Files: [citizenFiles.front, citizenFiles.back].filter(Boolean),
-    }
-
-    try {
-      if (hasCitizen) await api.updateCitizenInfo(payload, token)
-      else await api.createCitizenInfo(payload, token)
-      alert('Đã lưu thông tin công dân')
-      setHasCitizen(true)
+      setSubmitting(true)
+      setError(null)
+      
+      const authToken = localStorage.getItem('auth.token')
+      
+      await clientApi.updateCitizenInfo({
+        UserId: user?.userId || user?.UserId,
+        FullName: formData.fullName,
+        Address: formData.address,
+      }, authToken)
+      
+      setSuccess(true)
+      setEditing(false)
+      
+      setTimeout(() => {
+        setSuccess(false)
+      }, 3000)
     } catch (err) {
-      setApiError(err?.message || 'Lỗi khi gửi thông tin công dân')
+      console.error('Error updating profile:', err)
+      setError(err.message || 'Không cập nhật được hồ sơ')
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  async function submitDL(e) {
-    e.preventDefault()
-    setApiError('')
-    const token = localStorage.getItem('auth.token') || ''
-    const u = loadUser()
-    const userId = u.id || u.Id
-    if (!API_BASE) { setApiError('Thiếu cấu hình VITE_API_URL'); return }
-    const runningOnHost = typeof window !== 'undefined' ? window.location.hostname : ''
-    const isLocalApi = API_BASE.startsWith('http://localhost') || API_BASE.startsWith('https://localhost')
-    const cannotReachLocalhost = isLocalApi && runningOnHost && runningOnHost !== 'localhost' && runningOnHost !== '127.0.0.1'
-    if (cannotReachLocalhost) { setApiError('Hosted preview cannot reach http://localhost APIs. Run the frontend locally or provide a public API URL in VITE_API_URL.'); return }
-    if (!token || !userId) { setApiError('Bạn cần đăng nhập để gửi thông tin'); return }
-
-    const payload = {
-      UserId: userId,
-      LicenseId: dl.LicenseId,
-      LicenseType: dl.LicenseType,
-      RegisterDate: dl.RegisterDate,
-      RegisterOffice: dl.RegisterOffice,
-      Files: [dlFiles.front, dlFiles.back].filter(Boolean),
-    }
-
-    try {
-      if (hasDL) await api.updateDriverLicense(payload, token)
-      else await api.createDriverLicense(payload, token)
-      alert('Đã lưu giấy phép lái xe')
-      setHasDL(true)
-    } catch (err) {
-      setApiError(err?.message || 'Lỗi khi gửi giấy phép lái xe')
-    }
+  if (loading) {
+    return (
+      <div data-figma-layer="Profile Page">
+        <Navbar />
+        <main>
+          <section className="section page-offset">
+            <div className="container">
+              <div className="text-center" style={{ padding: '4rem 0' }}>
+                <p>Đang tải...</p>
+              </div>
+            </div>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    )
   }
-
-  const initials = (form.fullName || form.userName || 'EV').trim().split(/\s+/).slice(0,2).map(s=>s[0]?.toUpperCase()).join('')
 
   return (
-    <div data-figma-layer="Renter Profile Page">
+    <div data-figma-layer="Profile Page">
+      <Navbar />
       <main>
-        <section className="profile-section">
-          <div className="profile-hero">
-            <div className="profile-hero__overlay"></div>
-            <div className="container">
-              <div className="profile-hero__content">
-                <h1 className="profile-hero__title">Hồ sơ cá nhân</h1>
-                <p className="profile-hero__subtitle">Cập nhật thông tin liên hệ và tài khoản của bạn.</p>
-              </div>
-            </div>
-          </div>
-
+        <section className="section page-offset">
           <div className="container">
-            <div className="card">
-              <div className="card-body">
-                <div className="profile-header">
-                  <div className="avatar-circle" aria-hidden="true">{initials}</div>
-                  <div className="profile-meta">
-                    <h2 className="card-title">{form.fullName || form.userName || 'Người dùng'}</h2>
-                    <p className="card-subtext">Quản lý thông tin và bảo mật tài khoản</p>
-                    <div className="row">
-                      <span className="badge green">Đã xác minh số điện thoại</span>
-                      <span className="badge gray">Email chưa xác minh</span>
-                    </div>
-                  </div>
-                </div>
-
-                <form onSubmit={handleSubmit} className="profile-form" noValidate>
-                  <div className="field">
-                    <label htmlFor="userName" className="label">Tên đăng nhập</label>
-                    <input id="userName" name="userName" className="input" type="text" value={form.userName} onChange={onChange} required />
-                  </div>
-
-                  <div className="field">
-                    <label htmlFor="fullName" className="label">Họ và tên</label>
-                    <input id="fullName" name="fullName" className="input" type="text" value={form.fullName} onChange={onChange} />
-                  </div>
-
-                  <div className="field">
-                    <label htmlFor="email" className="label">Email</label>
-                    <input id="email" name="email" className="input" type="email" value={form.email} onChange={onChange} />
-                  </div>
-
-                  <div className="field">
-                    <label htmlFor="phoneNumber" className="label">Số điện thoại</label>
-                    <input id="phoneNumber" name="phoneNumber" className="input" type="tel" value={form.phoneNumber} onChange={onChange} />
-                  </div>
-
-                  <div className="row-between">
-                    <a className="nav-link" href="#profile-docs">Hồ sơ giấy tờ</a>
-                    <CTA as="button" type="submit" disabled={submitting} aria-busy={submitting}>{submitting ? 'Đang lưu…' : 'Lưu thay đổi'}</CTA>
-                  </div>
-                </form>
-              </div>
+            <div className="section-header">
+              <h1 className="section-title">Thông tin cá nhân</h1>
+              <p className="section-subtitle">Quản lý thông tin tài khoản và tài liệu xác minh của bạn.</p>
             </div>
 
-            <div id="profile-docs" className="section" aria-labelledby="docs-title">
-              <div className="section-header">
-                <h2 id="docs-title" className="section-title">Giấy tờ xác thực</h2>
-                {!API_BASE && (<p className="section-subtitle">Vui lòng cấu hình VITE_API_URL để gửi dữ liệu tới backend.</p>)}
-                {apiError ? <div role="alert" className="badge gray" aria-live="assertive">{apiError}</div> : null}
+            {error && (
+              <div className="error-message error-visible" style={{ marginBottom: '1.5rem' }}>
+                <span>{error}</span>
+              </div>
+            )}
+
+            {success && (
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#d4edda',
+                color: '#155724',
+                borderRadius: '0.5rem',
+                marginBottom: '1.5rem',
+                textAlign: 'center',
+              }}>
+                ✅ Cập nhật thành công!
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+              <div className="card">
+                <div className="card-body">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <h3 className="card-title">Thông tin cá nhân</h3>
+                    {!editing && (
+                      <button
+                        onClick={() => setEditing(true)}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#ff4d30',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.4rem',
+                          cursor: 'pointer',
+                          fontSize: '1.2rem',
+                        }}
+                      >
+                        ✏️ Chỉnh sửa
+                      </button>
+                    )}
+                  </div>
+
+                  {editing ? (
+                    <form onSubmit={handleSubmit}>
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <label htmlFor="fullName" className="label">Họ và tên</label>
+                        <input
+                          id="fullName"
+                          type="text"
+                          name="fullName"
+                          value={formData.fullName}
+                          onChange={handleInputChange}
+                          className="input"
+                          placeholder="Nhập họ và tên"
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <label htmlFor="email" className="label">Email</label>
+                        <input
+                          id="email"
+                          type="email"
+                          value={formData.email}
+                          className="input"
+                          disabled
+                          style={{ backgroundColor: '#f9f9f9', cursor: 'not-allowed' }}
+                        />
+                        <p className="card-subtext" style={{ marginTop: '0.5rem' }}>Email không thể thay đổi</p>
+                      </div>
+
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <label htmlFor="phoneNumber" className="label">Số điện thoại</label>
+                        <input
+                          id="phoneNumber"
+                          type="tel"
+                          value={formData.phoneNumber}
+                          className="input"
+                          disabled
+                          style={{ backgroundColor: '#f9f9f9', cursor: 'not-allowed' }}
+                        />
+                        <p className="card-subtext" style={{ marginTop: '0.5rem' }}>Liên hệ hỗ trợ để thay đổi</p>
+                      </div>
+
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <label htmlFor="address" className="label">Địa chỉ</label>
+                        <textarea
+                          id="address"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          className="input"
+                          placeholder="Nhập địa chỉ"
+                          style={{ minHeight: '80px' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <CTA
+                          as="button"
+                          type="submit"
+                          disabled={submitting}
+                        >
+                          {submitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+                        </CTA>
+                        <button
+                          type="button"
+                          onClick={() => setEditing(false)}
+                          style={{
+                            padding: '0.75rem 1.5rem',
+                            backgroundColor: '#f0f0f0',
+                            color: '#333',
+                            border: '1px solid #ddd',
+                            borderRadius: '0.4rem',
+                            cursor: 'pointer',
+                            fontSize: '1.4rem',
+                          }}
+                        >
+                          Hủy
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div>
+                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Họ và tên</p>
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                          {user?.fullName || user?.FullName || 'Chưa cập nhật'}
+                        </p>
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Email</p>
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                          {user?.email || user?.Email || 'Chưa cập nhật'}
+                        </p>
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Số điện thoại</p>
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                          {user?.phoneNumber || user?.PhoneNumber || 'Chưa cập nhật'}
+                        </p>
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Địa chỉ</p>
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                          {user?.address || user?.Address || 'Chưa cập nhật'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="docs-grid">
-                <div className="card">
-                  <div className="card-body doc-card">
-                    <h3 className="card-title">Thông tin công dân</h3>
-                    <form onSubmit={submitCitizen} className="profile-form" noValidate>
-                      <div className="field">
-                        <label className="label" htmlFor="CitizenId">Số CCCD</label>
-                        <input id="CitizenId" name="CitizenId" className="input" value={citizen.CitizenId} onChange={(e)=>setCitizen({...citizen, CitizenId:e.target.value})} required />
-                      </div>
-                      <div className="field">
-                        <label className="label" htmlFor="FullName">Họ và tên</label>
-                        <input id="FullName" name="FullName" className="input" value={citizen.FullName} onChange={(e)=>setCitizen({...citizen, FullName:e.target.value})} />
-                      </div>
-                      <div className="field">
-                        <label className="label" htmlFor="Sex">Giới tính</label>
-                        <select id="Sex" name="Sex" className="input" value={citizen.Sex} onChange={(e)=>setCitizen({...citizen, Sex:e.target.value})}>
-                          <option value="">Chọn</option>
-                          <option value="Male">Nam</option>
-                          <option value="Female">Nữ</option>
-                          <option value="Other">Khác</option>
-                        </select>
-                      </div>
-                      <div className="field">
-                        <label className="label" htmlFor="DayOfBirth">Ngày sinh</label>
-                        <input id="DayOfBirth" name="DayOfBirth" className="input" type="date" value={citizen.DayOfBirth} onChange={(e)=>setCitizen({...citizen, DayOfBirth:e.target.value})} />
-                      </div>
-                      <div className="field">
-                        <label className="label" htmlFor="Address">Địa chỉ</label>
-                        <input id="Address" name="Address" className="input" value={citizen.Address} onChange={(e)=>setCitizen({...citizen, Address:e.target.value})} />
-                      </div>
-                      <div className="field">
-                        <label className="label" htmlFor="CitiRegisOffice">Nơi cấp</label>
-                        <input id="CitiRegisOffice" name="CitiRegisOffice" className="input" value={citizen.CitiRegisOffice} onChange={(e)=>setCitizen({...citizen, CitiRegisOffice:e.target.value})} />
-                      </div>
-                      <div className="field">
-                        <label className="label" htmlFor="CitiRegisDate">Ngày cấp</label>
-                        <input id="CitiRegisDate" name="CitiRegisDate" className="input" type="date" value={citizen.CitiRegisDate} onChange={(e)=>setCitizen({...citizen, CitiRegisDate:e.target.value})} />
-                      </div>
+              <div className="card">
+                <div className="card-body">
+                  <h3 className="card-title">Quản lý tài liệu</h3>
+                  <p className="card-subtext" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
+                    Tải lên và quản lý các tài liệu xác minh của bạn.
+                  </p>
 
-                      <div className="doc-uploaders">
-                        <DocumentUploader label="Ảnh CCCD mặt trước" hint="PNG/JPG/PDF" value={citizenFiles.front} onChange={(f)=>setCitizenFiles(s=>({...s, front:f}))} />
-                        <DocumentUploader label="Ảnh CCCD mặt sau" hint="PNG/JPG/PDF" value={citizenFiles.back} onChange={(f)=>setCitizenFiles(s=>({...s, back:f}))} />
-                      </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{
+                      padding: '1rem',
+                      backgroundColor: '#f5f5f5',
+                      borderRadius: '0.5rem',
+                      border: '1px solid #ddd',
+                    }}>
+                      <p style={{ margin: 0, fontWeight: '500', marginBottom: '0.5rem' }}>Giấy phép lái xe</p>
+                      <p style={{ margin: '0 0 0.75rem 0', fontSize: '1.2rem', color: '#666' }}>
+                        Tải lên ảnh mặt trước và mặt sau
+                      </p>
+                      <CTA as="a" href="#profile-docs" variant="secondary" style={{ display: 'inline-block' }}>
+                        Quản lý GPLX
+                      </CTA>
+                    </div>
 
-                      <div className="row-between">
-                        <span className="section-subtitle">{hasCitizen ? 'Đã có thông tin, bấm để cập nhật' : 'Chưa có thông tin, bấm để tạo mới'}</span>
-                        <CTA as="button" type="submit">{hasCitizen ? 'Cập nhật' : 'Tạo mới'}</CTA>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-
-                <div className="card">
-                  <div className="card-body doc-card">
-                    <h3 className="card-title">Giấy phép lái xe</h3>
-                    <form onSubmit={submitDL} className="profile-form" noValidate>
-                      <div className="field">
-                        <label className="label" htmlFor="LicenseId">Số GPLX</label>
-                        <input id="LicenseId" name="LicenseId" className="input" value={dl.LicenseId} onChange={(e)=>setDl({...dl, LicenseId:e.target.value})} required />
-                      </div>
-                      <div className="field">
-                        <label className="label" htmlFor="LicenseType">Hạng</label>
-                        <input id="LicenseType" name="LicenseType" className="input" value={dl.LicenseType} onChange={(e)=>setDl({...dl, LicenseType:e.target.value})} placeholder="A1/A2/B1..." />
-                      </div>
-                      <div className="field">
-                        <label className="label" htmlFor="RegisterOffice">Nơi cấp</label>
-                        <input id="RegisterOffice" name="RegisterOffice" className="input" value={dl.RegisterOffice} onChange={(e)=>setDl({...dl, RegisterOffice:e.target.value})} />
-                      </div>
-                      <div className="field">
-                        <label className="label" htmlFor="RegisterDate">Ngày cấp</label>
-                        <input id="RegisterDate" name="RegisterDate" className="input" type="date" value={dl.RegisterDate} onChange={(e)=>setDl({...dl, RegisterDate:e.target.value})} />
-                      </div>
-
-                      <div className="doc-uploaders">
-                        <DocumentUploader label="Ảnh GPLX mặt trước" hint="PNG/JPG/PDF" value={dlFiles.front} onChange={(f)=>setDlFiles(s=>({...s, front:f}))} />
-                        <DocumentUploader label="Ảnh GPLX mặt sau" hint="PNG/JPG/PDF" value={dlFiles.back} onChange={(f)=>setDlFiles(s=>({...s, back:f}))} />
-                      </div>
-
-                      <div className="row-between">
-                        <span className="section-subtitle">{hasDL ? 'Đã có giấy phép, bấm để cập nhật' : 'Chưa có giấy phép, bấm để tạo mới'}</span>
-                        <CTA as="button" type="submit">{hasDL ? 'Cập nhật' : 'Tạo mới'}</CTA>
-                      </div>
-                    </form>
+                    <div style={{
+                      padding: '1rem',
+                      backgroundColor: '#f5f5f5',
+                      borderRadius: '0.5rem',
+                      border: '1px solid #ddd',
+                    }}>
+                      <p style={{ margin: 0, fontWeight: '500', marginBottom: '0.5rem' }}>CCCD / CMND</p>
+                      <p style={{ margin: '0 0 0.75rem 0', fontSize: '1.2rem', color: '#666' }}>
+                        Tải lên ảnh mặt trước và mặt sau
+                      </p>
+                      <CTA as="a" href="#profile-docs" variant="secondary" style={{ display: 'inline-block' }}>
+                        Quản lý CCCD
+                      </CTA>
+                    </div>
                   </div>
                 </div>
               </div>

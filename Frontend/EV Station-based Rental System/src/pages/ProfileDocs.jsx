@@ -19,7 +19,7 @@ export default function ProfileDocs() {
   return (
     <div data-figma-layer="Renter Documents Page">
       <main>
-        <section className="profile-section">
+        <section className="profile-section page-offset">
           <div className="profile-hero">
             <div className="profile-hero__overlay"></div>
             <div className="container">

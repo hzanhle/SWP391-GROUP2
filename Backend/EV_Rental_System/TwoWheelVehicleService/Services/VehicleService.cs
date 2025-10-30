@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 using TwoWheelVehicleService.DTOs;
 using TwoWheelVehicleService.Models;
 using TwoWheelVehicleService.Repositories;
@@ -26,6 +27,7 @@ namespace TwoWheelVehicleService.Services
                     StationId = vehicle.StationId,
                     Color = vehicle.Color,
                     Status = "Available",
+                    LicensePlate = vehicle.LicensePlate,
                     IsActive = true
                 };
 
@@ -189,6 +191,7 @@ namespace TwoWheelVehicleService.Services
                 existingVehicle.Color = vehicle.Color;
                 existingVehicle.Status = vehicle.Status;
                 existingVehicle.IsActive = vehicle.IsActive;
+                existingVehicle.LicensePlate = vehicle.LicensePlate;
 
                 await _vehicleRepository.UpdateVehicle(existingVehicle);
                 _logger.LogInformation("✅ Vehicle updated successfully: {@Vehicle}", existingVehicle);
@@ -199,5 +202,250 @@ namespace TwoWheelVehicleService.Services
                 throw;
             }
         }
+
+        public async Task<VehicleStatusResponse> UpdateVehicleStatusAsync(
+            int vehicleId,
+            UpdateVehicleStatusRequest request,
+            int staffId)
+        {
+            try
+            {
+                // 1. Validate vehicle exists (FIX: Dùng GetVehicleById thay vì GetByIdAsync)
+                var vehicle = await _vehicleRepository.GetVehicleById((int)vehicleId);
+                if (vehicle == null)
+                {
+                    _logger.LogError($"Vehicle not found: {vehicleId}");
+                    throw new Exception($"Vehicle not found: {vehicleId}");
+                }
+
+                _logger.LogInformation($"Staff {staffId} updating vehicle {vehicleId} status");
+
+                // 2. Parse technical status
+                var technicalStatus = ParseTechnicalStatus(request.TechnicalStatus);
+
+                // 3. Update vehicle current status
+                vehicle.CurrentBatteryLevel = request.BatteryLevel;
+                vehicle.CurrentTechnicalStatus = technicalStatus;
+                vehicle.LastStatusUpdate = DateTime.Now;
+                vehicle.LastUpdatedBy = staffId;
+
+                // 4. Auto-update vehicle status if needed
+                if (technicalStatus == TechnicalStatus.NeedsRepair)
+                {
+                    vehicle.Status = "Maintenance";
+                    _logger.LogInformation($"Auto-changed vehicle {vehicleId} status to MAINTENANCE");
+                }
+                else if (request.BatteryLevel < 30 && vehicle.Status == "Available")
+                {
+                    vehicle.Status = "Charging";
+                    _logger.LogInformation($"Auto-changed vehicle {vehicleId} status to CHARGING");
+                }
+
+                // 5. Update vehicle
+                await _vehicleRepository.UpdateVehicle(vehicle);
+
+                // 6. Create history record
+                var history = new VehicleStatusHistory
+                {
+                    VehicleId = vehicleId,
+                    BatteryLevel = request.BatteryLevel,
+                    TechnicalStatus = technicalStatus,
+                    Notes = request.Notes,
+                    UpdatedBy = staffId,
+                    UpdatedAt = DateTime.Now
+                };
+
+                await _vehicleRepository.CreateHistoryAsync(history);
+
+                // 7. TODO: If NEEDS_REPAIR, create incident report
+                if (technicalStatus == TechnicalStatus.NeedsRepair)
+                {
+                    _logger.LogWarning($"Vehicle {vehicleId} marked as NEEDS_REPAIR - TODO: create incident");
+                }
+
+                _logger.LogInformation($"Successfully updated vehicle {vehicleId} status by staff {staffId}");
+
+                return BuildVehicleStatusResponse(vehicle);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating vehicle {vehicleId} status");
+                throw;
+            }
+        }
+        public async Task<List<VehicleStatusResponse>> GetVehiclesWithStatusAsync(
+            string? statusFilter,
+            string? batteryFilter,
+            string? search,
+            int? stationId)
+        {
+            try
+            {
+                var vehicles = await _vehicleRepository.GetVehiclesWithFiltersAsync(
+                    statusFilter, batteryFilter, search, stationId);
+
+                _logger.LogInformation($"Retrieved {vehicles.Count} vehicles with filters");
+
+                return vehicles.Select(v => BuildVehicleStatusResponse(v)).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching vehicles with status");
+                throw;
+            }
+        }
+
+        public async Task<VehicleHistoryDTO> GetVehicleHistoryAsync(int vehicleId)
+        {
+            try
+            {
+                // Validate vehicle exists
+                var vehicle = await _vehicleRepository.GetVehicleById(vehicleId);
+                if (vehicle == null)
+                {
+                    _logger.LogError($"Vehicle not found: {vehicleId}");
+                    throw new Exception($"Vehicle not found: {vehicleId}");
+                }
+
+                // Get history records
+                var historyRecords = await _vehicleRepository.GetVehicleHistoryAsync(vehicleId);
+
+                _logger.LogInformation($"Retrieved {historyRecords.Count} history records for vehicle {vehicleId}");
+
+                // Map to DTO to avoid circular reference
+                var result = new VehicleHistoryDTO
+                {
+                    VehicleId = vehicle.VehicleId,
+                    Color = vehicle.Color,
+                    Status = vehicle.Status,
+                    IsActive = vehicle.IsActive,
+                    CurrentBatteryLevel = vehicle.CurrentBatteryLevel,
+                    CurrentTechnicalStatus = vehicle.CurrentTechnicalStatus,
+                    LastStatusUpdate = vehicle.LastStatusUpdate,
+                    StationId = vehicle.StationId,
+                    Model = vehicle.Model != null ? new VehicleModelDTO
+                    {
+                        ModelId = vehicle.Model.ModelId,
+                        ModelName = vehicle.Model.ModelName,
+                        Manufacturer = vehicle.Model.Manufacturer,
+                        Year = vehicle.Model.Year,
+                        MaxSpeed = vehicle.Model.MaxSpeed,
+                        BatteryCapacity = vehicle.Model.BatteryCapacity,
+                        ChargingTime = vehicle.Model.ChargingTime,
+                        BatteryRange = vehicle.Model.BatteryRange,
+                        VehicleCapacity = vehicle.Model.VehicleCapacity,
+                        ModelCost = vehicle.Model.ModelCost,
+                        RentFeeForHour = vehicle.Model.RentFeeForHour
+                    } : null,
+                    StatusHistory = historyRecords
+                        .OrderByDescending(h => h.UpdatedAt)
+                        .Select(h => new VehicleStatusHistoryDTO
+                        {
+                            Id = h.Id,
+                            VehicleId = h.VehicleId,
+                            BatteryLevel = h.BatteryLevel,
+                            TechnicalStatus = h.TechnicalStatus,
+                            Notes = h.Notes,
+                            UpdatedBy = h.UpdatedBy,
+                            UpdatedAt = h.UpdatedAt,
+                            Location = h.Location
+                        })
+                        .ToList()
+                };
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching vehicle {vehicleId} history");
+                throw;
+            }
+        }
+
+        public async Task<VehicleStatsResponse> GetVehicleStatsAsync(int? stationId)
+        {
+            try
+            {
+                var vehicles = await _vehicleRepository.GetVehiclesWithFiltersAsync(
+                    null, null, null, stationId);
+
+                var stats = new VehicleStatsResponse
+                {
+                    Total = vehicles.Count,
+                    Available = vehicles.Count(v => v.Status == "Available"),
+                    InUse = vehicles.Count(v => v.Status == "InUse"),
+                    Charging = vehicles.Count(v => v.Status == "Charging"),
+                    NeedsAttention = vehicles.Count(v =>
+                        v.CurrentBatteryLevel < 30 ||
+                        v.CurrentTechnicalStatus == TechnicalStatus.NeedsCheck ||
+                        v.CurrentTechnicalStatus == TechnicalStatus.NeedsRepair)
+                };
+
+                _logger.LogInformation($"Stats retrieved: {stats.Total} total, {stats.NeedsAttention} needs attention");
+
+                return stats;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating vehicle stats");
+                throw;
+            }
+        }
+
+        // ==================== HELPER METHODS ====================
+
+        private TechnicalStatus ParseTechnicalStatus(string status)
+        {
+            return status.ToLower() switch
+            {
+                "good" => TechnicalStatus.Good,
+                "fair" => TechnicalStatus.Fair,
+                "needs-check" => TechnicalStatus.NeedsCheck,
+                "needs-repair" => TechnicalStatus.NeedsRepair,
+                _ => throw new ArgumentException($"Invalid technical status: {status}")
+            };
+        }
+
+        private string GetTechnicalStatusCode(TechnicalStatus status)
+        {
+            return status switch
+            {
+                TechnicalStatus.Good => "good",
+                TechnicalStatus.Fair => "fair",
+                TechnicalStatus.NeedsCheck => "needs-check",
+                TechnicalStatus.NeedsRepair => "needs-repair",
+                _ => "unknown"
+            };
+        }
+
+        private string GetDescription(Enum value)
+        {
+            var field = value.GetType().GetField(value.ToString());
+            if (field == null) return value.ToString();
+
+            var attribute = (DescriptionAttribute?)Attribute.GetCustomAttribute(
+                field, typeof(DescriptionAttribute));
+            return attribute?.Description ?? value.ToString();
+        }
+
+        private VehicleStatusResponse BuildVehicleStatusResponse(Vehicle vehicle)
+        {
+            return new VehicleStatusResponse
+            {
+                VehicleId = vehicle.VehicleId,
+                VehicleCode = $"VE-{vehicle.VehicleId:D3}", // Format: VE-001, VE-002...
+                VehicleName = vehicle.Model?.ModelName ?? $"Vehicle {vehicle.VehicleId}",
+                Model = vehicle.Model?.ModelName ?? "N/A",
+                Status = vehicle.Status.ToLower(),
+                BatteryLevel = vehicle.CurrentBatteryLevel,
+                TechnicalStatus = GetTechnicalStatusCode(vehicle.CurrentTechnicalStatus),
+                TechnicalStatusDescription = GetDescription(vehicle.CurrentTechnicalStatus),
+                NextBooking = null, // TODO: Implement if you have Booking model
+                LastUpdate = vehicle.LastStatusUpdate?.ToString("HH:mm - dd/MM/yyyy") ?? "Chưa cập nhật",
+                LastUpdatedBy = vehicle.LastUpdatedBy.HasValue ? $"User #{vehicle.LastUpdatedBy}" : "N/A"
+            };
+        }
     }
+
+
 }

@@ -123,20 +123,20 @@
 }
 
 .card-subtext {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   color: #706f7b;
   font-family: "Rubik", sans-serif;
   margin: 0;
 }
 
 .dropdown-menu .card-subtext {
-  font-size: 1.3rem;
+  font-size: 1.6rem;
 }
 
 /* Clear all button */
 .dropdown-menu .btn-ghost {
   padding: 0.5rem 1rem;
-  font-size: 1.3rem;
+  font-size: 1.6rem;
   background-color: transparent;
   color: #0ea5e9;
   box-shadow: none;
@@ -184,7 +184,7 @@
 
 .text-red-600 {
   color: #dc2626;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
 }
 
 /* Notification list */
@@ -220,7 +220,7 @@
 }
 
 .notif-item-desc {
-  font-size: 1.3rem;
+  font-size: 1.6rem;
   color: #706f7b;
   font-family: "Rubik", sans-serif;
   line-height: 1.5;
@@ -232,7 +232,7 @@
 }
 
 .notif-item-time {
-  font-size: 1.2rem;
+  font-size: 1.6rem;
   color: #94a3b8;
   font-weight: 500;
 }

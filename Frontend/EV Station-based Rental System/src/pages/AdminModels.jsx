@@ -1,28 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import CTA from '../components/CTA'
+import { useEffect, useState } from 'react'
 import { getAllModels, createModel, updateModel, deleteModel } from '../api/vehicle'
+import { 
+  Box, Container, Card, CardContent, CardHeader, Typography, Button, TextField, Dialog, 
+  DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, Stack, Grid, Paper,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Chip
+} from '@mui/material'
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material'
 import AdminLayout from '../components/admin/AdminLayout'
-import '../styles/admin.css'
-
-function ModelRow({ m, onEdit, onDelete }) {
-  return (
-    <div className="card">
-      <div className="card-body">
-        <div className="row-between">
-          <div>
-            <div className="card-title">{m.modelName} • {m.manufacturer} ({m.year})</div>
-            <div className="card-subtext">Tốc độ: {m.maxSpeed} km/h • Pin: {m.batteryCapacity} mAh • Tầm: {m.batteryRange} km • Chỗ: {m.vehicleCapacity}</div>
-            <div className="card-subtext">Giá mẫu: {m.modelCost?.toLocaleString?.() ?? m.modelCost} • Giá/giờ: {m.rentFeeForHour?.toLocaleString?.() ?? m.rentFeeForHour}</div>
-          </div>
-          <div className="row">
-            <CTA as="button" onClick={() => onEdit(m)}>Sửa</CTA>
-            <button className="btn" onClick={() => onDelete(m)}>Xóa</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function ModelForm({ initial, onSubmit, onCancel }) {
   const [form, setForm] = useState(() => ({
@@ -51,26 +35,50 @@ function ModelForm({ initial, onSubmit, onCancel }) {
   }
 
   return (
-    <form className="card-body" onSubmit={submit} noValidate>
-      <div className="docs-grid">
-        <div className="field"><label className="label">T��n mẫu</label><input className="input" value={form.modelName} onChange={e=>updateField('modelName', e.target.value)} required /></div>
-        <div className="field"><label className="label">Hãng</label><input className="input" value={form.manufacturer} onChange={e=>updateField('manufacturer', e.target.value)} required /></div>
-        <div className="field"><label className="label">Năm</label><input className="input" type="number" value={form.year} onChange={e=>updateField('year', Number(e.target.value))} required /></div>
-        <div className="field"><label className="label">Tốc độ tối đa (km/h)</label><input className="input" type="number" value={form.maxSpeed} onChange={e=>updateField('maxSpeed', Number(e.target.value))} required /></div>
-        <div className="field"><label className="label">Dung lượng pin (mAh)</label><input className="input" type="number" value={form.batteryCapacity} onChange={e=>updateField('batteryCapacity', Number(e.target.value))} required /></div>
-        <div className="field"><label className="label">Thời gian sạc (phút)</label><input className="input" type="number" value={form.chargingTime} onChange={e=>updateField('chargingTime', Number(e.target.value))} required /></div>
-        <div className="field"><label className="label">Quãng đường (km)</label><input className="input" type="number" value={form.batteryRange} onChange={e=>updateField('batteryRange', Number(e.target.value))} required /></div>
-        <div className="field"><label className="label">Số chỗ</label><input className="input" type="number" value={form.vehicleCapacity} onChange={e=>updateField('vehicleCapacity', Number(e.target.value))} required /></div>
-        <div className="field"><label className="label">Giá mẫu (VNĐ)</label><input className="input" type="number" value={form.modelCost} onChange={e=>updateField('modelCost', Number(e.target.value))} required /></div>
-        <div className="field"><label className="label">Giá thuê/giờ (VNĐ)</label><input className="input" type="number" value={form.rentFeeForHour} onChange={e=>updateField('rentFeeForHour', Number(e.target.value))} required /></div>
-        <div className="field"><label className="label">Hình ảnh</label><input className="input" type="file" multiple onChange={handleFiles} /></div>
-      </div>
-      <div className="row-between">
-        <button type="button" className="btn" onClick={onCancel}>Hủy</button>
-        <CTA as="button" type="submit">Lưu</CTA>
-      </div>
-    </form>
-  )
+    <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Grid container spacing={2} sx={{ width: '100%' }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth label="Tên mẫu" value={form.modelName} onChange={e=>updateField('modelName', e.target.value)} required />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth label="Hãng" value={form.manufacturer} onChange={e=>updateField('manufacturer', e.target.value)} required />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth type="number" label="Năm" value={form.year} onChange={e=>updateField('year', Number(e.target.value))} required />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth type="number" label="Tốc độ tối đa (km/h)" value={form.maxSpeed} onChange={e=>updateField('maxSpeed', Number(e.target.value))} required />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth type="number" label="Dung lượng pin (mAh)" value={form.batteryCapacity} onChange={e=>updateField('batteryCapacity', Number(e.target.value))} required />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth type="number" label="Thời gian sạc (phút)" value={form.chargingTime} onChange={e=>updateField('chargingTime', Number(e.target.value))} required />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth type="number" label="Quãng đường (km)" value={form.batteryRange} onChange={e=>updateField('batteryRange', Number(e.target.value))} required />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth type="number" label="Số chỗ" value={form.vehicleCapacity} onChange={e=>updateField('vehicleCapacity', Number(e.target.value))} required />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth type="number" label="Giá mẫu (VNĐ)" value={form.modelCost} onChange={e=>updateField('modelCost', Number(e.target.value))} required />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth type="number" label="Giá thuê/giờ (VNĐ)" value={form.rentFeeForHour} onChange={e=>updateField('rentFeeForHour', Number(e.target.value))} required />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <TextField fullWidth type="file" onChange={handleFiles} slotProps={{
+            htmlInput: { multiple: true }
+          }} />
+        </Grid>
+      </Grid>
+      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+        <Button variant="outlined" onClick={onCancel}>Hủy</Button>
+        <Button variant="contained" type="submit">Lưu</Button>
+      </Box>
+    </Box>
+  );
 }
 
 export default function AdminModels() {
@@ -78,21 +86,14 @@ export default function AdminModels() {
   const [error, setError] = useState('')
   const [models, setModels] = useState([])
   const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
   const [editing, setEditing] = useState(null)
+  const [openDialog, setOpenDialog] = useState(false)
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth.token') : null
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    const list = Array.isArray(models) ? models : []
-    const f = q ? list.filter(m => (m.modelName||'').toLowerCase().includes(q) || (m.manufacturer||'').toLowerCase().includes(q)) : list
-    return f
-  }, [models, search])
-
-  const total = filtered.length
-  const start = (page - 1) * pageSize
-  const visible = filtered.slice(start, start + pageSize)
+  const filtered = models.filter(m => {
+    const q = search.toLowerCase()
+    return (m.modelName||'').toLowerCase().includes(q) || (m.manufacturer||'').toLowerCase().includes(q)
+  })
 
   async function load() {
     setLoading(true)
@@ -108,14 +109,6 @@ export default function AdminModels() {
   }
 
   useEffect(() => { load() }, [])
-
-  async function handleCreate() {
-    setEditing({})
-  }
-
-  async function handleEdit(m) {
-    setEditing(m)
-  }
 
   async function handleDelete(m) {
     if (!confirm('Xóa mẫu này?')) return
@@ -139,6 +132,7 @@ export default function AdminModels() {
         await createModel(form, token)
       }
       setEditing(null)
+      setOpenDialog(false)
       await load()
     } catch (e) {
       alert(e?.message || 'Lưu thất bại')
@@ -149,53 +143,123 @@ export default function AdminModels() {
 
   return (
     <AdminLayout active="models">
-      <section className="section" aria-labelledby="admin-models-title">
-        <div className="container">
-            <div className="section-header">
-              <h1 id="admin-models-title" className="section-title">Quản lý mẫu xe</h1>
-              <p className="section-subtitle">Thêm, sửa, xóa mẫu xe hai bánh.</p>
-            </div>
+      <Box sx={{ py: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+        <Container maxWidth="lg">
+          <Stack spacing={3}>
+            {/* Header */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
+                  Quản lý mẫu xe
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Thêm, sửa, xóa mẫu xe hai bánh.
+                </Typography>
+              </Box>
+              <Button 
+                variant="contained" 
+                startIcon={<AddIcon />}
+                onClick={() => { setEditing({}); setOpenDialog(true) }}
+              >
+                Thêm mẫu
+              </Button>
+            </Box>
 
-            <div className="card">
-              <div className="card-body">
-                {error ? <div role="alert" className="badge gray">{error}</div> : null}
-                <div className="row-between">
-                  <div className="field" style={{minWidth: '260px'}}>
-                    <label className="label">Tìm kiếm</label>
-                    <input className="input" value={search} onChange={e=>{ setSearch(e.target.value); setPage(1); }} placeholder="Tên mẫu, hãng" />
-                  </div>
-                  <CTA as="button" onClick={handleCreate}>Thêm mẫu</CTA>
-                </div>
-              </div>
-            </div>
-
-            {loading && (
-              <div className="text-center py-10"><div className="spinner" /></div>
+            {/* Error Alert */}
+            {error && (
+              <Alert severity="error" onClose={() => setError('')}>
+                {error}
+              </Alert>
             )}
 
-            {!loading && (
-              <div className="docs-grid">
-                {visible.map(m => (
-                  <ModelRow key={m.modelId} m={m} onEdit={handleEdit} onDelete={handleDelete} />
-                ))}
-              </div>
+            {/* Search Box */}
+            <Card>
+              <CardContent>
+                <TextField 
+                  fullWidth
+                  placeholder="Tìm kiếm theo tên mẫu hoặc hãng..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  variant="outlined"
+                  size="small"
+                />
+              </CardContent>
+            </Card>
+
+            {/* Models Table */}
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600 }}>Tên mẫu</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Hãng</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Năm</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Tốc độ (km/h)</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Pin (mAh)</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Giá (VNĐ)</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="center">Hành động</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filtered.map(m => (
+                      <TableRow key={m.modelId} hover>
+                        <TableCell>{m.modelName}</TableCell>
+                        <TableCell>{m.manufacturer}</TableCell>
+                        <TableCell align="right">{m.year}</TableCell>
+                        <TableCell align="right">{m.maxSpeed}</TableCell>
+                        <TableCell align="right">{m.batteryCapacity}</TableCell>
+                        <TableCell align="right">{m.modelCost?.toLocaleString?.()}</TableCell>
+                        <TableCell align="center">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => { setEditing(m); setOpenDialog(true) }}
+                            color="primary"
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleDelete(m)}
+                            color="error"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filtered.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                          Không tìm thấy mẫu nào
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             )}
 
-            <div className="row-between">
-              <button className="btn" disabled={page<=1} onClick={()=>setPage(p=>Math.max(1,p-1))}>Trước</button>
-              <div className="card-subtext">Trang {page} / {Math.max(1, Math.ceil(total / pageSize))} (Tổng {total})</div>
-              <button className="btn" disabled={page>=Math.ceil(total/pageSize)} onClick={()=>setPage(p=>p+1)}>Sau</button>
-            </div>
-
-            {editing !== null && (
-              <div className="card">
-                <div className="card-header"><h2 className="card-title">{editing?.modelId ? 'Sửa mẫu' : 'Thêm mẫu'}</h2></div>
-                <ModelForm initial={editing} onSubmit={handleSubmit} onCancel={()=>setEditing(null)} />
-              </div>
-            )}
-
-        </div>
-      </section>
+            {/* Form Dialog */}
+            <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>
+                {editing?.modelId ? 'Sửa mẫu xe' : 'Thêm mẫu xe mới'}
+              </DialogTitle>
+              <DialogContent sx={{ pt: 2 }}>
+                <ModelForm 
+                  initial={editing} 
+                  onSubmit={handleSubmit} 
+                  onCancel={() => { setOpenDialog(false); setEditing(null) }}
+                />
+              </DialogContent>
+            </Dialog>
+          </Stack>
+        </Container>
+      </Box>
     </AdminLayout>
   )
 }

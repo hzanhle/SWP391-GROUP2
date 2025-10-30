@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using BookingService.DTOs;
+﻿using BookingService.DTOs;
 using BookingService.Services;
 using BookingService.Repositories;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace BookingService.Controllers
 {
@@ -33,7 +34,28 @@ namespace BookingService.Controllers
             _logger = logger;
             _configuration = configuration;
         }
+        /// <summary>
+        /// Lấy UserId từ JWT token trong header Authorization
+        /// </summary>
+        private int GetUserIdFromToken()
+        {
+            // Lấy claim userId từ JWT đã được validate bởi [Authorize]
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)
+                ?? User.FindFirst("userId")
+                ?? User.FindFirst("sub");
 
+            if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
+            {
+                throw new UnauthorizedAccessException("Không thể trích xuất UserId từ token.");
+            }
+
+            if (!int.TryParse(userIdClaim.Value, out int userId))
+            {
+                throw new UnauthorizedAccessException("UserId trong token không hợp lệ.");
+            }
+
+            return userId;
+        }
         /// <summary>
         /// Xem trước đơn hàng: tính toán chi phí và kiểm tra lịch.
         /// Chỉ Member mới có thể xem trước đơn hàng của mình
@@ -42,14 +64,15 @@ namespace BookingService.Controllers
         [Authorize(Roles = "Member")]
         public async Task<IActionResult> GetOrderPreview([FromBody] OrderRequest request)
         {
+            int userId = GetUserIdFromToken();
             try
             {
-                var preview = await _orderService.GetOrderPreviewAsync(request);
+                var preview = await _orderService.GetOrderPreviewAsync(request, userId);
                 return Ok(preview);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting order preview for User {UserId}", request.UserId);
+                _logger.LogError(ex, "Error getting order preview for User {UserId}", userId);
                 return BadRequest(new { Message = "Lỗi khi xem trước đơn hàng: " + ex.Message });
             }
         }
@@ -62,19 +85,20 @@ namespace BookingService.Controllers
         [Authorize(Roles = "Member")]
         public async Task<IActionResult> CreateOrder([FromBody] OrderRequest request)
         {
+            var userId = GetUserIdFromToken();
             try
             {
-                var order = await _orderService.CreateOrderAsync(request);
+                var order = await _orderService.CreateOrderAsync(request, userId);
                 return Ok(order);
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogWarning(ex, "Invalid operation when creating order for User {UserId}", request.UserId);
+                _logger.LogWarning(ex, "Invalid operation when creating order for User {UserId}", userId);
                 return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating order for User {UserId}", request.UserId);
+                _logger.LogError(ex, "Error creating order for User {UserId}", userId);
                 return StatusCode(500, new { Message = "Lỗi hệ thống khi tạo đơn hàng." });
             }
         }
@@ -442,42 +466,3 @@ namespace BookingService.Controllers
         }
     }
 }
-
-/*
- * ===== PHÂN QUYỀN CHI TIẾT =====
- * 
- * 🔐 MEMBER (Khách hàng & Chủ xe):
- *    - POST /preview: Xem trước đơn hàng
- *    - POST /: Tạo đơn hàng mới
- *    - GET /{orderId}: Xem chi tiết đơn của mình
- *    - GET /user/{userId}: Xem danh sách đơn của mình
- *    - POST /{orderId}/start: Xác nhận bắt đầu thuê (chủ xe)
- *    - POST /{orderId}/complete: Xác nhận hoàn thành (chủ xe)
- * 
- * 👔 EMPLOYEE (Nhân viên):
- *    - GET /{orderId}: Xem chi tiết bất kỳ đơn nào
- *    - GET /user/{userId}: Xem đơn của bất kỳ user nào
- *    - POST /{orderId}/start: Hỗ trợ xác nhận bắt đầu
- *    - POST /{orderId}/complete: Hỗ trợ xác nhận hoàn thành
- * 
- * 👑 ADMIN (Quản trị viên):
- *    - Tất cả quyền của Employee
- *    - POST /check-expired: Chạy job kiểm tra đơn hết hạn
- * 
- * 🌐 ALLOW ANONYMOUS:
- *    - POST /confirm-payment: Webhook từ VNPay (validate bằng signature)
- * 
- * ⚠️ LƯU Ý QUAN TRỌNG:
- * 1. Service layer PHẢI validate ownership:
- *    - Member chỉ được xem/thao tác đơn của mình
- *    - Kiểm tra userId từ JWT token vs userId trong đơn hàng
- * 
- * 2. Webhook security:
- *    - confirm-payment dùng AllowAnonymous
- *    - PHẢI validate signature/hash từ VNPay trong service
- *    - Có thể thêm IP whitelist nếu cần
- * 
- * 3. Background jobs:
- *    - check-expired nên được gọi từ Hangfire/Quartz
- *    - Hoặc protect bằng API key thay vì role
- */

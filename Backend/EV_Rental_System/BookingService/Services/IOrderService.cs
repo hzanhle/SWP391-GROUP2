@@ -7,10 +7,10 @@ namespace BookingService.Services
     public interface IOrderService
     {
         // (MỚI) Xem trước
-        Task<OrderPreviewResponse> GetOrderPreviewAsync(OrderRequest request);
+        Task<OrderPreviewResponse> GetOrderPreviewAsync(OrderRequest request, int userId);
 
         // (Cập nhật) Tạo Order (Treo)
-        Task<OrderResponse> CreateOrderAsync(OrderRequest request);
+        Task<OrderResponse> CreateOrderAsync(OrderRequest request, int userId);
 
         // (Cập nhật) Xác nhận thanh toán
         Task<bool> ConfirmPaymentAsync(int orderId, string transactionId, string? gatewayResponse = null);

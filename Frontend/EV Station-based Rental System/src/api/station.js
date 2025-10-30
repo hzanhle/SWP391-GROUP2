@@ -33,7 +33,7 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
   }
 
   const isJson = res.headers.get('content-type')?.includes('application/json')
-  const data = isJson ? await res.json().catch(() => null) : null
+  let data = isJson ? await res.json().catch(() => null) : null
 
   if (!res.ok) {
     const message = (data && (data.message || data.Message)) || `${res.status} ${res.statusText}`
@@ -42,6 +42,12 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
     error.data = data
     throw error
   }
+
+  // Unwrap nested data if present
+  if (data && typeof data === 'object' && (data.data !== undefined || data.Data !== undefined)) {
+    data = data.data !== undefined ? data.data : data.Data
+  }
+
   return { status: res.status, data }
 }
 

@@ -23,7 +23,9 @@ namespace TwoWheelVehicleService.Repositories
         }
         public async Task<List<Vehicle>> GetAllVehicles() // Get All Vehicles
         {
-            return await _context.Vehicles.ToListAsync();
+            return await _context.Vehicles
+                        .Include(v => v.Model) //include để lấy model name
+                        .ToListAsync();
         }
         public async Task AddVehicle(Vehicle vehicle)
         {
@@ -41,9 +43,11 @@ namespace TwoWheelVehicleService.Repositories
             }
         }
 
-        public async Task<Vehicle> GetVehicleById(int Id)
+        public async Task<Vehicle?> GetVehicleById(int Id)
         {
-            return await _context.Vehicles.FindAsync(Id);
+            return await _context.Vehicles
+                .Include(v => v.Model)
+                .FirstOrDefaultAsync(v => v.VehicleId == Id);
         }
 
         public async Task UpdateVehicle(Vehicle vehicle)
@@ -64,8 +68,80 @@ namespace TwoWheelVehicleService.Repositories
 
         public Task<List<Vehicle>> GetAllVehiclesByModelId(int modelId)
         {
-            var vehicles = _context.Vehicles.Where(v => v.ModelId == modelId).ToListAsync();
+            var vehicles = _context.Vehicles
+                .Include(v => v.Model)
+                .Where(v => v.ModelId == modelId)
+                .ToListAsync();
             return vehicles;
+        }
+
+        public async Task<List<VehicleStatusHistory>> GetVehicleHistoryAsync(int vehicleId)
+        {
+            return await _context.VehicleStatusHistories
+                .Where(h => h.VehicleId == vehicleId)
+                .OrderByDescending(h => h.UpdatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<VehicleStatusHistory?> GetLatestStatusAsync(int vehicleId)
+        {
+            return await _context.VehicleStatusHistories
+                .Where(h => h.VehicleId == vehicleId)
+                .OrderByDescending(h => h.UpdatedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<VehicleStatusHistory> CreateHistoryAsync(VehicleStatusHistory history)
+        {
+            _context.VehicleStatusHistories.Add(history);
+            await _context.SaveChangesAsync();
+            return history;
+        }
+
+        public async Task<List<Vehicle>> GetVehiclesWithFiltersAsync(
+            string? statusFilter,
+            string? batteryFilter,
+            string? search,
+            int? stationId)
+        {
+            var query = _context.Vehicles
+                .Include(v => v.Model) //include model để lấy modelname
+                .AsQueryable();
+
+            // Filter by station (nếu có StationId)
+            if (stationId.HasValue)
+                query = query.Where(v => v.StationId == stationId.Value);
+
+            // Filter by status
+            if (!string.IsNullOrEmpty(statusFilter) && statusFilter != "all")
+            {
+                query = query.Where(v => v.Status.ToLower() == statusFilter.ToLower());
+            }
+
+            // Filter by battery
+            if (!string.IsNullOrEmpty(batteryFilter) && batteryFilter != "all")
+            {
+                query = batteryFilter.ToLower() switch
+                {
+                    "low" => query.Where(v => v.CurrentBatteryLevel < 30),
+                    "medium" => query.Where(v => v.CurrentBatteryLevel >= 30 && v.CurrentBatteryLevel < 70),
+                    "high" => query.Where(v => v.CurrentBatteryLevel >= 70),
+                    _ => query
+                };
+            }
+
+            // Filter by search - FIXED: Tìm theo VehicleId hoặc ModelName
+            if (!string.IsNullOrEmpty(search))
+            {
+                var lowerSearch = search.ToLower();
+                query = query.Where(v =>
+                    v.VehicleId.ToString().Contains(search) || // Tìm theo VehicleId
+                    (v.Model != null && v.Model.ModelName.ToLower().Contains(lowerSearch)) || // Tìm theo ModelName
+                    v.Color.ToLower().Contains(lowerSearch)); // Tìm theo Color
+            }
+
+            return await query.ToListAsync();
         }
     }
 }
+

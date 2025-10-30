@@ -7,7 +7,7 @@ namespace UserService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // 🔒 Bắt buộc xác thực JWT cho toàn bộ controller
+    [Authorize] // 🔒 Yêu cầu xác thực JWT
     public class CitizenInfoController : ControllerBase
     {
         private readonly ICitizenInfoService _citizenInfoService;
@@ -41,34 +41,53 @@ namespace UserService.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateCitizenInfo([FromForm] CitizenInfoRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new
+                    {
+                        Field = x.Key,
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage)
+                    })
+                    .ToList();
+
+                return BadRequest(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
+
             try
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(new ResponseDTO
-                    {
-                        Message = "Dữ liệu không hợp lệ",
-                        Data = ModelState
-                            .Where(x => x.Value.Errors.Any())
-                            .Select(x => new
-                            {
-                                Field = x.Key,
-                                Errors = x.Value.Errors.Select(e => e.ErrorMessage)
-                            })
-                            .ToList()
-                    });
-
                 var userId = GetUserIdFromToken();
-                var response = await _citizenInfoService.AddCitizenInfo(request, userId);
+                var result = await _citizenInfoService.AddCitizenInfo(request, userId);
 
-                return Ok(response);
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Tạo thông tin CCCD thành công",
+                    Data = result
+                });
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(new { error = ex.Message });
+                return Unauthorized(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = "Lỗi hệ thống nội bộ", details = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -78,41 +97,59 @@ namespace UserService.Controllers
         [HttpPut]
         public async Task<IActionResult> UpdateCitizenInfo([FromForm] CitizenInfoRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new
+                    {
+                        Field = x.Key,
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage)
+                    })
+                    .ToList();
+
+                return BadRequest(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
+
             try
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(new ResponseDTO
-                    {
-                        Message = "Dữ liệu không hợp lệ",
-                        Data = ModelState
-                            .Where(x => x.Value.Errors.Any())
-                            .Select(x => new
-                            {
-                                Field = x.Key,
-                                Errors = x.Value.Errors.Select(e => e.ErrorMessage)
-                            })
-                            .ToList()
-                    });
-
                 var userId = GetUserIdFromToken();
                 await _citizenInfoService.UpdateCitizenInfo(request, userId);
 
-                return Ok(new { message = "Yêu cầu cập nhật CCCD đã được gửi thành công." });
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Yêu cầu cập nhật CCCD đã được gửi thành công"
+                });
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(new { error = ex.Message });
+                return Unauthorized(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = $"Lỗi hệ thống: {ex.Message}" });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
         // ============================================
         // 🔹 Lấy thông tin CCCD theo UserId
         // ============================================
-        [AllowAnonymous] // 🟡 Cho phép admin hoặc người khác truy cập mà không cần token
+        [AllowAnonymous]
         [HttpGet("{userId:int}")]
         public async Task<IActionResult> GetCitizenInfoByUserId(int userId)
         {
@@ -120,13 +157,29 @@ namespace UserService.Controllers
             {
                 var citizenInfo = await _citizenInfoService.GetCitizenInfoByUserId(userId);
                 if (citizenInfo == null)
-                    return NotFound(new { message = "Citizen info not found." });
+                {
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin CCCD cho user này."
+                    });
+                }
 
-                return Ok(citizenInfo);
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Lấy thông tin CCCD thành công",
+                    Data = citizenInfo
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -139,29 +192,50 @@ namespace UserService.Controllers
             try
             {
                 await _citizenInfoService.DeleteCitizenInfo(id);
-                return Ok(new { message = "Citizen info deleted successfully." });
+
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Xóa thông tin CCCD thành công"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
 
         // ============================================
         // 🔹 Duyệt hoặc từ chối CCCD
         // ============================================
-        [Authorize(Roles = "Admin")] // 🔒 Chỉ admin mới được duyệt
+        [Authorize(Roles = "Admin")]
         [HttpPost("status/{userId:int}/{isApproved:bool}")]
         public async Task<IActionResult> SetStatus(int userId, bool isApproved)
         {
             try
             {
                 var notification = await _citizenInfoService.SetStatus(userId, isApproved);
-                return Ok(notification);
+
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Cập nhật trạng thái CCCD thành công",
+                    Data = notification
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = $"Internal server error: {ex.Message}" });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
             }
         }
     }

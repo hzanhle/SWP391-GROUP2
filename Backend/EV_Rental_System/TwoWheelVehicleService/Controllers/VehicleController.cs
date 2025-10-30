@@ -18,35 +18,70 @@ namespace TwoWheelVehicleService.Controllers
             _vehicleService = vehicleService;
         }
 
+        private IActionResult HandleInvalidModel()
+        {
+            var errors = ModelState
+                .Where(x => x.Value.Errors.Any())
+                .Select(x => new { Field = x.Key, Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray() })
+                .ToList();
+
+            return BadRequest(new ResponseDTO
+            {
+                IsSuccess = false,
+                Message = "Dữ liệu không hợp lệ",
+                Data = errors
+            });
+        }
+
         // ============================ GET ============================
 
+        [AllowAnonymous]
         [HttpGet]
-        [AllowAnonymous] // 🟡 Có thể cho phép public xem danh sách xe
         public async Task<IActionResult> GetAllVehicles()
         {
             try
             {
                 var vehicles = await _vehicleService.GetAllVehiclesAsync();
-                return Ok(vehicles);
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Lấy danh sách xe thành công",
+                    Data = vehicles
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống",
+                    Data = ex.Message
+                });
             }
         }
 
-        [HttpGet("active")]
         [AllowAnonymous]
+        [HttpGet("active")]
         public async Task<IActionResult> GetActiveVehicles()
         {
             try
             {
                 var vehicles = await _vehicleService.GetActiveVehiclesAsync();
-                return Ok(vehicles);
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Lấy danh sách xe active thành công",
+                    Data = vehicles
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -57,13 +92,27 @@ namespace TwoWheelVehicleService.Controllers
             {
                 var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
                 if (vehicle == null)
-                    return NotFound(new ResponseDTO { Message = "Vehicle not found" });
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Xe không tồn tại"
+                    });
 
-                return Ok(vehicle);
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Lấy xe thành công",
+                    Data = vehicle
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -73,32 +122,26 @@ namespace TwoWheelVehicleService.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateVehicle([FromBody] VehicleRequest request)
         {
+            if (!ModelState.IsValid)
+                return HandleInvalidModel();
+
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState
-                        .Where(x => x.Value.Errors.Any())
-                        .Select(x => new
-                        {
-                            Field = x.Key,
-                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                        })
-                        .ToList();
-
-                    return BadRequest(new ResponseDTO
-                    {
-                        Message = "Invalid data",
-                        Data = errors
-                    });
-                }
-
                 await _vehicleService.AddVehicleAsync(request);
-                return Ok(new ResponseDTO { Message = "Vehicle created successfully" });
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Tạo xe thành công"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -108,20 +151,36 @@ namespace TwoWheelVehicleService.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateVehicle(int id, [FromBody] Vehicle vehicle)
         {
+            if (!ModelState.IsValid)
+                return HandleInvalidModel();
+
             try
             {
                 var existing = await _vehicleService.GetVehicleByIdAsync(id);
                 if (existing == null)
-                    return NotFound(new ResponseDTO { Message = "Vehicle not found" });
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Xe không tồn tại"
+                    });
 
                 vehicle.VehicleId = id;
                 await _vehicleService.UpdateVehicleAsync(vehicle);
 
-                return Ok(new ResponseDTO { Message = "Vehicle updated successfully" });
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Cập nhật xe thành công"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -135,14 +194,27 @@ namespace TwoWheelVehicleService.Controllers
             {
                 var existing = await _vehicleService.GetVehicleByIdAsync(id);
                 if (existing == null)
-                    return NotFound(new ResponseDTO { Message = "Vehicle not found" });
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Xe không tồn tại"
+                    });
 
                 await _vehicleService.DeleteVehicleAsync(id);
-                return Ok(new ResponseDTO { Message = "Vehicle deleted successfully" });
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Xóa xe thành công"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -152,21 +224,38 @@ namespace TwoWheelVehicleService.Controllers
         [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateVehicleStatus(int id, [FromBody] string status)
         {
+            if (string.IsNullOrEmpty(status))
+                return BadRequest(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Trạng thái không được để trống"
+                });
+
             try
             {
-                if (string.IsNullOrEmpty(status))
-                    return BadRequest(new ResponseDTO { Message = "Status is required" });
-
                 var existing = await _vehicleService.GetVehicleByIdAsync(id);
                 if (existing == null)
-                    return NotFound(new ResponseDTO { Message = "Vehicle not found" });
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Xe không tồn tại"
+                    });
 
                 await _vehicleService.SetVehicleStatus(id, status);
-                return Ok(new ResponseDTO { Message = "Status updated successfully" });
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Cập nhật trạng thái thành công"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -177,11 +266,20 @@ namespace TwoWheelVehicleService.Controllers
             try
             {
                 await _vehicleService.ToggleActiveStatus(id);
-                return Ok(new ResponseDTO { Message = "Vehicle active status toggled successfully" });
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Đổi trạng thái active xe thành công"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -195,27 +293,37 @@ namespace TwoWheelVehicleService.Controllers
             {
                 var vehicle = await _vehicleService.GetVehicleByIdAsync(vehicleId);
                 if (vehicle == null)
-                    return NotFound(new ResponseDTO { Message = "Vehicle not found" });
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Xe không tồn tại"
+                    });
 
                 bool isAvailable = (vehicle.IsActive ?? false) && vehicle.Status == "Available";
 
-                return Ok(new
+                return Ok(new ResponseDTO
                 {
-                    success = true,
-                    isAvailable,
-                    vehicle = new
+                    IsSuccess = true,
+                    Message = "Kiểm tra khả dụng thành công",
+                    Data = new
                     {
                         vehicle.VehicleId,
                         vehicle.ModelId,
                         vehicle.Color,
                         vehicle.Status,
-                        vehicle.IsActive
+                        vehicle.IsActive,
+                        isAvailable
                     }
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống",
+                    Data = ex.Message
+                });
             }
         }
 
@@ -230,16 +338,21 @@ namespace TwoWheelVehicleService.Controllers
                     .Where(v => v.ModelId == modelId && v.IsActive && v.Status == "Available")
                     .ToList();
 
-                return Ok(new
+                return Ok(new ResponseDTO
                 {
-                    success = true,
-                    count = available.Count,
-                    vehicles = available
+                    IsSuccess = true,
+                    Message = $"Có {available.Count} xe khả dụng cho model {modelId}",
+                    Data = available
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDTO { Message = ex.Message });
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống",
+                    Data = ex.Message
+                });
             }
         }
     }

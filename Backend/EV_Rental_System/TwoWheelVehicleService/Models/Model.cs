@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace TwoWheelVehicleService.Models
 {
@@ -44,6 +45,9 @@ namespace TwoWheelVehicleService.Models
 
         // Navigation properties
         public ICollection<Image> Images { get; set; } = new List<Image>();
+
+        [JsonIgnore]
+
         public ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
 
         public Model() { }
