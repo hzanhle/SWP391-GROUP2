@@ -9,8 +9,10 @@ namespace BookingService
         public DbSet<Payment> Payments { get; set; }
         public DbSet<OnlineContract> OnlineContracts { get; set; }
         public DbSet<TrustScore> TrustScores { get; set; }
+        public DbSet<TrustScoreHistory> TrustScoreHistories { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Feedback> Feedbacks { get; set; }
+        public DbSet<Settlement> Settlements { get; set; }
 
         public MyDbContext(DbContextOptions<MyDbContext> options) : base(options) { }
 
@@ -100,6 +102,23 @@ namespace BookingService
             });
 
             // =========================
+            // TRUST SCORE HISTORY
+            // =========================
+            modelBuilder.Entity<TrustScoreHistory>(entity =>
+            {
+                entity.HasKey(h => h.HistoryId);
+
+                entity.Property(h => h.Reason).HasMaxLength(500).IsRequired();
+                entity.Property(h => h.ChangeType).HasMaxLength(50).IsRequired();
+
+                // Indexes for queries
+                entity.HasIndex(h => h.UserId);
+                entity.HasIndex(h => h.OrderId);
+                entity.HasIndex(h => h.CreatedAt);
+                entity.HasIndex(h => h.ChangeType);
+            });
+
+            // =========================
             // NOTIFICATION
             // =========================
             modelBuilder.Entity<Notification>(entity =>
@@ -112,6 +131,38 @@ namespace BookingService
                 entity.HasIndex(n => n.UserId);
                 entity.HasIndex(n => n.Created);
                 entity.HasIndex(n => new { n.DataType, n.DataId });
+            });
+
+            // =========================
+            // SETTLEMENT
+            // =========================
+            modelBuilder.Entity<Settlement>(entity =>
+            {
+                entity.HasKey(s => s.SettlementId);
+
+                // Decimal precision
+                entity.Property(s => s.OvertimeHours).HasColumnType("decimal(10,2)");
+                entity.Property(s => s.OvertimeFee).HasColumnType("decimal(18,2)");
+                entity.Property(s => s.DamageCharge).HasColumnType("decimal(18,2)");
+                entity.Property(s => s.InitialDeposit).HasColumnType("decimal(18,2)");
+                entity.Property(s => s.TotalAdditionalCharges).HasColumnType("decimal(18,2)");
+                entity.Property(s => s.DepositRefundAmount).HasColumnType("decimal(18,2)");
+                entity.Property(s => s.AdditionalPaymentRequired).HasColumnType("decimal(18,2)");
+
+                // String lengths
+                entity.Property(s => s.DamageDescription).HasMaxLength(1000);
+                entity.Property(s => s.InvoiceUrl).HasMaxLength(500);
+
+                // 1-1 relationship with Order (optional - an order may not have settlement yet)
+                entity.HasOne(s => s.Order)
+                      .WithOne()
+                      .HasForeignKey<Settlement>(s => s.OrderId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Indexes for queries
+                entity.HasIndex(s => s.OrderId).IsUnique();
+                entity.HasIndex(s => s.IsFinalized);
+                entity.HasIndex(s => s.CreatedAt);
             });
         }
     }

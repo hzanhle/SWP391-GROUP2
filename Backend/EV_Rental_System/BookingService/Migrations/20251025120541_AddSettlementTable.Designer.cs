@@ -4,6 +4,7 @@ using BookingService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookingService.Migrations
 {
     [DbContext(typeof(MyDbContext))]
-    partial class MyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251025120541_AddSettlementTable")]
+    partial class AddSettlementTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -355,58 +358,6 @@ namespace BookingService.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("TrustScores");
-                });
-
-            modelBuilder.Entity("BookingService.Models.TrustScoreHistory", b =>
-                {
-                    b.Property<int>("HistoryId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HistoryId"));
-
-                    b.Property<int?>("AdjustedByAdminId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ChangeAmount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ChangeType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("NewScore")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("OrderId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PreviousScore")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("HistoryId");
-
-                    b.HasIndex("ChangeType");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("OrderId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("TrustScoreHistories");
                 });
 
             modelBuilder.Entity("BookingService.Models.OnlineContract", b =>
