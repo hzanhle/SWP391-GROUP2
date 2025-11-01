@@ -1,151 +1,479 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿// Controllers/FeedbackController.cs
+
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using StationService.DTOs;
 using StationService.Services;
-using System;
-using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace StationService.Controllers
 {
-    // File: Controllers/FeedbackController.cs
     [ApiController]
-    [Route("api/stations/{stationId}/feedbacks")]
+    [Route("api/[controller]")]
     public class FeedbackController : ControllerBase
     {
         private readonly IFeedbackService _feedbackService;
         private readonly ILogger<FeedbackController> _logger;
 
-        public FeedbackController(IFeedbackService feedbackService, ILogger<FeedbackController> logger)
+        public FeedbackController(
+            IFeedbackService feedbackService,
+            ILogger<FeedbackController> logger)
         {
             _feedbackService = feedbackService;
             _logger = logger;
         }
 
-        // GET /api/stations/1/feedbacks
-        [HttpGet]
-        [AllowAnonymous] // Cho phép khách vãng lai xem feedback
-        public async Task<IActionResult> GetFeedbacksForStation(int stationId)
+        // ==================== HELPER METHODS ====================
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst("userId") ?? User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                throw new UnauthorizedAccessException("Invalid or missing user ID in token");
+            }
+            return userId;
+        }
+
+        private bool IsAdmin()
+        {
+            return User.IsInRole("Admin");
+        }
+
+        // ==================== PUBLIC APIs (No Auth) ====================
+        /// [Public] Xem tất cả feedback của một station
+        [HttpGet("station/{stationId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetStationFeedbacks(int stationId)
         {
             try
             {
-                var feedbacks = await _feedbackService.GetByStationIdAsync(stationId);
-                return Ok(feedbacks); // Trả về 200 OK và danh sách feedback
+                var feedbacks = await _feedbackService.GetFeedbacksByStationAsync(
+                    stationId, onlyPublished: true);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = feedbacks,
+                    total = feedbacks.Count
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Đã xảy ra lỗi khi lấy danh sách feedback cho StationId: {StationId}", stationId);
-                return StatusCode(500, "Đã xảy ra lỗi khi xử lý yêu cầu của bạn.");
+                _logger.LogError(ex, $"Error getting feedbacks for station {stationId}");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra"
+                });
             }
         }
 
-        // POST /api/stations/1/feedbacks
-        [HttpPost]
-        [Authorize(Roles = "User,Admin")] // Chỉ người dùng đã đăng nhập mới có thể tạo feedback
-        public async Task<IActionResult> CreateFeedback(int stationId, [FromBody] CreateFeedbackRequest request)
+        /// [Public] Xem thống kê rating của station
+        [HttpGet("station/{stationId}/stats")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetStationStats(int stationId)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState); // Trả về 400 Bad Request nếu dữ liệu không hợp lệ
-            }
-
             try
             {
-                var newFeedback = await _feedbackService.CreateAsync(stationId, request);
-                //Trả về 201 Created và thông tin feedback vừa tạo
-                return CreatedAtRoute("GetFeedbackByIdRoute", new { stationId = stationId, feedbackId = newFeedback.FeedbackId }, newFeedback);
+                var stats = await _feedbackService.GetStationStatsAsync(stationId);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = stats
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi tạo Feedback cho stationId: {StationId}", stationId);
-                return StatusCode(500, "Đã xảy ra lỗi hệ thống.");
+                _logger.LogError(ex, $"Error getting stats for station {stationId}");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra"
+                });
             }
         }
 
-        // GET: /api/stations/1/feedbacks/10
-        [HttpGet("{feedbackId}", Name = "GetFeedbackByIdRoute")]
-        [AllowAnonymous] //Cho phép khách vãng lai tìm xem feedback theo id trạm
-        public async Task<IActionResult> GetFeedbackById(int stationId, int feedbackId)
+        /// [Public] Xem chi tiết một feedback
+        [HttpGet("{feedbackId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetFeedbackById(int feedbackId)
         {
             try
             {
                 var feedback = await _feedbackService.GetByIdAsync(feedbackId);
-                if (feedback == null || feedback.StationId != stationId)
+
+                if (feedback == null)
                 {
-                    return NotFound();
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Không tìm thấy feedback"
+                    });
                 }
-                return Ok(feedback);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = feedback
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi lấy feedback ID: {FeedbackId}", feedbackId);
-                return StatusCode(500, "Đã xảy ra lỗi hệ thống.");
+                _logger.LogError(ex, $"Error getting feedback {feedbackId}");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra"
+                });
             }
         }
 
-        // PUT: /api/stations/1/feedbacks/10
+        // ==================== USER APIs (Auth Required) ====================
+        /// [User] Tạo feedback mới cho station
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> CreateFeedback([FromBody] CreateFeedbackDTO dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Dữ liệu không hợp lệ",
+                        errors = ModelState
+                    });
+                }
+
+                var userId = GetCurrentUserId();
+                var feedback = await _feedbackService.CreateFeedbackAsync(dto, userId);
+
+                _logger.LogInformation($"User {userId} created feedback {feedback.FeedbackId}");
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Tạo feedback thành công",
+                    data = feedback
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating feedback");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra khi tạo feedback"
+                });
+            }
+        }
+
+        /// [User] Cập nhật feedback của mình
         [HttpPut("{feedbackId}")]
-        [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền sửa feedback
-        public async Task<IActionResult> UpdateFeedback(int stationId, int feedbackId, [FromBody] UpdateFeedbackRequest request)
+        [Authorize]
+        public async Task<IActionResult> UpdateFeedback(
+            int feedbackId,
+            [FromBody] UpdateFeedbackDTO dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             try
             {
-                await _feedbackService.UpdateAsync(feedbackId, request);
-                return NoContent(); // 204 No Content - Thành công
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Dữ liệu không hợp lệ",
+                        errors = ModelState
+                    });
+                }
+
+                var userId = GetCurrentUserId();
+                var feedback = await _feedbackService.UpdateFeedbackAsync(feedbackId, dto, userId);
+
+                _logger.LogInformation($"User {userId} updated feedback {feedbackId}");
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Cập nhật feedback thành công",
+                    data = feedback
+                });
             }
-            catch (KeyNotFoundException knfex)
+            catch (KeyNotFoundException ex)
             {
-                _logger.LogWarning(knfex.Message);
-                return NotFound(knfex.Message);
+                return NotFound(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi cập nhật feedback ID: {FeedbackId}", feedbackId);
-                return StatusCode(500, "Đã xảy ra lỗi hệ thống.");
+                _logger.LogError(ex, $"Error updating feedback {feedbackId}");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra khi cập nhật feedback"
+                });
             }
         }
 
-        // DELETE: /api/stations/1/feedbacks/10
+        /// [User] Xóa feedback của mình
         [HttpDelete("{feedbackId}")]
-        [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền xóa feedback
-        public async Task<IActionResult> DeleteFeedback(int stationId, int feedbackId)
+        [Authorize]
+        public async Task<IActionResult> DeleteFeedback(int feedbackId)
         {
             try
             {
-                var feedbackToDelete = await _feedbackService.GetByIdAsync(feedbackId);
-                if (feedbackToDelete == null)
-                {
-                    _logger.LogWarning("Không tìm thấy Feedback Id: {feedbackId} để xóa.", feedbackId);
-                    return NotFound($"Không tìm thấy feedback với ID: {feedbackId}.");
-                }
+                var userId = GetCurrentUserId();
+                var isAdmin = IsAdmin();
 
-                //Kiểm tra feedback có thuộc đúng station không
-                if(feedbackToDelete.StationId != stationId)
-                {
-                    _logger.LogWarning("Cố gắng xóa FeedbackId: {FeedbackId} (thuộc StationId: {ActualStationId}) thông qua URL của StationId: {RequestStationId}",
-                                        feedbackId, feedbackToDelete.StationId, stationId);
-                    return Forbid();
-                }
+                await _feedbackService.DeleteFeedbackAsync(feedbackId, userId, isAdmin);
 
-                await _feedbackService.DeleteAsync(feedbackId);
-                _logger.LogInformation("Đã xóa thành công FeedbackId: {FeedbackId} thuộc StationId: {StationId}.", feedbackId, stationId);
-                return NoContent();
+                _logger.LogInformation($"User {userId} deleted feedback {feedbackId}");
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Xóa feedback thành công"
+                });
             }
-            catch (KeyNotFoundException knfex)
+            catch (KeyNotFoundException ex)
             {
-                _logger.LogWarning(knfex.Message);
-                return NotFound(knfex.Message);
+                return NotFound(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi xóa feedback ID: {FeedbackId} cho StationId: {StaionId}", feedbackId, stationId);
-                return StatusCode(500, "Đã xảy ra lỗi hệ thống.");
+                _logger.LogError(ex, $"Error deleting feedback {feedbackId}");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra khi xóa feedback"
+                });
             }
         }
+
+        /// [User] Xem tất cả feedback đã tạo
+        [HttpGet("my-feedbacks")]
+        [Authorize]
+        public async Task<IActionResult> GetMyFeedbacks()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var feedbacks = await _feedbackService.GetFeedbacksByUserAsync(userId);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = feedbacks,
+                    total = feedbacks.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user feedbacks");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra"
+                });
+            }
+        }
+
+        /// [User] Xem feedback của mình cho một station
+        [HttpGet("my-feedback/station/{stationId}")]
+        [Authorize]
+        public async Task<IActionResult> GetMyFeedbackForStation(int stationId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var feedback = await _feedbackService.GetMyFeedbackForStationAsync(userId, stationId);
+
+                if (feedback == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Bạn chưa feedback cho trạm này"
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    data = feedback
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting user feedback for station {stationId}");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra"
+                });
+            }
+        }
+
+        // ==================== ADMIN APIs ====================
+        /// [Admin] Xem tất cả feedback
+        [HttpGet("admin/all")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllFeedbacks()
+        {
+            try
+            {
+                var feedbacks = await _feedbackService.GetAllFeedbacksAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    data = feedbacks,
+                    total = feedbacks.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all feedbacks");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra"
+                });
+            }
+        }
+
+        /// [Admin] Verify/Unverify feedback
+        [HttpPut("{feedbackId}/verify")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> VerifyFeedback(
+            int feedbackId,
+            [FromBody] VerifyFeedbackRequest request)
+        {
+            try
+            {
+                var feedback = await _feedbackService.VerifyFeedbackAsync(
+                    feedbackId, request.IsVerified);
+
+                _logger.LogInformation($"Admin verified feedback {feedbackId}: {request.IsVerified}");
+
+                return Ok(new
+                {
+                    success = true,
+                    message = request.IsVerified ? "Đã verify feedback" : "Đã bỏ verify feedback",
+                    data = feedback
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error verifying feedback {feedbackId}");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra"
+                });
+            }
+        }
+
+        /// [Admin] Publish/Unpublish feedback (ẩn spam)
+        [HttpPut("{feedbackId}/publish")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PublishFeedback(
+            int feedbackId,
+            [FromBody] PublishFeedbackRequest request)
+        {
+            try
+            {
+                var feedback = await _feedbackService.PublishFeedbackAsync(
+                    feedbackId, request.IsPublished);
+
+                _logger.LogInformation($"Admin set publish feedback {feedbackId}: {request.IsPublished}");
+
+                return Ok(new
+                {
+                    success = true,
+                    message = request.IsPublished ? "Đã hiển thị feedback" : "Đã ẩn feedback",
+                    data = feedback
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error publishing feedback {feedbackId}");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra"
+                });
+            }
+        }
+    }
+
+    // ==================== REQUEST DTOs ====================
+
+    public class VerifyFeedbackRequest
+    {
+        public bool IsVerified { get; set; }
+    }
+
+    public class PublishFeedbackRequest
+    {
+        public bool IsPublished { get; set; }
     }
 }

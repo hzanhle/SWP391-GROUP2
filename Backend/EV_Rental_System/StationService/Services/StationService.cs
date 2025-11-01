@@ -73,7 +73,6 @@ namespace StationService.Services
                 {
                     FeedbackId =f.FeedbackId,
                     StationId = f.StationId,
-                    OrderId = f.OrderId,
                     Rate = f.Rate,
                     Description = f.Description,
                     CreatedDate = f.CreatedDate
