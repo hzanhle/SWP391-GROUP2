@@ -121,8 +121,8 @@ export default function Profile() {
         <section className="section page-offset">
           <div className="container">
             <div className="section-header">
-              <h1 className="section-title">Thông tin cá nhân</h1>
-              <p className="section-subtitle">Quản lý thông tin tài khoản và tài liệu xác minh của bạn.</p>
+              <h1 className="section-title">Personal Information</h1>
+              <p className="section-subtitle">Manage your account information and verification documents.</p>
             </div>
 
             {error && (
@@ -140,7 +140,7 @@ export default function Profile() {
                 marginBottom: '1.5rem',
                 textAlign: 'center',
               }}>
-                ✅ Cập nhật thành công!
+                ✅ Updated successfully!
               </div>
             )}
 
@@ -162,7 +162,7 @@ export default function Profile() {
                           fontSize: '1.2rem',
                         }}
                       >
-                        ✏️ Chỉnh sửa
+                        ✏️ Edit
                       </button>
                     )}
                   </div>
@@ -170,7 +170,7 @@ export default function Profile() {
                   {editing ? (
                     <form onSubmit={handleSubmit}>
                       <div style={{ marginBottom: '1.5rem' }}>
-                        <label htmlFor="fullName" className="label">Họ và tên</label>
+                        <label htmlFor="fullName" className="label">Full Name</label>
                         <input
                           id="fullName"
                           type="text"
@@ -178,7 +178,7 @@ export default function Profile() {
                           value={formData.fullName}
                           onChange={handleInputChange}
                           className="input"
-                          placeholder="Nhập họ và tên"
+                          placeholder="Enter full name"
                         />
                       </div>
 
@@ -192,11 +192,11 @@ export default function Profile() {
                           disabled
                           style={{ backgroundColor: '#f9f9f9', cursor: 'not-allowed' }}
                         />
-                        <p className="card-subtext" style={{ marginTop: '0.5rem' }}>Email không thể thay đổi</p>
+                        <p className="card-subtext" style={{ marginTop: '0.5rem' }}>Email cannot be changed</p>
                       </div>
 
                       <div style={{ marginBottom: '1.5rem' }}>
-                        <label htmlFor="phoneNumber" className="label">Số điện thoại</label>
+                        <label htmlFor="phoneNumber" className="label">Phone Number</label>
                         <input
                           id="phoneNumber"
                           type="tel"
@@ -205,18 +205,18 @@ export default function Profile() {
                           disabled
                           style={{ backgroundColor: '#f9f9f9', cursor: 'not-allowed' }}
                         />
-                        <p className="card-subtext" style={{ marginTop: '0.5rem' }}>Liên hệ hỗ trợ để thay đổi</p>
+                        <p className="card-subtext" style={{ marginTop: '0.5rem' }}>Contact support to change</p>
                       </div>
 
                       <div style={{ marginBottom: '1.5rem' }}>
-                        <label htmlFor="address" className="label">Địa chỉ</label>
+                        <label htmlFor="address" className="label">Address</label>
                         <textarea
                           id="address"
                           name="address"
                           value={formData.address}
                           onChange={handleInputChange}
                           className="input"
-                          placeholder="Nhập địa chỉ"
+                          placeholder="Enter address"
                           style={{ minHeight: '80px' }}
                         />
                       </div>
@@ -227,7 +227,7 @@ export default function Profile() {
                           type="submit"
                           disabled={submitting}
                         >
-                          {submitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+                          {submitting ? 'Saving...' : 'Save Changes'}
                         </CTA>
                         <button
                           type="button"
@@ -242,34 +242,34 @@ export default function Profile() {
                             fontSize: '1.4rem',
                           }}
                         >
-                          Hủy
+                          Cancel
                         </button>
                       </div>
                     </form>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                       <div>
-                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Họ và tên</p>
+                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Full Name</p>
                         <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
-                          {user?.fullName || user?.FullName || 'Chưa cập nhật'}
+                          {user?.fullName || user?.FullName || 'Not updated'}
                         </p>
                       </div>
                       <div>
                         <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Email</p>
                         <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
-                          {user?.email || user?.Email || 'Chưa cập nhật'}
+                          {user?.email || user?.Email || 'Not updated'}
                         </p>
                       </div>
                       <div>
-                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Số điện thoại</p>
+                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Phone Number</p>
                         <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
-                          {user?.phoneNumber || user?.PhoneNumber || 'Chưa cập nhật'}
+                          {user?.phoneNumber || user?.PhoneNumber || 'Not updated'}
                         </p>
                       </div>
                       <div>
-                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Địa chỉ</p>
+                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Address</p>
                         <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
-                          {user?.address || user?.Address || 'Chưa cập nhật'}
+                          {user?.address || user?.Address || 'Not updated'}
                         </p>
                       </div>
                     </div>
@@ -279,9 +279,9 @@ export default function Profile() {
 
               <div className="card">
                 <div className="card-body">
-                  <h3 className="card-title">Quản lý tài liệu</h3>
+                  <h3 className="card-title">Document Management</h3>
                   <p className="card-subtext" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
-                    Tải lên và quản lý các tài liệu xác minh của bạn.
+                    Upload and manage your verification documents.
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -291,12 +291,12 @@ export default function Profile() {
                       borderRadius: '0.5rem',
                       border: '1px solid #ddd',
                     }}>
-                      <p style={{ margin: 0, fontWeight: '500', marginBottom: '0.5rem' }}>Giấy phép lái xe</p>
+                      <p style={{ margin: 0, fontWeight: '500', marginBottom: '0.5rem' }}>Driver's License</p>
                       <p style={{ margin: '0 0 0.75rem 0', fontSize: '1.2rem', color: '#666' }}>
-                        Tải lên ảnh mặt trước và mặt sau
+                        Upload front and back photos
                       </p>
                       <CTA as="a" href="#profile-docs" variant="secondary" style={{ display: 'inline-block' }}>
-                        Quản lý GPLX
+                        Manage License
                       </CTA>
                     </div>
 
@@ -306,12 +306,12 @@ export default function Profile() {
                       borderRadius: '0.5rem',
                       border: '1px solid #ddd',
                     }}>
-                      <p style={{ margin: 0, fontWeight: '500', marginBottom: '0.5rem' }}>CCCD / CMND</p>
+                      <p style={{ margin: 0, fontWeight: '500', marginBottom: '0.5rem' }}>ID Card</p>
                       <p style={{ margin: '0 0 0.75rem 0', fontSize: '1.2rem', color: '#666' }}>
-                        Tải lên ảnh mặt trước và mặt sau
+                        Upload front and back photos
                       </p>
                       <CTA as="a" href="#profile-docs" variant="secondary" style={{ display: 'inline-block' }}>
-                        Quản lý CCCD
+                        Manage ID Card
                       </CTA>
                     </div>
                   </div>

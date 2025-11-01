@@ -59,7 +59,7 @@ export default function AdminUsers() {
   }, [token])
 
   async function onDelete(id) {
-    if (!confirm('Xóa người dùng này?')) return
+    if (!confirm('Delete this user?')) return
     try {
       setBusyId(id)
       await deleteUser(id, token)
@@ -121,7 +121,7 @@ export default function AdminUsers() {
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <Alert severity="error">
             <Typography variant="h6">Unauthorized</Typography>
-            <Typography>Bạn không có quyền truy cập trang Admin.</Typography>
+            <Typography>You do not have permission to access the Admin page.</Typography>
           </Alert>
         </Container>
       </AdminLayout>
@@ -136,10 +136,10 @@ export default function AdminUsers() {
             {/* Header */}
             <Box>
               <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
-                Quản lý người dùng
+                User Management
               </Typography>
               <Typography variant="body1" color="text.secondary">
-  Xóa, chuyển role Staff ⇄ Admin, đánh dấu cảnh báo.
+  Delete, switch roles between Staff and Admin, mark warnings.
 </Typography>
 
             </Box>
@@ -220,7 +220,7 @@ export default function AdminUsers() {
                     {users.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-  Không tìm thấy người dùng nào
+  No users found
 </TableCell>
                       </TableRow>
                     )}

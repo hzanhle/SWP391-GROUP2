@@ -24,13 +24,13 @@ export default function BookingDetail() {
         console.log('[BookingDetail] Hash:', hash, 'OrderIdParam:', orderIdParam, 'PendingOrderId:', pendingBooking.orderId, 'ActiveOrder:', activeOrder, 'FinalOrderId:', orderId)
 
         if (!orderId || isNaN(orderId)) {
-          setError('Không tìm thấy mã đơn hàng')
+          setError('Order code not found')
           return
         }
 
         const authToken = localStorage.getItem('auth.token')
         if (!authToken) {
-          setError('Vui lòng đăng nhập')
+          setError('Please log in')
           window.location.hash = 'login'
           return
         }
@@ -40,7 +40,7 @@ export default function BookingDetail() {
         setError(null)
       } catch (err) {
         console.error('Error fetching order details:', err)
-        setError(err.message || 'Không tải được chi tiết đơn hàng')
+        setError(err.message || 'Unable to load order details')
       } finally {
         setLoading(false)
       }
@@ -72,29 +72,29 @@ export default function BookingDetail() {
     if (currentStatus === 'Confirmed' || currentStatus === 'Pending') {
       return (
         <>
-          <CTA as="a" href={`#check-in?orderId=${order?.orderId || order?.OrderId}`} variant="primary">Check-in nhận xe</CTA>
-          <CTA as="a" href="#booking-new" variant="secondary">Đặt xe mới</CTA>
+          <CTA as="a" href={`#check-in?orderId=${order?.orderId || order?.OrderId}`} variant="primary">Check-in to Receive Vehicle</CTA>
+          <CTA as="a" href="#booking-new" variant="secondary">Book New Vehicle</CTA>
         </>
       )
     }
     if (currentStatus === 'Active') {
       return (
         <>
-          <CTA as="a" href="#return" variant="primary">Trả xe</CTA>
-          <CTA as="a" href="#booking-new" variant="secondary">Đặt xe mới</CTA>
+          <CTA as="a" href="#return" variant="primary">Return Vehicle</CTA>
+          <CTA as="a" href="#booking-new" variant="secondary">Book New Vehicle</CTA>
         </>
       )
     }
     if (currentStatus === 'Completed') {
       return (
         <>
-          <CTA as="a" href="#feedback" variant="primary">Gửi phản hồi</CTA>
-          <CTA as="a" href="#booking-new" variant="secondary">Đặt xe mới</CTA>
+          <CTA as="a" href="#feedback" variant="primary">Send Feedback</CTA>
+          <CTA as="a" href="#booking-new" variant="secondary">Book New Vehicle</CTA>
         </>
       )
     }
     return (
-      <CTA as="a" href="#booking-new" variant="primary">Đặt xe mới</CTA>
+      <CTA as="a" href="#booking-new" variant="primary">Book New Vehicle</CTA>
     )
   }
 
@@ -106,7 +106,7 @@ export default function BookingDetail() {
           <section className="section page-offset">
             <div className="container">
               <div className="text-center" style={{ padding: '4rem 0' }}>
-                <p>Đang tải...</p>
+                <p>Loading...</p>
               </div>
             </div>
           </section>
@@ -128,7 +128,7 @@ export default function BookingDetail() {
                   <div className="error-message">
                     <span>{error}</span>
                   </div>
-                  <CTA as="a" href="#booking" style={{ marginTop: '1rem' }}>Quay lại danh sách</CTA>
+                  <CTA as="a" href="#booking" style={{ marginTop: '1rem' }}>Back to List</CTA>
                 </div>
               </div>
             </div>
@@ -148,8 +148,8 @@ export default function BookingDetail() {
             <div className="container">
               <div className="card">
                 <div className="card-body text-center">
-                  <p>Không tìm thấy thông tin đơn hàng</p>
-                  <CTA as="a" href="#booking" style={{ marginTop: '1rem' }}>Quay lại</CTA>
+                  <p>Order information not found</p>
+                  <CTA as="a" href="#booking" style={{ marginTop: '1rem' }}>Back</CTA>
                 </div>
               </div>
             </div>
@@ -172,26 +172,26 @@ export default function BookingDetail() {
         <section id="booking" className="section page-offset" aria-labelledby="booking-detail-title">
           <div className="container">
             <div className="section-header">
-              <h1 id="booking-detail-title" className="section-title">Chi tiết đặt xe</h1>
-              <p className="section-subtitle">Theo dõi trạng thái và thao tác tiếp theo.</p>
+              <h1 id="booking-detail-title" className="section-title">Booking Details</h1>
+              <p className="section-subtitle">Track status and next actions.</p>
             </div>
 
             <div className="card">
               <div className="card-body">
                 <div className="row-between" style={{ marginBottom: '1.5rem' }}>
-                  <h3 className="card-title">Mã đơn: #{orderId}</h3>
+                  <h3 className="card-title">Order ID: #{orderId}</h3>
                   <span className={`badge ${getStatusBadgeClass(status)}`}>{status}</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
                   <div>
-                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Thời gian nhận xe</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Pickup Time</p>
                     <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
                       {fromDate.toLocaleString('vi-VN')}
                     </p>
                   </div>
                   <div>
-                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Thời gian trả xe</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Return Time</p>
                     <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
                       {toDate.toLocaleString('vi-VN')}
                     </p>
@@ -201,13 +201,13 @@ export default function BookingDetail() {
                 {order?.vehicle && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
                     <div>
-                      <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Xe</p>
+                      <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Vehicle</p>
                       <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
                         {order.vehicle.model || order.Vehicle?.Model || 'N/A'}
                       </p>
                     </div>
                     <div>
-                      <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Màu xe</p>
+                      <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Color</p>
                       <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
                         {order.vehicle.color || order.Vehicle?.Color || 'N/A'}
                       </p>
@@ -217,13 +217,13 @@ export default function BookingDetail() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
                   <div>
-                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Tổng tiền</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Total Amount</p>
                     <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.6rem', fontWeight: '500', color: '#ff4d30' }}>
                       ${Number(order?.totalCost || order?.TotalCost || 0).toFixed(2)}
                     </p>
                   </div>
                   <div>
-                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Phương thức thanh toán</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Payment Method</p>
                     <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
                       {order?.paymentMethod || order?.PaymentMethod || 'VNPay'}
                     </p>

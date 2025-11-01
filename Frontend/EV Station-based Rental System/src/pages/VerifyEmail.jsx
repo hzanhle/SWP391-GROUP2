@@ -25,14 +25,14 @@ export default function VerifyEmail() {
     const code = form.code.value.trim()
 
     try {
-      if (!email) throw new Error('Không tìm thấy email cần xác minh. Vui lòng đăng ký lại.')
+      if (!email) throw new Error('Email for verification not found. Please register again.')
       await api.verifyRegistrationOtp(email, code)
       setVerified(true)
       try { localStorage.removeItem('pendingVerificationEmail') } catch {}
-      window.alert('Xác minh thành công! Bạn có thể đăng nhập.')
+      window.alert('Verification successful! You can now log in.')
       window.location.hash = 'login'
     } catch (err) {
-      const msg = (err?.data && (err.data.message || err.data.Message)) || err?.message || 'Xác minh thất bại'
+      const msg = (err?.data && (err.data.message || err.data.Message)) || err?.message || 'Verification failed'
       setError(msg)
     } finally {
       setSubmitting(false)

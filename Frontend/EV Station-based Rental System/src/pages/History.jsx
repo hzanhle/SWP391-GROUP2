@@ -17,7 +17,7 @@ export default function History() {
         const authToken = localStorage.getItem('auth.token')
 
         if (!authUser || !authToken) {
-          setError('Vui lòng đăng nhập để xem lịch sử')
+          setError('Please log in to view history')
           return
         }
 
@@ -25,7 +25,7 @@ export default function History() {
         const userId = Number(user?.userId || user?.UserId || user?.id || user?.Id)
 
         if (!userId || isNaN(userId)) {
-          setError('Không thể xác định ID người dùng')
+          setError('Unable to determine user ID')
           return
         }
 
@@ -35,7 +35,7 @@ export default function History() {
         setError(null)
       } catch (err) {
         console.error('Error fetching booking history:', err)
-        setError(err.message || 'Không tải được lịch sử thuê')
+        setError(err.message || 'Unable to load rental history')
       } finally {
         setLoading(false)
       }
@@ -48,7 +48,7 @@ export default function History() {
     const statusMap = {
       'Pending': 'yellow',
       'Confirmed': 'blue',
-      'InProgress': 'green',
+      'Active': 'green',
       'Completed': 'green',
       'Cancelled': 'red',
     }
@@ -64,13 +64,13 @@ export default function History() {
         <CTA
           as="button"
           onClick={() => {
-            localStorage.removeItem('InProgressOrder')
+            localStorage.removeItem('activeOrder')
             localStorage.setItem('pending_booking', JSON.stringify(order))
             window.location.hash = 'payment'
           }}
           variant="primary"
         >
-          Thanh toán
+          Pay Now
         </CTA>
       )
     }
@@ -87,14 +87,14 @@ export default function History() {
       )
     }
 
-    if (status === 'InProgress') {
+    if (status === 'Active') {
       return (
         <CTA
           as="a"
           href={`#return?orderId=${orderId}`}
           variant="primary"
         >
-          Trả xe
+          Return Vehicle
         </CTA>
       )
     }
@@ -106,7 +106,7 @@ export default function History() {
           href="#feedback"
           variant="primary"
         >
-          Đánh giá
+          Rate
         </CTA>
       )
     }
@@ -117,13 +117,13 @@ export default function History() {
         onClick={() => {
           const orderId = order.orderId || order.OrderId
           console.log('[History] Viewing order:', orderId)
-          localStorage.removeItem('InProgressOrder')
+          localStorage.removeItem('activeOrder')
           localStorage.setItem('pending_booking', JSON.stringify(order))
           window.location.hash = `booking?orderId=${orderId}`
         }}
         variant="secondary"
       >
-        Xem
+        View
       </CTA>
     )
   }
@@ -135,14 +135,14 @@ export default function History() {
         <section id="history" className="section page-offset" aria-labelledby="history-title">
           <div className="container">
             <div className="section-header">
-              <h1 id="history-title" className="section-title">Lịch sử thuê</h1>
-              <p className="section-subtitle">Xem lại chuyến thuê và chi phí.</p>
+              <h1 id="history-title" className="section-title">Rental History</h1>
+              <p className="section-subtitle">Review your rentals and expenses.</p>
             </div>
 
             {loading && (
               <div className="card">
                 <div className="card-body text-center">
-                  <p>Đang tải lịch sử...</p>
+                  <p>Loading history...</p>
                 </div>
               </div>
             )}
@@ -160,8 +160,8 @@ export default function History() {
             {!loading && !error && orders.length === 0 && (
               <div className="card">
                 <div className="card-body text-center">
-                  <p className="card-subtext">Bạn chưa có lịch sử thuê xe nào.</p>
-                  <CTA as="a" href="#booking-new" style={{ marginTop: '1rem' }}>Đặt xe ngay</CTA>
+                  <p className="card-subtext">You have no rental history yet.</p>
+                  <CTA as="a" href="#booking-new" style={{ marginTop: '1rem' }}>Book Now</CTA>
                 </div>
               </div>
             )}

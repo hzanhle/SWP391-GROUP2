@@ -63,11 +63,12 @@ export function sendRegistrationOtp(user) {
 }
 
 export function verifyRegistrationOtp(email, otp) {
-  const q = new URLSearchParams({ otp: String(otp) }).toString()
-  // Controller expects email in body (as raw string) and otp from query
-  return request(`/api/User/register/verify-otp?${q}`, {
+  return request('/api/User/register/verify-otp', {
     method: 'POST',
-    body: String(email),
+    body: {
+      email: String(email),
+      otp: String(otp),
+    },
   })
 }
 
@@ -208,8 +209,13 @@ export function sendPasswordResetOtp(email) {
 }
 
 export function verifyPasswordResetOtp(email, otp) {
-  const q = new URLSearchParams({ email: String(email) }).toString()
-  return request(`/api/User/verify-reset-otp?${q}`, { method: 'POST', body: String(otp) })
+  return request('/api/User/verify-reset-otp', {
+    method: 'POST',
+    body: {
+      email: String(email),
+      otp: String(otp),
+    },
+  })
 }
 
 export function resetPassword(payload) {

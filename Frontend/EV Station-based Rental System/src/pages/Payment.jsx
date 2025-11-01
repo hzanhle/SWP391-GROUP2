@@ -25,7 +25,7 @@ export default function Payment() {
       try {
         const authToken = localStorage.getItem('auth.token')
         if (!authToken) {
-          setError('Vui lòng đăng nhập')
+          setError('Please log in')
           window.location.hash = 'login'
           return
         }
@@ -35,7 +35,7 @@ export default function Payment() {
 
         if (!pendingBooking) {
           console.error('[Payment] No pending_booking found in localStorage')
-          setError('Không tìm thấy thông tin đơn hàng. Vui lòng b���t đầu lại.')
+          setError('Order information not found. Please start over.')
           setTimeout(() => {
             window.location.hash = 'booking-new'
           }, 1000)
@@ -48,7 +48,7 @@ export default function Payment() {
           console.log('[Payment] Parsed booking data:', bookingData)
         } catch (parseErr) {
           console.error('[Payment] Error parsing booking data:', parseErr)
-          setError('Dữ liệu đơn hàng không hợp lệ. Vui lòng bắt đầu lại.')
+          setError('Order data is invalid. Please start over.')
           setTimeout(() => {
             window.location.hash = 'booking-new'
           }, 1000)
@@ -157,7 +157,7 @@ export default function Payment() {
         setLoading(false)
       } catch (err) {
         console.error('Error initializing payment:', err)
-        setError(err.message || 'Lỗi khi tải trang thanh toán')
+        setError(err.message || 'Error loading payment page')
         setLoading(false)
       }
     }
@@ -180,7 +180,7 @@ export default function Payment() {
 
   async function handleCreatePayment() {
     if (!booking) {
-      setPaymentError('Không tìm thấy thông tin đơn hàng')
+      setPaymentError('Order information not found')
       return
     }
 
@@ -195,11 +195,11 @@ export default function Payment() {
         // Redirect to VNPay
         window.location.href = paymentRes.data.paymentUrl
       } else {
-        setPaymentError('Không thể tạo URL thanh toán')
+        setPaymentError('Unable to create payment URL')
       }
     } catch (err) {
       console.error('Error creating payment:', err)
-      setPaymentError(err.message || 'Lỗi khi tạo thanh toán. Vui lòng thử lại.')
+      setPaymentError(err.message || 'Error creating payment. Please try again.')
     } finally {
       setPaymentProcessing(false)
     }
@@ -220,7 +220,7 @@ export default function Payment() {
       window.location.hash = 'booking'
     } catch (err) {
       console.error('Error starting trip:', err)
-      setPaymentError(err.message || 'Không thể bắt đầu chuyến')
+      setPaymentError(err.message || 'Unable to start rental')
     }
   }
 
@@ -265,7 +265,7 @@ export default function Payment() {
           <section className="section page-offset">
             <div className="container">
               <div className="text-center" style={{ padding: '4rem 0' }}>
-                <p style={{ fontSize: '1.8rem' }}>Đang tải...</p>
+                <p style={{ fontSize: '1.8rem' }}>Loading...</p>
               </div>
             </div>
           </section>
@@ -285,36 +285,36 @@ export default function Payment() {
               <div className="card">
                 <div className="card-body" style={{ textAlign: 'center', padding: '4rem' }}>
                   <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✅</div>
-                  <h2 className="card-title" style={{ color: '#2a6817', marginBottom: '1rem' }}>Thanh toán thành công!</h2>
+                  <h2 className="card-title" style={{ color: '#2a6817', marginBottom: '1rem' }}>Payment Successful!</h2>
                   <p className="card-subtext" style={{ marginBottom: '2rem', fontSize: '1.6rem' }}>
-                    Đơn hàng của bạn đã được xác nhận. <br />
-                    Mã đơn hàng: <strong>#{booking?.orderId}</strong>
+                    Your order has been confirmed. <br />
+                    Order ID: <strong>#{booking?.orderId}</strong>
                   </p>
                   <p className="card-subtext" style={{ marginBottom: '1rem' }}>
-                    Tổng tiền: <strong style={{ fontSize: '1.8rem', color: '#ff4d30' }}>${booking?.totalCost?.toFixed(2)}</strong>
+                    Total Amount: <strong style={{ fontSize: '1.8rem', color: '#ff4d30' }}>${booking?.totalCost?.toFixed(2)}</strong>
                   </p>
 
                   {contractUrl ? (
                     <div style={{ display: 'grid', gap: '1.5rem' }}>
                       <div style={{ backgroundColor: '#f5f5f5', padding: '2rem', borderRadius: '8px' }}>
-                        <h3 style={{ marginBottom: '1rem', fontSize: '1.4rem', fontWeight: '600' }}>📄 Hợp đồng thuê xe</h3>
+                        <h3 style={{ marginBottom: '1rem', fontSize: '1.4rem', fontWeight: '600' }}>📄 Rental Contract</h3>
                         <iframe
                           src={`${contractUrl}#toolbar=0&navpanes=0&scrollbar=0`}
                           style={{ width: '100%', height: '600px', border: '1px solid #ddd', borderRadius: '4px' }}
                           title="Contract PDF"
                         />
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-                          <a href={contractUrl} download target="_blank" rel="noreferrer" className="btn" style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>⬇️ Tải xuống</a>
-                          <a href={contractUrl} target="_blank" rel="noreferrer" className="btn" style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>👁️ Xem đầy đủ</a>
+                          <a href={contractUrl} download target="_blank" rel="noreferrer" className="btn" style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>⬇️ Download</a>
+                          <a href={contractUrl} target="_blank" rel="noreferrer" className="btn" style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>👁️ View Full</a>
                         </div>
                       </div>
-                      <CTA as="button" onClick={handleStartTrip} variant="primary">Bắt đầu chuyến</CTA>
-                      <CTA as="button" onClick={() => setShowFeedback(true)} variant="ghost">Để lại đánh giá sau khi trả xe</CTA>
+                      <CTA as="button" onClick={handleStartTrip} variant="primary">Start Rental</CTA>
+                      <CTA as="button" onClick={() => setShowFeedback(true)} variant="ghost">Leave Rating After Return</CTA>
                     </div>
                   ) : (
                     <div>
-                      <p className="card-subtext">Hợp đồng đang được tạo — bạn sẽ nhận email và link tải khi hoàn tất.</p>
-                      <CTA as="button" onClick={handleConfirmSuccess} variant="primary">Xem chi tiết đơn hàng</CTA>
+                      <p className="card-subtext">Contract is being created — you will receive an email with download link when complete.</p>
+                      <CTA as="button" onClick={handleConfirmSuccess} variant="primary">View Order Details</CTA>
                     </div>
                   )}
 
@@ -339,19 +339,19 @@ export default function Payment() {
               <div className="card">
                 <div className="card-body" style={{ textAlign: 'center', padding: '4rem' }}>
                   <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>❌</div>
-                  <h2 className="card-title" style={{ color: '#d32f2f', marginBottom: '1rem' }}>Thanh toán thất bại</h2>
+                  <h2 className="card-title" style={{ color: '#d32f2f', marginBottom: '1rem' }}>Payment Failed</h2>
                   <p className="card-subtext" style={{ marginBottom: '2rem', fontSize: '1.6rem' }}>
                     {error}
                   </p>
                   <p className="card-subtext" style={{ marginBottom: '2rem' }}>
-                    Mã đơn hàng: <strong>#{booking?.orderId}</strong>
+                    Order ID: <strong>#{booking?.orderId}</strong>
                   </p>
                   <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                     <CTA as="button" onClick={handleRetry} variant="primary">
-                      Thử lại thanh toán
+                      Retry Payment
                     </CTA>
                     <CTA as="a" href="#booking-new" variant="secondary">
-                      Đặt xe mới
+                      Book New Vehicle
                     </CTA>
                   </div>
                 </div>
@@ -371,8 +371,8 @@ export default function Payment() {
         <section className="section page-offset">
           <div className="container">
             <div className="section-header">
-              <h1 className="section-title">Thanh toán</h1>
-              <p className="section-subtitle">Hoàn tất thanh toán để xác nhận đơn hàng của bạn.</p>
+              <h1 className="section-title">Payment</h1>
+              <p className="section-subtitle">Complete payment to confirm your order.</p>
             </div>
 
             {error && (
@@ -384,36 +384,36 @@ export default function Payment() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
               <div className="card">
                 <div className="card-body">
-                  <h3 className="card-title">Tóm tắt đơn hàng</h3>
+                  <h3 className="card-title">Order Summary</h3>
                   
                   {booking ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.5rem' }}>
                       <div>
-                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Mã đơn hàng</h4>
+                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Order ID</h4>
                         <p style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#ff4d30' }}>{booking.orderId ? `#${booking.orderId}` : 'N/A'}</p>
                       </div>
 
                       <div>
-                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Xe</h4>
+                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Vehicle</h4>
                         <p className="card-subtext" style={{ marginBottom: '0.5rem' }}>{booking.vehicleInfo?.model || 'N/A'}</p>
-                        <p className="card-subtext">Màu: {booking.vehicleInfo?.color || 'N/A'}</p>
+                        <p className="card-subtext">Color: {booking.vehicleInfo?.color || 'N/A'}</p>
                       </div>
 
                       <div>
-                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Điểm thuê</h4>
+                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Station</h4>
                         <p className="card-subtext">{booking.vehicleInfo?.station || 'N/A'}</p>
                       </div>
 
                       <div>
-                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Thời gian</h4>
+                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Time</h4>
                         {booking.dates?.from && (
                           <p className="card-subtext">
-                            Nhận: {new Date(booking.dates.from).toLocaleString('vi-VN')}
+                            Pickup: {new Date(booking.dates.from).toLocaleString('vi-VN')}
                           </p>
                         )}
                         {booking.dates?.to && (
                           <p className="card-subtext">
-                            Trả: {new Date(booking.dates.to).toLocaleString('vi-VN')}
+                            Return: {new Date(booking.dates.to).toLocaleString('vi-VN')}
                           </p>
                         )}
                       </div>
@@ -422,13 +422,13 @@ export default function Payment() {
 
                       <div style={{ backgroundColor: '#f9f9f9', padding: '1rem', borderRadius: '0.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                          <span style={{ fontSize: '1.4rem', color: '#666' }}>Chi phí thuê:</span>
+                          <span style={{ fontSize: '1.4rem', color: '#666' }}>Rental Fee:</span>
                           <span style={{ fontSize: '1.4rem', fontWeight: '500' }}>${(booking.totalCost || 0).toFixed(2)}</span>
                         </div>
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem' }}>
-                        <h4 style={{ fontSize: '1.8rem', color: '#ff4d30', margin: 0 }}>Tổng thanh toán:</h4>
+                        <h4 style={{ fontSize: '1.8rem', color: '#ff4d30', margin: 0 }}>Total Payment:</h4>
                         <h2 style={{ fontSize: '2.4rem', color: '#ff4d30', margin: 0 }}>
                           ${(booking.totalCost || 0).toFixed(2)}
                         </h2>
@@ -509,11 +509,11 @@ export default function Payment() {
                     fontSize: '1.4rem',
                     color: '#666'
                   }}>
-                    <h4 style={{ marginBottom: '1rem', fontSize: '1.6rem', color: '#333' }}>ℹ️ Lưu ý</h4>
+                    <h4 style={{ marginBottom: '1rem', fontSize: '1.6rem', color: '#333' }}>ℹ️ Note</h4>
                     <ul style={{ marginLeft: '1.5rem', lineHeight: '1.8' }}>
-                      <li>Bạn sẽ được chuyển hướng đến trang thanh to��n VNPay</li>
-                      <li>Vui lòng không đóng trình duyệt khi đang thanh toán</li>
-                      <li>Sau khi thanh toán thành công, hệ thống sẽ tự động xác nhận đơn hàng</li>
+                      <li>You will be redirected to the VNPay payment page</li>
+                      <li>Please do not close your browser while paying</li>
+                      <li>After successful payment, the system will automatically confirm your order</li>
                     </ul>
                   </div>
                 </div>

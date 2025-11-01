@@ -52,7 +52,7 @@ export default function AdminDashboard() {
         setUserGrowth(Array.isArray(ug.data) ? ug.data : [])
         setError('')
       } catch (e) {
-        setError(e.message || 'Không tải được dữ liệu dashboard')
+        setError(e.message || 'Unable to load dashboard data')
       } finally {
         setLoading(false)
       }
@@ -77,8 +77,8 @@ export default function AdminDashboard() {
           <div className="container">
             <div className="card card-body">
               <h1 className="section-title">Unauthorized</h1>
-              <p className="section-subtitle">Bạn không có quyền truy cập Dashboard Admin.</p>
-              <a className="btn" href="#">Về trang chủ</a>
+              <p className="section-subtitle">You do not have permission to access the Admin Dashboard.</p>
+              <a className="btn" href="#">Go to Home</a>
             </div>
           </div>
         </section>
@@ -91,8 +91,8 @@ export default function AdminDashboard() {
       <section className="section">
         <div className="container">
           <div className="section-header">
-            <h1 className="section-title">Bảng điều khiển</h1>
-            <p className="section-subtitle">Tổng quan hệ thống và các chỉ số chính</p>
+            <h1 className="section-title">Dashboard</h1>
+            <p className="section-subtitle">System overview and key metrics</p>
           </div>
 
           {error ? (
@@ -100,26 +100,26 @@ export default function AdminDashboard() {
           ) : null}
 
           {loading ? (
-            <div className="card card-body">Đang tải...</div>
+            <div className="card card-body">Loading...</div>
           ) : (
             <div className="admin-grid">
-              <div className="col-12 lg-3"><StatCard title="Tổng người dùng" value={summary?.totalUsers ?? summary?.TotalUsers ?? 0} caption="Active/Total" /></div>
-              <div className="col-12 lg-3"><StatCard title="Đơn thuê" value={summary?.totalBookings ?? summary?.TotalBookings ?? 0} /></div>
-              <div className="col-12 lg-3"><StatCard title="Doanh thu (năm)" value={(summary?.yearlyRevenue ?? summary?.YearlyRevenue ?? 0).toLocaleString()} /></div>
-              <div className="col-12 lg-3"><StatCard title="Số trạm" value={summary?.totalStations ?? summary?.TotalStations ?? 0} /></div>
+              <div className="col-12 lg-3"><StatCard title="Total Users" value={summary?.totalUsers ?? summary?.TotalUsers ?? 0} caption="Active/Total" /></div>
+              <div className="col-12 lg-3"><StatCard title="Bookings" value={summary?.totalBookings ?? summary?.TotalBookings ?? 0} /></div>
+              <div className="col-12 lg-3"><StatCard title="Revenue (Year)" value={(summary?.yearlyRevenue ?? summary?.YearlyRevenue ?? 0).toLocaleString()} /></div>
+              <div className="col-12 lg-3"><StatCard title="Total Stations" value={summary?.totalStations ?? summary?.TotalStations ?? 0} /></div>
 
               <div className="col-12 lg-8">
                 <Card className="admin-card">
-                  <CardHeader title="Doanh thu theo tháng" />
+                  <CardHeader title="Revenue by Month" />
                   <CardContent>
                     {revenueSeries && revenueSeries.values.length > 0 ? (
                       <LineChart
                         height={280}
-                        series={[{ data: revenueSeries.values.filter(v => v !== null && v !== undefined), label: 'Doanh thu' }]}
+                        series={[{ data: revenueSeries.values.filter(v => v !== null && v !== undefined), label: 'Revenue' }]}
                         xAxis={[{ scaleType: 'point', data: revenueSeries.months.map((m, idx) => `T${m}`).filter(label => label !== null && label !== undefined) }]}
                       />
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
+                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>No data</div>
                     )}
                   </CardContent>
                 </Card>
@@ -127,13 +127,13 @@ export default function AdminDashboard() {
 
               <div className="col-12 lg-4">
                 <Card className="admin-card">
-                  <CardHeader title="Top xe sử dụng" />
+                  <CardHeader title="Top Vehicles" />
                   <CardContent>
                     {topVehicles && topVehicles.length > 0 ? (
                       <BarChart
                         height={280}
                         yAxis={[{ scaleType: 'band', data: (topVehicles || []).map((v, idx) => (v.modelName || v.ModelName || v.name || v.Name || `Vehicle ${idx + 1}`)).filter(name => name !== null && name !== undefined) }]}
-                        series={[{ data: (topVehicles || []).map(v => Number(v.usageCount ?? v.UsageCount ?? v.count ?? 0)), label: 'Lượt thuê' }]}
+                        series={[{ data: (topVehicles || []).map(v => Number(v.usageCount ?? v.UsageCount ?? v.count ?? 0)), label: 'Rentals' }]}
                         layout="horizontal"
                       />
                     ) : (
@@ -145,7 +145,7 @@ export default function AdminDashboard() {
 
               <div className="col-12 lg-6">
                 <Card className="admin-card">
-                  <CardHeader title="Tăng trưởng người dùng" />
+                  <CardHeader title="User Growth" />
                   <CardContent>
                     {userGrowth && userGrowth.length > 0 ? (
                       <LineChart
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
 
               <div className="col-12 lg-6">
                 <Card className="admin-card">
-                  <CardHeader title="Trạng thái trạm" />
+                  <CardHeader title="Station Status" />
                   <CardContent>
                     {stations && stations.length > 0 ? (
                       <PieChart
@@ -173,14 +173,14 @@ export default function AdminDashboard() {
                             const on = items.filter(s => s.isOperational ?? s.IsOperational).length;
                             const off = items.length - on;
                             return [
-                              { id: 0, value: on, label: 'Hoạt động' },
-                              { id: 1, value: off, label: 'Bảo trì' },
+                              { id: 0, value: on, label: 'Operating' },
+                              { id: 1, value: off, label: 'Maintenance' },
                             ];
                           })()).filter(item => item && item.value !== null && item.value !== undefined)
                         }]}
                       />
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
+                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>No data</div>
                     )}
                   </CardContent>
                 </Card>

@@ -60,12 +60,12 @@ export default function AdminStaffShift() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Xóa ca làm việc này?')) return
+    if (!confirm('Delete this shift?')) return
     try {
       await staffApi.deleteShift(id, token)
       setShifts(prev => prev.filter(s => Number(s.id ?? s.Id) !== Number(id)))
     } catch (e) {
-      alert(e.message || 'Xóa thất bại')
+      alert(e.message || 'Delete failed')
     }
   }
 
@@ -78,10 +78,10 @@ export default function AdminStaffShift() {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
                 <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
-                  Ca làm việc nhân viên
+                  Staff Shifts
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-  Quản lý ca làm việc - Tạo / Xóa / Xem
+  Manage shifts - Create / Delete / View
 </Typography>
               </Box>
               <Button 
@@ -89,7 +89,7 @@ export default function AdminStaffShift() {
                 startIcon={<AddIcon />}
                 onClick={() => setOpenDialog(true)}
               >
-                Thêm ca
+                Add Shift
               </Button>
             </Box>
 
@@ -111,12 +111,12 @@ export default function AdminStaffShift() {
                   <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 600 }}>ID</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Nhân viên</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Trạm</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Ngày</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Giờ bắt đầu</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Giờ kết thúc</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="center">Hành động</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Staff</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Station</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Start Time</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>End Time</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -142,7 +142,7 @@ export default function AdminStaffShift() {
                     {!(shifts || []).length && (
                       <TableRow>
                         <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-  Không có ca làm việc
+  No shifts
 </TableCell>
                       </TableRow>
                     )}
@@ -153,7 +153,7 @@ export default function AdminStaffShift() {
 
             {/* Create Shift Dialog */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-              <DialogTitle>Tạo ca làm việc mới</DialogTitle>
+              <DialogTitle>Create New Shift</DialogTitle>
               <DialogContent sx={{ pt: 2 }}>
                 <Stack spacing={2}>
                   <TextField

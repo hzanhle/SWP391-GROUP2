@@ -111,13 +111,13 @@ export default function AdminModels() {
   useEffect(() => { load() }, [])
 
   async function handleDelete(m) {
-    if (!confirm('Xóa mẫu này?')) return
+    if (!confirm('Delete this model?')) return
     try {
       setLoading(true)
       await deleteModel(m.modelId, token)
       await load()
     } catch (e) {
-      alert(e?.message || 'Xóa thất bại')
+      alert(e?.message || 'Delete failed')
     } finally {
       setLoading(false)
     }
@@ -135,7 +135,7 @@ export default function AdminModels() {
       setOpenDialog(false)
       await load()
     } catch (e) {
-      alert(e?.message || 'Lưu thất bại')
+      alert(e?.message || 'Save failed')
     } finally {
       setLoading(false)
     }
@@ -150,10 +150,10 @@ export default function AdminModels() {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
                 <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
-                  Quản lý mẫu xe
+                  Model Management
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Thêm, sửa, xóa mẫu xe hai bánh.
+                  Add, edit, delete two-wheel vehicle models.
                 </Typography>
               </Box>
               <Button 
@@ -161,7 +161,7 @@ export default function AdminModels() {
                 startIcon={<AddIcon />}
                 onClick={() => { setEditing({}); setOpenDialog(true) }}
               >
-                Thêm mẫu
+                Add Model
               </Button>
             </Box>
 
@@ -177,7 +177,7 @@ export default function AdminModels() {
               <CardContent>
                 <TextField 
                   fullWidth
-                  placeholder="Tìm kiếm theo tên mẫu hoặc hãng..."
+                  placeholder="Search by model name or brand..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   variant="outlined"
@@ -196,13 +196,13 @@ export default function AdminModels() {
                 <Table>
                   <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>Tên mẫu</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Hãng</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="right">Năm</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="right">Tốc độ (km/h)</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="right">Pin (mAh)</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="right">Giá (VNĐ)</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="center">Hành động</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Model Name</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Brand</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Year</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Speed (km/h)</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Battery (mAh)</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Price (VND)</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -235,7 +235,7 @@ export default function AdminModels() {
                     {filtered.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                          Không tìm thấy mẫu nào
+                          No models found
                         </TableCell>
                       </TableRow>
                     )}

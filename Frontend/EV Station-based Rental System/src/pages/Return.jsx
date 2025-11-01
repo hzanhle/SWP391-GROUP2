@@ -25,7 +25,7 @@ export default function Return() {
       const orderId = Number(orderIdParam || activeOrder || pending.orderId)
 
       if (!orderId) {
-        setError('Không tìm thấy mã đơn hàng để hoàn tất trả xe')
+        setError('Order code for return not found')
         return
       }
 
@@ -36,7 +36,7 @@ export default function Return() {
       setShowFeedback(true)
     } catch (err) {
       console.error('Error completing rental:', err)
-      setError(err.message || 'Lỗi khi hoàn thành trả xe')
+      setError(err.message || 'Error completing rental return')
     } finally {
       setLoading(false)
     }
@@ -63,7 +63,7 @@ export default function Return() {
       window.location.hash = 'booking'
     } catch (err) {
       console.error('Error submitting feedback:', err)
-      setError(err.message || 'Lỗi khi gửi đánh giá')
+      setError(err.message || 'Error sending rating')
       throw err
     }
   }
@@ -75,8 +75,8 @@ export default function Return() {
         <section id="return" className="section page-offset" aria-labelledby="return-title">
           <div className="container">
             <div className="section-header">
-              <h1 id="return-title" className="section-title">Trả xe</h1>
-              <p className="section-subtitle">Kiểm tra tình trạng và hoàn tất thanh toán nếu phát sinh.</p>
+              <h1 id="return-title" className="section-title">Return Vehicle</h1>
+              <p className="section-subtitle">Check condition and complete payment if applicable.</p>
             </div>
 
             {error && <div className="error-message" style={{ marginBottom: '1rem' }}>{error}</div>}
@@ -85,24 +85,24 @@ export default function Return() {
               <form className="card-body" onSubmit={handleSubmit}>
                 <div className="docs-grid">
                   <div className="doc-card">
-                    <h3 className="card-title">Ảnh sau khi sử dụng</h3>
+                    <h3 className="card-title">Photos After Use</h3>
                     <div className="doc-uploaders">
-                      <DocumentUploader label="Mặt trước" />
-                      <DocumentUploader label="Mặt sau" />
-                      <DocumentUploader label="Bên trái" />
-                      <DocumentUploader label="Bên phải" />
+                      <DocumentUploader label="Front" />
+                      <DocumentUploader label="Back" />
+                      <DocumentUploader label="Left" />
+                      <DocumentUploader label="Right" />
                     </div>
                   </div>
                   <div className="doc-card">
                     <h3 className="card-title">Checklist</h3>
-                    <label className="row"><input type="checkbox" required /> Không trầy xước mới</label>
-                    <label className="row"><input type="checkbox" required /> Mức pin theo hợp đồng</label>
-                    <label className="row"><input type="checkbox" required /> Phụ kiện đầy đủ</label>
+                    <label className="row"><input type="checkbox" required /> No new scratches</label>
+                    <label className="row"><input type="checkbox" required /> Battery level as per contract</label>
+                    <label className="row"><input type="checkbox" required /> All accessories complete</label>
                   </div>
                 </div>
                 <div className="row-between">
-                  <a className="nav-link" href="#booking">Quay lại</a>
-                  <CTA as="button" type="submit" disabled={loading}>{loading ? 'Đang xử lý...' : 'Xác nhận trả xe'}</CTA>
+                  <a className="nav-link" href="#booking">Back</a>
+                  <CTA as="button" type="submit" disabled={loading}>{loading ? 'Processing...' : 'Confirm Return'}</CTA>
                 </div>
               </form>
             </div>

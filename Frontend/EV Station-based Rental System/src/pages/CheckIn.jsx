@@ -15,7 +15,7 @@ export default function CheckIn() {
     e.preventDefault()
 
     if (!agreed) {
-      setError('Vui lòng xác nhận rằng bạn đã kiểm tra xe')
+      setError('Please confirm that you have inspected the vehicle')
       return
     }
 
@@ -33,13 +33,13 @@ export default function CheckIn() {
       const orderId = Number(orderIdParam || activeOrder || pending.orderId)
 
       if (!orderId || isNaN(orderId)) {
-        setError('Không tìm thấy mã đơn hàng để check-in')
+        setError('Order code for check-in not found')
         return
       }
 
       const token = localStorage.getItem('auth.token')
       if (!token) {
-        setError('Vui lòng đăng nhập lại')
+        setError('Please log in again')
         return
       }
 
@@ -54,7 +54,7 @@ export default function CheckIn() {
       }, 2000)
     } catch (err) {
       console.error('Error during check-in:', err)
-      setError(err.message || 'Lỗi khi check-in. Vui lòng thử lại.')
+      setError(err.message || 'Error during check-in. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -70,9 +70,9 @@ export default function CheckIn() {
               <div className="card">
                 <div className="card-body" style={{ textAlign: 'center', padding: '4rem' }}>
                   <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✅</div>
-                  <h2 className="card-title" style={{ color: '#2a6817', marginBottom: '1rem' }}>Check-in thành công!</h2>
+                  <h2 className="card-title" style={{ color: '#2a6817', marginBottom: '1rem' }}>Check-in Successful!</h2>
                   <p className="card-subtext" style={{ marginBottom: '2rem', fontSize: '1.6rem' }}>
-                    Bạn đã nhận xe thành công. Chuyến đi vui vẻ!
+                    You have successfully received the vehicle. Enjoy your trip!
                   </p>
                   <p className="card-subtext">Đang chuyển hướng...</p>
                 </div>
@@ -92,8 +92,8 @@ export default function CheckIn() {
         <section id="check-in" className="section page-offset" aria-labelledby="checkin-title">
           <div className="container">
             <div className="section-header">
-              <h1 id="checkin-title" className="section-title">Check-in nhận xe</h1>
-              <p className="section-subtitle">Chụp ảnh và xác nhận tình trạng trước khi nhận xe.</p>
+              <h1 id="checkin-title" className="section-title">Check-in to Receive Vehicle</h1>
+              <p className="section-subtitle">Take photos and confirm vehicle condition before receiving.</p>
             </div>
 
             {error && (
@@ -106,17 +106,17 @@ export default function CheckIn() {
               <form className="card-body" onSubmit={handleSubmit}>
                 <div className="docs-grid">
                   <div className="doc-card">
-                    <h3 className="card-title">Ảnh tình trạng xe</h3>
+                    <h3 className="card-title">Vehicle Condition Photos</h3>
                     <div className="doc-uploaders">
-                      <DocumentUploader label="Mặt trước" />
-                      <DocumentUploader label="Mặt sau" />
-                      <DocumentUploader label="Bên trái" />
-                      <DocumentUploader label="Bên phải" />
+                      <DocumentUploader label="Front" />
+                      <DocumentUploader label="Back" />
+                      <DocumentUploader label="Left" />
+                      <DocumentUploader label="Right" />
                     </div>
                   </div>
                   <div className="doc-card">
-                    <h3 className="card-title">Xác nhận</h3>
-                    <p className="card-subtext">Tôi xác nhận đã kiểm tra xe và đồng ý điều khoản thuê.</p>
+                    <h3 className="card-title">Confirmation</h3>
+                    <p className="card-subtext">I confirm that I have inspected the vehicle and agree to the rental terms.</p>
                     <label className="row">
                       <input
                         type="checkbox"
@@ -125,14 +125,14 @@ export default function CheckIn() {
                         required
                         aria-label="Agree"
                       />
-                      Tôi đồng ý
+                      I Agree
                     </label>
                   </div>
                 </div>
                 <div className="row-between">
-                  <a className="nav-link" href="#booking">Quay lại</a>
+                  <a className="nav-link" href="#booking">Back</a>
                   <CTA as="button" type="submit" disabled={loading || !agreed}>
-                    {loading ? 'Đang xử lý...' : 'Hoàn tất check-in'}
+                    {loading ? 'Processing...' : 'Complete Check-in'}
                   </CTA>
                 </div>
               </form>
