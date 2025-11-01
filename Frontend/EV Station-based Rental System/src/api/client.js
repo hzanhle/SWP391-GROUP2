@@ -185,9 +185,9 @@ export function clearNotifications(userId, token) {
   return request(`/api/Notification/${userId}`, { method: 'DELETE', token })
 }
 
-// Staff verification actions
+// Staff verification actions (Admin/Employee only - not for regular staff)
 export function setCitizenInfoStatus(userId, isApproved, token) {
-  return request(`/api/CitizenInfo/set-status/${userId}&${isApproved}`, { method: 'POST', token })
+  return request(`/api/CitizenInfo/status/${userId}/${isApproved}`, { method: 'POST', token })
 }
 
 export function setDriverLicenseStatus(userId, isApproved, token) {

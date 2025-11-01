@@ -212,9 +212,9 @@ namespace UserService.Controllers
         }
 
         // ============================================
-        // ✅ Admin + Employee: duyệt hoặc từ chối hồ sơ
+        // ✅ Admin + Employee + Staff: duyệt hoặc từ chối hồ sơ
         // ============================================
-        [Authorize(Roles = "Admin,Employee")]
+        [Authorize(Roles = "Admin,Employee,Staff")]
         [HttpPost("set-status/{userId}/{isApproved}")]
         public async Task<IActionResult> SetStatus(int userId, bool isApproved)
         {

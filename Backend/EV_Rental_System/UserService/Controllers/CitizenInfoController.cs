@@ -213,7 +213,7 @@ namespace UserService.Controllers
         // ============================================
         // 🔹 Duyệt hoặc từ chối CCCD
         // ============================================
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff,Employee")]
         [HttpPost("status/{userId:int}/{isApproved:bool}")]
         public async Task<IActionResult> SetStatus(int userId, bool isApproved)
         {
