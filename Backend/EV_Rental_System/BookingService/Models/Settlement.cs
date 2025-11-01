@@ -78,6 +78,29 @@ namespace BookingService.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? FinalizedAt { get; set; }
 
+        // ===== Refund Tracking =====
+
+        /// <summary>
+        /// Trạng thái hoàn tiền deposit
+        /// </summary>
+        public RefundStatus RefundStatus { get; set; } = RefundStatus.Pending;
+
+        /// <summary>
+        /// Thời gian xử lý hoàn tiền
+        /// </summary>
+        public DateTime? RefundProcessedAt { get; set; }
+
+        /// <summary>
+        /// Admin đã xử lý hoàn tiền (nếu có)
+        /// </summary>
+        public int? RefundProcessedBy { get; set; }
+
+        /// <summary>
+        /// Ghi chú của admin về việc hoàn tiền
+        /// </summary>
+        [MaxLength(500)]
+        public string? RefundNotes { get; set; }
+
         // ===== Business Methods =====
 
         /// <summary>
@@ -154,6 +177,40 @@ namespace BookingService.Models
                     ? description
                     : $"{DamageDescription}; {description}";
             }
+        }
+
+        /// <summary>
+        /// Mark refund as processed (admin manually refunded via VNPay portal)
+        /// </summary>
+        public void MarkRefundAsProcessed(int adminId, string? notes = null)
+        {
+            if (RefundStatus == RefundStatus.Processed)
+                throw new InvalidOperationException($"Refund for Settlement {SettlementId} is already marked as processed.");
+
+            // Determine refund status based on refund amount
+            if (DepositRefundAmount <= 0)
+            {
+                RefundStatus = RefundStatus.NotRequired;
+            }
+            else
+            {
+                RefundStatus = RefundStatus.Processed;
+            }
+
+            RefundProcessedAt = DateTime.UtcNow;
+            RefundProcessedBy = adminId;
+            RefundNotes = notes;
+        }
+
+        /// <summary>
+        /// Mark refund as failed
+        /// </summary>
+        public void MarkRefundAsFailed(int adminId, string? notes = null)
+        {
+            RefundStatus = RefundStatus.Failed;
+            RefundProcessedAt = DateTime.UtcNow;
+            RefundProcessedBy = adminId;
+            RefundNotes = notes;
         }
     }
 }

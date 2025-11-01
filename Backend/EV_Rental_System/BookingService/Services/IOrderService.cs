@@ -23,8 +23,8 @@ namespace BookingService.Services
         Task<IEnumerable<Order>> GetOrdersByUserIdAsync(int userId);
 
         //Task<bool> CancelOrderAsync(int orderId, int userId);
-        Task<bool> StartRentalAsync(int orderId);
-        Task<bool> CompleteRentalAsync(int orderId);
+        Task<bool> StartRentalAsync(int orderId, List<IFormFile> images, int confirmedBy, VehicleCheckInRequest request);
+        Task<bool> CompleteRentalAsync(int orderId, List<IFormFile> images, int confirmedBy, VehicleReturnRequest request);
 
         //Task<bool> CheckVehicleAvailabilityAsync(int vehicleId, DateTime fromDate, DateTime toDate);
     }

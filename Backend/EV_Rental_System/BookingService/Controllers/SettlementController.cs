@@ -179,5 +179,75 @@ namespace BookingService.Controllers
                 return StatusCode(500, new { Message = "Lỗi khi lấy thông tin settlement" });
             }
         }
+
+        /// <summary>
+        /// Mark refund as processed (Admin manually refunded via VNPay portal)
+        /// </summary>
+        [HttpPost("{orderId}/refund/processed")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> MarkRefundAsProcessed(int orderId, [FromBody] RefundProcessRequest? request = null)
+        {
+            try
+            {
+                // Get admin ID from JWT token
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int adminId))
+                {
+                    return Unauthorized(new { Message = "Không thể xác thực admin." });
+                }
+
+                var result = await _settlementService.MarkRefundAsProcessedAsync(orderId, adminId, request?.Notes);
+                return Ok(new
+                {
+                    Message = "Đã cập nhật trạng thái hoàn tiền thành công",
+                    Settlement = result
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Invalid operation marking refund as processed for Order {OrderId}", orderId);
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking refund as processed for Order {OrderId}", orderId);
+                return StatusCode(500, new { Message = "Lỗi khi cập nhật trạng thái hoàn tiền" });
+            }
+        }
+
+        /// <summary>
+        /// Mark refund as failed
+        /// </summary>
+        [HttpPost("{orderId}/refund/failed")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> MarkRefundAsFailed(int orderId, [FromBody] RefundProcessRequest? request = null)
+        {
+            try
+            {
+                // Get admin ID from JWT token
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int adminId))
+                {
+                    return Unauthorized(new { Message = "Không thể xác thực admin." });
+                }
+
+                var result = await _settlementService.MarkRefundAsFailedAsync(orderId, adminId, request?.Notes);
+                return Ok(new
+                {
+                    Message = "Đã đánh dấu hoàn tiền thất bại",
+                    Settlement = result
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Invalid operation marking refund as failed for Order {OrderId}", orderId);
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking refund as failed for Order {OrderId}", orderId);
+                return StatusCode(500, new { Message = "Lỗi khi đánh dấu hoàn tiền thất bại" });
+            }
+        }
     }
 }

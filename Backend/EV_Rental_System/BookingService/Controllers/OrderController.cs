@@ -237,21 +237,39 @@ namespace BookingService.Controllers
         }
 
         /// <summary>
-        /// Bắt đầu chuyến thuê (khi khách nhận xe)
+        /// Bắt đầu chuyến thuê (khi khách nhận xe) - Có upload ảnh xe
         /// Chủ xe (Member) hoặc Employee có thể xác nhận bắt đầu
         /// </summary>
         [HttpPost("{orderId}/start")]
         [Authorize(Roles = "Employee,Member")]
-        public async Task<IActionResult> StartRental(int orderId)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> StartRental(
+            int orderId,
+            [FromForm] VehicleCheckInRequest request,
+            [FromForm] List<IFormFile> images)
         {
             try
             {
-                var success = await _orderService.StartRentalAsync(orderId);
+                // Get current user ID from JWT token
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int confirmedBy))
+                {
+                    return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+                }
+
+                // Validate images
+                if (images == null || images.Count == 0)
+                {
+                    return BadRequest(new { Message = "Phải có ít nhất một ảnh xe để bắt đầu thuê." });
+                }
+
+                var success = await _orderService.StartRentalAsync(orderId, images, confirmedBy, request);
                 if (!success)
                 {
                     return BadRequest(new { Message = "Không thể bắt đầu chuyến thuê." });
                 }
-                return Ok(new { Message = "Chuyến thuê đã bắt đầu." });
+
+                return Ok(new { Message = "Chuyến thuê đã bắt đầu. Ảnh xe đã được lưu." });
             }
             catch (InvalidOperationException ex)
             {
@@ -266,21 +284,43 @@ namespace BookingService.Controllers
         }
 
         /// <summary>
-        /// Hoàn thành chuyến thuê (khi khách trả xe)
+        /// Hoàn thành chuyến thuê (khi khách trả xe) - Có upload ảnh xe
         /// Chủ xe (Member) hoặc Employee có thể xác nhận hoàn thành
         /// </summary>
         [HttpPost("{orderId}/complete")]
         [Authorize(Roles = "Employee,Member")]
-        public async Task<IActionResult> CompleteRental(int orderId)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> CompleteRental(
+            int orderId,
+            [FromForm] VehicleReturnRequest request,
+            [FromForm] List<IFormFile> images)
         {
             try
             {
-                var success = await _orderService.CompleteRentalAsync(orderId);
+                // Get current user ID from JWT token
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int confirmedBy))
+                {
+                    return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+                }
+
+                // Validate images
+                if (images == null || images.Count == 0)
+                {
+                    return BadRequest(new { Message = "Phải có ít nhất một ảnh xe để hoàn thành thuê." });
+                }
+
+                var success = await _orderService.CompleteRentalAsync(orderId, images, confirmedBy, request);
                 if (!success)
                 {
                     return BadRequest(new { Message = "Không thể hoàn thành chuyến thuê." });
                 }
-                return Ok(new { Message = "Chuyến thuê đã hoàn thành." });
+
+                var message = request.HasDamage
+                    ? "Chuyến thuê đã hoàn thành. Ảnh xe và thông tin hư hỏng đã được lưu."
+                    : "Chuyến thuê đã hoàn thành. Ảnh xe đã được lưu.";
+
+                return Ok(new { Message = message });
             }
             catch (InvalidOperationException ex)
             {

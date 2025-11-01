@@ -243,6 +243,50 @@ namespace BookingService.Services
 
         // ===== PRIVATE HELPERS =====
 
+        /// <summary>
+        /// Mark refund as processed (admin manually refunded via VNPay portal)
+        /// </summary>
+        public async Task<SettlementResponse> MarkRefundAsProcessedAsync(int orderId, int adminId, string? notes = null)
+        {
+            _logger.LogInformation("Marking refund as processed for Order {OrderId} by Admin {AdminId}", orderId, adminId);
+
+            var settlement = await _settlementRepo.GetByOrderIdAsync(orderId);
+            if (settlement == null)
+                throw new InvalidOperationException($"Settlement not found for Order {orderId}");
+
+            if (!settlement.IsFinalized)
+                throw new InvalidOperationException($"Settlement must be finalized before processing refund");
+
+            settlement.MarkRefundAsProcessed(adminId, notes);
+            await _settlementRepo.UpdateAsync(settlement);
+
+            _logger.LogInformation("Refund marked as processed for Order {OrderId}", orderId);
+
+            return MapToResponse(settlement);
+        }
+
+        /// <summary>
+        /// Mark refund as failed
+        /// </summary>
+        public async Task<SettlementResponse> MarkRefundAsFailedAsync(int orderId, int adminId, string? notes = null)
+        {
+            _logger.LogInformation("Marking refund as failed for Order {OrderId} by Admin {AdminId}", orderId, adminId);
+
+            var settlement = await _settlementRepo.GetByOrderIdAsync(orderId);
+            if (settlement == null)
+                throw new InvalidOperationException($"Settlement not found for Order {orderId}");
+
+            if (!settlement.IsFinalized)
+                throw new InvalidOperationException($"Settlement must be finalized before processing refund");
+
+            settlement.MarkRefundAsFailed(adminId, notes);
+            await _settlementRepo.UpdateAsync(settlement);
+
+            _logger.LogInformation("Refund marked as failed for Order {OrderId}", orderId);
+
+            return MapToResponse(settlement);
+        }
+
         private SettlementResponse MapToResponse(Settlement settlement)
         {
             return new SettlementResponse

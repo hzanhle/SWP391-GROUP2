@@ -34,5 +34,15 @@ namespace BookingService.Services
         /// Get settlement details by settlement ID
         /// </summary>
         Task<SettlementResponse?> GetSettlementByIdAsync(int settlementId);
+
+        /// <summary>
+        /// Mark refund as processed (admin manually refunded via VNPay portal)
+        /// </summary>
+        Task<SettlementResponse> MarkRefundAsProcessedAsync(int orderId, int adminId, string? notes = null);
+
+        /// <summary>
+        /// Mark refund as failed
+        /// </summary>
+        Task<SettlementResponse> MarkRefundAsFailedAsync(int orderId, int adminId, string? notes = null);
     }
 }

@@ -5,6 +5,7 @@ using BookingService.Models.ModelSettings;
 using BookingService.Repositories;
 using BookingService.Services;
 using BookingService.Services.SignalR;
+using BookingService.Swagger;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -80,6 +81,8 @@ builder.Services.AddScoped<ITrustScoreRepository, TrustScoreRepository>();
 builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
 builder.Services.AddScoped<ISettlementRepository, SettlementRepository>();
 builder.Services.AddScoped<ITrustScoreHistoryRepository, TrustScoreHistoryRepository>();
+builder.Services.AddScoped<IVehicleCheckInRepository, VehicleCheckInRepository>();
+builder.Services.AddScoped<IVehicleReturnRepository, VehicleReturnRepository>();
 
 // ====================== Services ======================
 builder.Services.AddScoped<IAwsS3Service, AwsS3Service>();
@@ -93,6 +96,7 @@ builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddSingleton<IPdfConverterService, PuppeteerPdfService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<ISettlementService, SettlementService>();
+builder.Services.AddScoped<IImageStorageService, ImageStorageService>();
 
 // ====================== Build App ======================
 var app = builder.Build();
@@ -253,16 +257,9 @@ static void ConfigureSwagger(IServiceCollection services)
             Scheme = "Bearer"
         });
 
-        options.AddSecurityRequirement(new OpenApiSecurityRequirement
-        {
-            {
-                new OpenApiSecurityScheme
-                {
-                    Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-                },
-                Array.Empty<string>()
-            }
-        });
+        // Use operation filter to only apply security to endpoints with [Authorize]
+        // This respects [AllowAnonymous] attributes (e.g., payment webhooks)
+        options.OperationFilter<AuthorizeCheckOperationFilter>();
 
         options.CustomSchemaIds(type => type.FullName);
     });
