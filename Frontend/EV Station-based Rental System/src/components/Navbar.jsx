@@ -200,27 +200,19 @@ function Navbar() {
           <div className="navbar__right">
             {user ? (
               <div className="navbar__user">
-                <span className="navbar__greeting">Xin chào, {userName}</span>
+                <span className="navbar__greeting">Hello, {userName}</span>
                 <div className="navbar__notifications">
                   <NotificationBell />
                 </div>
                 {isMember && (
                   <div style={{ display: 'flex', gap: '1rem' }}>
-                    <a href="#booking" className="navbar-link" title="Đơn hàng">
-                      <i className="fa-solid fa-file-invoice"></i>
-                      <span>Đơn hàng</span>
-                    </a>
-                    <a href="#history" className="navbar-link" title="Lịch sử">
+                    <a href="#history" className="navbar-link" title="History">
                       <i className="fa-solid fa-history"></i>
-                      <span>Lịch sử</span>
+                      <span>History</span>
                     </a>
-                    <a href="#check-in" className="navbar-link" title="Check-in">
-                      <i className="fa-solid fa-sign-in-alt"></i>
-                      <span>Check-in</span>
-                    </a>
-                    <a href="#feedback" className="navbar-link" title="Phản hồi">
+                    <a href="#feedback" className="navbar-link" title="Feedback">
                       <i className="fa-solid fa-comment"></i>
-                      <span>Phản hồi</span>
+                      <span>Feedback</span>
                     </a>
                   </div>
                 )}
