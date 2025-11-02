@@ -14,6 +14,9 @@ namespace StationService.Models
         [Required]
         public int UserId { get; set; }
 
+        [MaxLength(100)]
+        public string? UserName { get; set; }
+
         [Required]
         [Range(1, 5, ErrorMessage = "Đánh giá phải từ 1 đến 5 sao.")]
         public int Rate { get; set; }

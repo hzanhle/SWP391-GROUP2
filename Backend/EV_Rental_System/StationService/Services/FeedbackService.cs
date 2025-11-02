@@ -10,18 +10,21 @@ namespace StationService.Services
     public class FeedbackService : IFeedbackService
     {
         private readonly IFeedbackRepository _repository;
+        private readonly IUserIntegrationService _userIntegrationService;
         private readonly ILogger<FeedbackService> _logger;
 
         public FeedbackService(
             IFeedbackRepository repository,
+            IUserIntegrationService userIntegrationService,
             ILogger<FeedbackService> logger)
         {
             _repository = repository;
+            _userIntegrationService = userIntegrationService;
             _logger = logger;
         }
 
-        /// Tạo feedback cho station
-        public async Task<FeedbackDTO> CreateFeedbackAsync(CreateFeedbackDTO dto, int userId)
+        /// Tạo feedback cho station     
+        public async Task<FeedbackDTO> CreateFeedbackAsync(CreateFeedbackDTO dto, int userId, string? userName)
         {
             _logger.LogInformation($"User {userId} creating feedback for station {dto.StationId}");
 
@@ -37,6 +40,7 @@ namespace StationService.Services
             var feedback = new Feedback
             {
                 UserId = userId,
+                UserName = userName ?? $"User #{userId}",
                 StationId = dto.StationId,
                 Rate = dto.Rate,
                 Description = dto.Description,
@@ -120,7 +124,10 @@ namespace StationService.Services
 
             var feedbacks = await _repository.GetByStationIdAsync(stationId, onlyPublished);
 
-            return feedbacks.Select(MapToDto).ToList();
+            var dtos = feedbacks.Select(MapToDto).ToList();
+            await EnrichWithUserNamesAsync(dtos);
+            
+            return dtos;
         }
         /// Lấy feedback của user cho một station
         public async Task<FeedbackDTO?> GetMyFeedbackForStationAsync(int userId, int stationId)
@@ -139,7 +146,10 @@ namespace StationService.Services
 
             var feedbacks = await _repository.GetByUserIdAsync(userId);
 
-            return feedbacks.Select(MapToDto).ToList();
+            var dtos = feedbacks.Select(MapToDto).ToList();
+            await EnrichWithUserNamesAsync(dtos);
+
+            return dtos;
         }
 
         /// Lấy tất cả feedback (Admin only)
@@ -149,7 +159,10 @@ namespace StationService.Services
 
             var feedbacks = await _repository.GetAllAsync();
 
-            return feedbacks.Select(MapToDto).ToList();
+            var dtos = feedbacks.Select(MapToDto).ToList();
+            await EnrichWithUserNamesAsync(dtos);
+
+            return dtos;
         }
 
         /// Lấy thống kê feedback của station
@@ -238,7 +251,7 @@ namespace StationService.Services
                 StationId = feedback.StationId,
                 StationName = feedback.Station?.Name,
                 UserId = feedback.UserId,
-                UserName = null,
+                UserName = feedback.UserName,
                 Rate = feedback.Rate,
                 Description = feedback.Description,
                 CreatedDate = feedback.CreatedDate,
@@ -246,6 +259,43 @@ namespace StationService.Services
                 IsVerified = feedback.IsVerified,
                 IsPublished = feedback.IsPublished
             };
+        }
+
+        /// Enrich DTOs with userName from UserService
+        private async Task EnrichWithUserNamesAsync(List<FeedbackDTO> feedbacks)
+        {
+            if (!feedbacks.Any())
+            {
+                return;
+            }
+
+            try
+            {
+                // Get unique user IDs
+                var userIds = feedbacks.Select(f => f.UserId).Distinct().ToList();
+
+                // Fetch usernames in batch
+                var userNames = await _userIntegrationService.GetUserNamesByIdsAsync(userIds);
+
+                // Enrich each feedback
+                foreach (var feedback in feedbacks)
+                {
+                    if (userNames.TryGetValue(feedback.UserId, out var userName))
+                    {
+                        feedback.UserName = userName;
+                    }
+                    else
+                    {
+                        feedback.UserName = $"User #{feedback.UserId}"; // Fallback
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to enrich feedbacks with usernames");
+                // Không throw exception, chỉ log warning
+                // Feedback vẫn được trả về nhưng không có userName
+            }
         }
     }
 }

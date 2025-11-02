@@ -35,6 +35,12 @@ namespace StationService.Controllers
             return userId;
         }
 
+        private string? GetCurrentUserName()
+        {
+            var userNameClaim = User.FindFirst("userName") ?? User.FindFirst(ClaimTypes.Name);
+            return userNameClaim?.Value;
+        }
+
         private bool IsAdmin()
         {
             return User.IsInRole("Admin");
@@ -149,7 +155,8 @@ namespace StationService.Controllers
                 }
 
                 var userId = GetCurrentUserId();
-                var feedback = await _feedbackService.CreateFeedbackAsync(dto, userId);
+                var userName = GetCurrentUserName();
+                var feedback = await _feedbackService.CreateFeedbackAsync(dto, userId, userName);
 
                 _logger.LogInformation($"User {userId} created feedback {feedback.FeedbackId}");
 
