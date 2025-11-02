@@ -9,15 +9,6 @@ export default function Profile() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phoneNumber: '',
-    address: '',
-  })
-  const [submitting, setSubmitting] = useState(false)
 
   // CCCD document states
   const [citizenFormData, setCitizenFormData] = useState({
@@ -67,14 +58,8 @@ export default function Profile() {
           return
         }
 
-        const { data } = await clientApi.getUserById(userId, authToken)
+        const { data } = await clientApi.getUserDetail(userId, authToken)
         setUser(data)
-        setFormData({
-          fullName: data?.fullName || data?.FullName || '',
-          email: data?.email || data?.Email || '',
-          phoneNumber: data?.phoneNumber || data?.PhoneNumber || '',
-          address: data?.address || data?.Address || '',
-        })
         setError(null)
       } catch (err) {
         console.error('Error fetching profile:', err)
@@ -86,14 +71,6 @@ export default function Profile() {
 
     fetchUserProfile()
   }, [])
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
 
   const handleCitizenInputChange = (e) => {
     const { name, value } = e.target
@@ -111,32 +88,6 @@ export default function Profile() {
     }))
   }
 
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault()
-    
-    try {
-      setSubmitting(true)
-      setError(null)
-      
-      await clientApi.updateCitizenInfo({
-        UserId: user?.userId || user?.UserId,
-        FullName: formData.fullName,
-        Address: formData.address,
-      }, authToken)
-      
-      setSuccess(true)
-      setEditing(false)
-      
-      setTimeout(() => {
-        setSuccess(false)
-      }, 3000)
-    } catch (err) {
-      console.error('Error updating profile:', err)
-      setError(err.message || 'Không cập nhật được hồ sơ')
-    } finally {
-      setSubmitting(false)
-    }
-  }
 
   const handleCitizenInfoSubmit = async (e) => {
     e.preventDefault()
@@ -277,149 +228,28 @@ export default function Profile() {
               </div>
             )}
 
-            {success && (
-              <div style={{
-                padding: '1rem',
-                backgroundColor: '#d4edda',
-                color: '#155724',
-                borderRadius: '0.5rem',
-                marginBottom: '1.5rem',
-                textAlign: 'center',
-              }}>
-                ✅ Cập nhật thông tin cá nhân thành công!
-              </div>
-            )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
-              <div className="card">
-                <div className="card-body">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h3 className="card-title">Thông tin cá nhân</h3>
-                    {!editing && (
-                      <button
-                        onClick={() => setEditing(true)}
-                        style={{
-                          padding: '0.5rem 1rem',
-                          backgroundColor: '#ff4d30',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.4rem',
-                          cursor: 'pointer',
-                          fontSize: '1.2rem',
-                        }}
-                      >
-                        ✏️ Chỉnh sửa
-                      </button>
-                    )}
+            <div className="card">
+              <div className="card-body">
+                <h3 className="card-title">Thông tin cá nhân</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
+                  <div>
+                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Tên đăng nhập</p>
+                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                      {user?.userName || user?.UserName || 'Chưa cập nhật'}
+                    </p>
                   </div>
-
-                  {editing ? (
-                    <form onSubmit={handleProfileSubmit}>
-                      <div style={{ marginBottom: '1.5rem' }}>
-                        <label htmlFor="fullName" className="label">Họ và tên</label>
-                        <input
-                          id="fullName"
-                          type="text"
-                          name="fullName"
-                          value={formData.fullName}
-                          onChange={handleInputChange}
-                          className="input"
-                          placeholder="Nhập họ và tên"
-                        />
-                      </div>
-
-                      <div style={{ marginBottom: '1.5rem' }}>
-                        <label htmlFor="email" className="label">Email</label>
-                        <input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          className="input"
-                          disabled
-                          style={{ backgroundColor: '#f9f9f9', cursor: 'not-allowed' }}
-                        />
-                        <p className="card-subtext" style={{ marginTop: '0.5rem' }}>Email không thể thay đổi</p>
-                      </div>
-
-                      <div style={{ marginBottom: '1.5rem' }}>
-                        <label htmlFor="phoneNumber" className="label">Số điện thoại</label>
-                        <input
-                          id="phoneNumber"
-                          type="tel"
-                          value={formData.phoneNumber}
-                          className="input"
-                          disabled
-                          style={{ backgroundColor: '#f9f9f9', cursor: 'not-allowed' }}
-                        />
-                        <p className="card-subtext" style={{ marginTop: '0.5rem' }}>Liên hệ hỗ trợ để thay đổi</p>
-                      </div>
-
-                      <div style={{ marginBottom: '1.5rem' }}>
-                        <label htmlFor="address" className="label">Địa chỉ</label>
-                        <textarea
-                          id="address"
-                          name="address"
-                          value={formData.address}
-                          onChange={handleInputChange}
-                          className="input"
-                          placeholder="Nhập địa chỉ"
-                          style={{ minHeight: '80px' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '1rem' }}>
-                        <CTA
-                          as="button"
-                          type="submit"
-                          disabled={submitting}
-                        >
-                          {submitting ? 'Đang lưu...' : 'Lưu thay đổi'}
-                        </CTA>
-                        <button
-                          type="button"
-                          onClick={() => setEditing(false)}
-                          style={{
-                            padding: '0.75rem 1.5rem',
-                            backgroundColor: '#f0f0f0',
-                            color: '#333',
-                            border: '1px solid #ddd',
-                            borderRadius: '0.4rem',
-                            cursor: 'pointer',
-                            fontSize: '1.4rem',
-                          }}
-                        >
-                          Hủy
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <div>
-                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Họ và tên</p>
-                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
-                          {user?.fullName || user?.FullName || 'Chưa cập nhật'}
-                        </p>
-                      </div>
-                      <div>
-                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Email</p>
-                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
-                          {user?.email || user?.Email || 'Chưa cập nhật'}
-                        </p>
-                      </div>
-                      <div>
-                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Số điện thoại</p>
-                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
-                          {user?.phoneNumber || user?.PhoneNumber || 'Chưa cập nhật'}
-                        </p>
-                      </div>
-                      <div>
-                        <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Địa chỉ</p>
-                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
-                          {user?.address || user?.Address || 'Chưa cập nhật'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  <div>
+                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Email</p>
+                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                      {user?.email || user?.Email || 'Chưa cập nhật'}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Số điện thoại</p>
+                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                      {user?.phoneNumber || user?.PhoneNumber || 'Chưa cập nhật'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -474,9 +304,22 @@ export default function Profile() {
                         className="input"
                         placeholder="VD: 123456789"
                         pattern="^[0-9]{9,12}$"
-                        title="Số CCCD phải từ 9-12 ký tự"
+                        title="S��� CCCD phải từ 9-12 ký tự"
                       />
                     </div>
+                     <div style={{ marginBottom: '1.5rem' }}>
+                      <label htmlFor="fullName" className="label">Full Name</label>
+                      <input
+                        id="fullName"
+                        type="text"
+                        name="fullName"
+                        value={citizenFormData.fullName}
+                        onChange={handleCitizenInputChange}
+                        className="input"
+                        placeholder="VD: Le Nguyen Hoang Anh"
+                      />
+                    </div> 
+
 
                     <div style={{ marginBottom: '1.5rem' }}>
                       <label htmlFor="sex" className="label">Giới tính</label>

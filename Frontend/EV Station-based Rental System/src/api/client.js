@@ -96,6 +96,10 @@ export function getUserById(userId, token) {
   return request(`/api/User/${userId}`, { method: 'GET', token })
 }
 
+export function getUserDetail(userId, token) {
+  return request(`/api/User/UserDetail/${userId}`, { method: 'GET', token })
+}
+
 export function getAllUsers(token) {
   return request('/api/User', { method: 'GET', token })
 }
@@ -177,12 +181,12 @@ export function getDriverLicense(userId, token) {
   return request(`/api/DriverLicense/${userId}`, { method: 'GET', token })
 }
 
-export function getNotifications(userId, token) {
-  return request(`/api/Notification/${userId}`, { method: 'GET', token })
+export function getNotifications(token) {
+  return request('/api/Notification', { method: 'GET', token })
 }
 
-export function clearNotifications(userId, token) {
-  return request(`/api/Notification/${userId}`, { method: 'DELETE', token })
+export function clearNotifications(token) {
+  return request('/api/Notification', { method: 'DELETE', token })
 }
 
 // Staff verification actions (Admin/Employee only - not for regular staff)
@@ -230,4 +234,4 @@ export function resetPassword(payload) {
   })
 }
 
-export default { request, sendRegistrationOtp, verifyRegistrationOtp, registerUser, login, getUserById, getAllUsers, deleteUser, toggleUserActive, toggleStaffAdmin, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense, getNotifications, clearNotifications, setCitizenInfoStatus, setDriverLicenseStatus, listVerificationUsers, sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword }
+export default { request, sendRegistrationOtp, verifyRegistrationOtp, registerUser, login, getUserById, getUserDetail, getAllUsers, deleteUser, toggleUserActive, toggleStaffAdmin, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense, getNotifications, clearNotifications, setCitizenInfoStatus, setDriverLicenseStatus, listVerificationUsers, sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword }

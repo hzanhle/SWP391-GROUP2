@@ -206,17 +206,9 @@ function Navbar() {
                 </div>
                 {isMember && (
                   <div style={{ display: 'flex', gap: '1rem' }}>
-                    <a href="#booking" className="navbar-link" title="Orders">
-                      <i className="fa-solid fa-file-invoice"></i>
-                      <span>Orders</span>
-                    </a>
                     <a href="#history" className="navbar-link" title="History">
                       <i className="fa-solid fa-history"></i>
                       <span>History</span>
-                    </a>
-                    <a href="#check-in" className="navbar-link" title="Check-in">
-                      <i className="fa-solid fa-sign-in-alt"></i>
-                      <span>Check-in</span>
                     </a>
                     <a href="#feedback" className="navbar-link" title="Feedback">
                       <i className="fa-solid fa-comment"></i>

@@ -43,7 +43,7 @@ export default function NotificationBell() {
       try {
         setLoading(true)
         setError('')
-        const { data } = await api.getNotifications(userId, token)
+        const { data } = await api.getNotifications(token)
         if (!cancelled) setItems(Array.isArray(data) ? data : [])
       } catch (e) {
         if (!cancelled) setError(e?.message || 'Không thể tải thông báo')
@@ -83,7 +83,7 @@ export default function NotificationBell() {
                 {items.length > 0 && (
                   <button className="btn-ghost" onClick={async () => {
                     try {
-                      await api.clearNotifications(userId, token)
+                      await api.clearNotifications(token)
                       setItems([])
                       setError('')
                     } catch (e) {

@@ -66,10 +66,10 @@ namespace TwoWheelVehicleService.Services
             try
             {
                 var images = await _imageRepository.GetImagesByModelId(modelId);
-                var urls = images.Select(i => i.Url).ToList();
+                var filenames = images.Select(i => Path.GetFileName(i.Url)).ToList();
 
-                _logger.LogInformation("📸 Retrieved {Count} image paths for ModelId={ModelId}", urls.Count, modelId);
-                return urls;
+                _logger.LogInformation("📸 Retrieved {Count} image paths for ModelId={ModelId}", filenames.Count, modelId);
+                return filenames;
             }
             catch (Exception ex)
             {

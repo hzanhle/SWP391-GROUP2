@@ -7,6 +7,7 @@ export default function Vehicles() {
   const [models, setModels] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const apiBaseUrl = (import.meta.env.VITE_VEHICLE_API_URL || import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
   useEffect(() => {
     loadModels()
@@ -26,7 +27,20 @@ export default function Vehicles() {
     }
   }
 
-  const placeholderImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23ff4d30' width='400' height='300'/%3E%3C/svg%3E"
+  const getImageUrl = (model) => {
+    const placeholderImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23ff4d30' width='400' height='300'/%3E%3C/svg%3E"
+
+    if (!model.imageUrls || model.imageUrls.length === 0) {
+      return placeholderImg
+    }
+
+    const imagePath = model.imageUrls[0]
+    if (imagePath.startsWith('http')) {
+      return imagePath
+    }
+
+    return `${apiBaseUrl}/api/Model/image/${imagePath}`
+  }
 
   return (
     <div data-figma-layer="Vehicles Page">
@@ -78,7 +92,7 @@ export default function Vehicles() {
                     <div key={model.modelId} className="models-div__box">
                       <div className="models-div__box__img">
                         <img
-                          src={model.imageUrls && model.imageUrls.length > 0 ? model.imageUrls[0] : placeholderImg}
+                          src={getImageUrl(model)}
                           alt={`${model.manufacturer} ${model.modelName}`}
                         />
                         <div className="models-div__box__descr">
