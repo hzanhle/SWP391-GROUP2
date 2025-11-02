@@ -7,6 +7,7 @@ export default function FeaturedStations() {
   const [stations, setStations] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [selectedStation, setSelectedStation] = useState(null)
 
   useEffect(() => {
     let mounted = true
@@ -64,15 +65,20 @@ export default function FeaturedStations() {
           <div className="container carousel">
             <div className="carousel-track" role="list">
               {stations.map((s) => (
-                <div role="listitem" key={s.id || `${s.name}-${s.address}`}>
-                  <StationCard {...s} />
+                <div
+                  role="listitem"
+                  key={s.id || `${s.name}-${s.address}`}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setSelectedStation(s)}
+                >
+                  <StationCard {...s} isSelected={selectedStation?.id === s.id} />
                 </div>
               ))}
             </div>
           </div>
 
           <div className="container map-section">
-            <StationMap stations={stations} />
+            <StationMap stations={stations} selectedStation={selectedStation} />
           </div>
         </>
       )}

@@ -58,7 +58,7 @@ function useGeocoder() {
   return { geocode }
 }
 
-export default function StationMap({ stations = [] }) {
+export default function StationMap({ stations = [], selectedStation = null }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const [error, setError] = useState(null)
@@ -70,12 +70,16 @@ export default function StationMap({ stations = [] }) {
     async function init() {
       try {
         if (!isMounted) return
-        const data = Array.isArray(stations) ? stations : []
+
+        // Show only selected station if provided, otherwise show all stations
+        const data = selectedStation
+          ? [selectedStation]
+          : (Array.isArray(stations) ? stations : [])
 
         // Initialize map once
         if (!mapRef.current && containerRef.current) {
           mapRef.current = L.map(containerRef.current, {
-            center: [10.776, 106.700], // Default to HCMC center-ish
+            center: [10.776, 106.700],
             zoom: 12,
             scrollWheelZoom: false,
           })
@@ -112,6 +116,10 @@ export default function StationMap({ stations = [] }) {
 
         if (bounds.isValid()) {
           map.fitBounds(bounds.pad(0.2))
+        } else if (selectedStation) {
+          // If selected but geocoding failed, at least show the default location
+          const address = selectedStation.address ?? selectedStation.location ?? selectedStation.Location
+          map.setView([10.776, 106.700], 14)
         }
 
         // Ensure Leaflet recalculates size after layout
@@ -124,11 +132,11 @@ export default function StationMap({ stations = [] }) {
       }
     }
 
-    if (stations.length > 0) {
+    if (stations.length > 0 || selectedStation) {
       init()
     }
     return () => { isMounted = false }
-  }, [stations, geocode])
+  }, [stations, selectedStation, geocode])
 
   // Recompute map size when container resizes
   useEffect(() => {

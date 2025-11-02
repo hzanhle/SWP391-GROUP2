@@ -1,7 +1,7 @@
 import React from 'react'
 import CTA from './CTA'
 
-export default function StationCard({ id, name, address, vehicles, distance }) {
+export default function StationCard({ id, name, address, vehicles, distance, isSelected }) {
   function handleView(e) {
     e.preventDefault()
     try {
@@ -13,7 +13,15 @@ export default function StationCard({ id, name, address, vehicles, distance }) {
     window.location.hash = 'booking-new'
   }
   return (
-    <div className="card" data-figma-layer="StationCard" data-tailwind='class: "border border-slate-200 rounded-lg bg-white"'>
+    <div
+      className="card"
+      data-figma-layer="StationCard"
+      data-tailwind='class: "border border-slate-200 rounded-lg bg-white"'
+      style={{
+        border: isSelected ? '2px solid #ff4d30' : undefined,
+        boxShadow: isSelected ? '0 4px 12px rgba(255, 77, 48, 0.3)' : undefined,
+      }}
+    >
       <div className="card-body">
         <div className="row-between">
           <div>
