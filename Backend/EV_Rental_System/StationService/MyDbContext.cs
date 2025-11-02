@@ -151,6 +151,10 @@ namespace StationService
                 entity.Property(e => e.Rate).IsRequired();
 
                 // Optional Fields
+                entity.Property(e => e.UserName)
+                    .HasMaxLength(100)
+                    .IsRequired(false);
+
                 entity.Property(e => e.Description)
                     .HasMaxLength(1000)
                     .IsRequired(false);

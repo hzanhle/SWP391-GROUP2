@@ -76,6 +76,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+//HttpClient for UserIntegrationService
+builder.Services.AddHttpClient<IUserIntegrationService, UserIntegrationService>();
+
 // Dependency Injection (repositories & services)
 builder.Services.AddScoped<IStationRepository, StationRepository>();
 builder.Services.AddScoped<IStationService, StationService.Services.StationService>();

@@ -7,7 +7,7 @@ namespace StationService.Services
         // ==================== CRUD Operations ====================
 
         Task<FeedbackDTO?> GetByIdAsync(int feedbackId);
-        Task<FeedbackDTO> CreateFeedbackAsync(CreateFeedbackDTO dto, int userId);
+        Task<FeedbackDTO> CreateFeedbackAsync(CreateFeedbackDTO dto, int userId, string userName);
         Task<FeedbackDTO> UpdateFeedbackAsync(int feedbackId, UpdateFeedbackDTO dto, int userId);
         Task<bool> DeleteFeedbackAsync(int feedbackId, int userId, bool isAdmin = false);
 
