@@ -98,7 +98,7 @@ export default function Payment() {
                 VehicleType: bookingData.vehicleInfo?.type || 'N/A',
                 FromDate: new Date(bookingData.dates?.from).toISOString(),
                 ToDate: new Date(bookingData.dates?.to).toISOString(),
-                TotalRentalCost: Number(bookingData.totalCost || 0),
+                TotalRentalCost: Number(bookingData.totalRentalCost || 0),
                 DepositCost: Number(bookingData.depositCost || 0),
                 ServiceFee: Number(bookingData.serviceFee || 0),
                 TotalPaymentCost: Number(bookingData.totalCost || 0),
@@ -423,14 +423,26 @@ export default function Payment() {
                       <div style={{ backgroundColor: '#f9f9f9', padding: '1rem', borderRadius: '0.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                           <span style={{ fontSize: '1.4rem', color: '#666' }}>Rental Fee:</span>
-                          <span style={{ fontSize: '1.4rem', fontWeight: '500' }}>${(booking.totalCost || 0).toFixed(2)}</span>
+                          <span style={{ fontSize: '1.4rem', fontWeight: '500' }}>{(booking.totalRentalCost || 0).toLocaleString('vi-VN')} ₫</span>
                         </div>
+                        {(booking.depositCost || 0) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                            <span style={{ fontSize: '1.4rem', color: '#666' }}>Deposit:</span>
+                            <span style={{ fontSize: '1.4rem', fontWeight: '500' }}>{(booking.depositCost || 0).toLocaleString('vi-VN')} ₫</span>
+                          </div>
+                        )}
+                        {(booking.serviceFee || 0) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                            <span style={{ fontSize: '1.4rem', color: '#666' }}>Service Fee:</span>
+                            <span style={{ fontSize: '1.4rem', fontWeight: '500' }}>{(booking.serviceFee || 0).toLocaleString('vi-VN')} ₫</span>
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem' }}>
                         <h4 style={{ fontSize: '1.8rem', color: '#ff4d30', margin: 0 }}>Total Payment:</h4>
                         <h2 style={{ fontSize: '2.4rem', color: '#ff4d30', margin: 0 }}>
-                          ${(booking.totalCost || 0).toFixed(2)}
+                          {(booking.totalCost || 0).toLocaleString('vi-VN')} ₫
                         </h2>
                       </div>
 

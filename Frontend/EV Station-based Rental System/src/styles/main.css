@@ -2800,6 +2800,61 @@ footer {
   z-index: 5;
 }
 
+.booking-notes-container {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.booking-note {
+  display: flex;
+  gap: 1rem;
+  padding: 1.2rem;
+  border-radius: 0.6rem;
+  border-left: 4px solid;
+}
+
+.booking-note-warning {
+  background-color: #fef3c7;
+  border-left-color: #f59e0b;
+}
+
+.booking-note-info {
+  background-color: #dbeafe;
+  border-left-color: #3b82f6;
+}
+
+.booking-note-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.booking-note-content {
+  flex: 1;
+}
+
+.booking-note-text {
+  font-size: 1.4rem;
+  color: #333;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.field-error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #dc2626;
+  font-size: 1.4rem;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+.error-icon {
+  font-size: 1.6rem;
+}
+
 @media (max-width: 768px) {
   .section {
     padding: 4rem 0;

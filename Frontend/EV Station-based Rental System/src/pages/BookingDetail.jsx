@@ -77,10 +77,11 @@ export default function BookingDetail() {
         </>
       )
     }
-    if (currentStatus === 'Active') {
+    
+    if (currentStatus === 'InProgresss') {
       return (
         <>
-          <CTA as="a" href="#return" variant="primary">Return Vehicle</CTA>
+          <CTA as="a" href="#return" variant="primary">Check-out</CTA>
           <CTA as="a" href="#booking-new" variant="secondary">Book New Vehicle</CTA>
         </>
       )
