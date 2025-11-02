@@ -60,7 +60,7 @@ export default function BookingDetail() {
     const statusMap = {
       'Pending': 'yellow',
       'Confirmed': 'blue',
-      'Active': 'green',
+      'InProgress': 'green',
       'Completed': 'green',
       'Cancelled': 'red',
     }
@@ -69,19 +69,21 @@ export default function BookingDetail() {
 
   const getNextActions = (status) => {
     const currentStatus = status || order?.status || order?.Status
+    const orderId = order?.orderId || order?.OrderId
+
     if (currentStatus === 'Confirmed' || currentStatus === 'Pending') {
       return (
         <>
-          <CTA as="a" href={`#check-in?orderId=${order?.orderId || order?.OrderId}`} variant="primary">Check-in to Receive Vehicle</CTA>
+          <CTA as="a" href={`#check-in?orderId=${orderId}`} variant="primary">Check-in to Receive Vehicle</CTA>
           <CTA as="a" href="#booking-new" variant="secondary">Book New Vehicle</CTA>
         </>
       )
     }
-    
-    if (currentStatus === 'InProgresss') {
+
+    if (currentStatus === 'InProgress') {
       return (
         <>
-          <CTA as="a" href="#return" variant="primary">Check-out</CTA>
+          <CTA as="a" href={`#return?orderId=${orderId}`} variant="primary">Return Vehicle</CTA>
           <CTA as="a" href="#booking-new" variant="secondary">Book New Vehicle</CTA>
         </>
       )

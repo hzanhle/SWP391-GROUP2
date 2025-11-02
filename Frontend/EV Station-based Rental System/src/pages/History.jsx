@@ -48,7 +48,7 @@ export default function History() {
     const statusMap = {
       'Pending': 'yellow',
       'Confirmed': 'blue',
-      'Active': 'green',
+      'InProgress': 'green',
       'Completed': 'green',
       'Cancelled': 'red',
     }
@@ -87,7 +87,7 @@ export default function History() {
       )
     }
 
-    if (status === 'Active') {
+    if (status === 'InProgress') {
       return (
         <CTA
           as="a"

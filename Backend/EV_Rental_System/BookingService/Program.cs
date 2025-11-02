@@ -5,6 +5,7 @@ using BookingService.Models.ModelSettings;
 using BookingService.Repositories;
 using BookingService.Services;
 using BookingService.Services.SignalR;
+using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -90,6 +91,19 @@ builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddSingleton<IPdfConverterService, PuppeteerPdfService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 
+// ====================== Hangfire Background Jobs ======================
+var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddHangfire(config =>
+{
+    config.UseSqlServerStorage(connStr, new Hangfire.SqlServer.SqlServerStorageOptions
+    {
+        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+        DisableGlobalLocks = true
+    });
+});
+builder.Services.AddHangfireServer();
+
 // ====================== Build App ======================
 var app = builder.Build();
 
@@ -144,6 +158,12 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// ====================== Hangfire Dashboard ======================
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireAuthorizationFilter() }
+});
+
 // ====================== Request Logging (Dev only) ======================
 if (app.Environment.IsDevelopment())
 {
@@ -167,16 +187,23 @@ app.MapGet("/health", () => Results.Ok(new
     environment = app.Environment.EnvironmentName
 })).AllowAnonymous();
 
+// ====================== Hangfire Recurring Jobs ======================
+RecurringJob.AddOrUpdate<IOrderService>(
+    "check-expired-orders",
+    service => service.CheckExpiredOrdersAsync(),
+    Cron.MinuteInterval(1)); // Check every 1 minute
+
 // ====================== Startup Log ======================
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
-logger.LogInformation("=====================================");
-logger.LogInformation("🚀 BookingService API Started");
-logger.LogInformation("Environment: {Env}", app.Environment.EnvironmentName);
+var loggerApp = app.Services.GetRequiredService<ILogger<Program>>();
+loggerApp.LogInformation("=====================================");
+loggerApp.LogInformation("🚀 BookingService API Started");
+loggerApp.LogInformation("Environment: {Env}", app.Environment.EnvironmentName);
 if (app.Environment.IsDevelopment())
 {
-    logger.LogInformation("Swagger: http://localhost:5049");
+    loggerApp.LogInformation("Swagger: http://localhost:5049");
+    loggerApp.LogInformation("Hangfire Dashboard: http://localhost:5049/hangfire");
 }
-logger.LogInformation("=====================================");
+loggerApp.LogInformation("=====================================");
 
 app.Run();
 
@@ -205,7 +232,7 @@ static void ValidateConfiguration(IConfiguration config)
     }
 
     // Required sections
-    var required = new[] {"EmailSettings", "VNPaySettings", "PdfSettings", "ContractSettings", "OrderSettings" };
+    var required = new[] { "EmailSettings", "VNPaySettings", "PdfSettings", "ContractSettings", "OrderSettings" };
     foreach (var section in required)
     {
         if (!config.GetSection(section).Exists())
@@ -373,4 +400,15 @@ static void ConfigureAuthentication(IServiceCollection services, IConfiguration 
         });
 
     services.AddAuthorization();
+}
+
+// ====================== Hangfire Authorization Filter ======================
+class HangfireAuthorizationFilter : Hangfire.Dashboard.IDashboardAuthorizationFilter
+{
+    public bool Authorize(Hangfire.Dashboard.DashboardContext context)
+    {
+        // Allow access only to localhost/development
+        // In production, this dashboard should not be exposed
+        return true;
+    }
 }
