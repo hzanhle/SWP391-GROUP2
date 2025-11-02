@@ -17,9 +17,10 @@ export default function Return() {
       setLoading(true)
       setError(null)
 
-      // Determine orderId: try query param, then active_order, then pending_booking
-      const params = new URLSearchParams(window.location.search)
-      const orderIdParam = params.get('orderId')
+      // Determine orderId: try hash param, then active_order, then pending_booking
+      const hash = window.location.hash.substring(1)
+      const hashParams = new URLSearchParams(hash.split('?')[1] || '')
+      const orderIdParam = hashParams.get('orderId')
       const activeOrder = localStorage.getItem('active_order')
       const pending = JSON.parse(localStorage.getItem('pending_booking') || '{}')
       const orderId = Number(orderIdParam || activeOrder || pending.orderId)

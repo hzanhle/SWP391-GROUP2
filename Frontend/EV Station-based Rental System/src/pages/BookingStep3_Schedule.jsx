@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import CTA from '../components/CTA'
+import TermsAndServices from '../components/TermsAndServices'
 
 export default function BookingStep3_Schedule({
   selectedStation,
@@ -18,27 +19,58 @@ export default function BookingStep3_Schedule({
   termsAccepted,
   setTermsAccepted,
 }) {
+  const [showTerms, setShowTerms] = useState(false)
+
+  const pickupTime = pickupDate ? new Date(pickupDate) : null
+  const dropoffTime = dropoffDate ? new Date(dropoffDate) : null
+  const hoursDiff = pickupTime && dropoffTime ? (dropoffTime - pickupTime) / (1000 * 60 * 60) : 0
+  const isValidTimeRange = hoursDiff >= 3
+
   return (
     <div className="booking-grid">
+      <div className="booking-notes-container">
+        <div className="booking-note booking-note-warning">
+          <span className="booking-note-icon">⏱️</span>
+          <div className="booking-note-content">
+            <p className="booking-note-text"><strong>Lưu ý:</strong> Thời gian đặt và trả xe phải cách nhau ít nhất <strong>3 tiếng</strong></p>
+          </div>
+        </div>
+        <div className="booking-note booking-note-info">
+          <span className="booking-note-icon">⚠️</span>
+          <div className="booking-note-content">
+            <p className="booking-note-text"><strong>Hạn chế:</strong> Bạn có tối đa <strong>15 phút</strong> để đến điểm nhận xe sau thời gian được chỉ định</p>
+          </div>
+        </div>
+      </div>
+
       <div className="field">
-        <label htmlFor="pickup-date" className="label">Thời gian nhận xe</label>
-        <input 
+        <label htmlFor="pickup-date" className="label">
+          <span>Thời gian nhận xe</span>
+        </label>
+        <input
           id="pickup-date"
-          type="datetime-local" 
+          type="datetime-local"
           className="input"
           value={pickupDate}
           onChange={(e) => onPickupDateChange(e.target.value)}
         />
       </div>
       <div className="field">
-        <label htmlFor="dropoff-date" className="label">Thời gian trả xe</label>
-        <input 
+        <label htmlFor="dropoff-date" className="label">
+          <span>Thời gian trả xe</span>
+        </label>
+        <input
           id="dropoff-date"
-          type="datetime-local" 
+          type="datetime-local"
           className="input"
           value={dropoffDate}
           onChange={(e) => onDropoffDateChange(e.target.value)}
         />
+        {pickupDate && dropoffDate && !isValidTimeRange && (
+          <div className="field-error-message">
+            <span className="error-icon">⚠️</span> Thời gian trả xe phải sau nhân xe ít nhất 3 tiếng
+          </div>
+        )}
       </div>
 
       {previewError && (
@@ -49,10 +81,10 @@ export default function BookingStep3_Schedule({
 
       {!preview && !previewLoading && (
         <div className="field grid-span-full text-center">
-          <CTA 
-            as="button" 
-            onClick={onPreview} 
-            disabled={!selectedModel || !pickupDate || !dropoffDate}
+          <CTA
+            as="button"
+            onClick={onPreview}
+            disabled={!selectedModel || !pickupDate || !dropoffDate || !isValidTimeRange}
           >
             Xem trước chi phí
           </CTA>
@@ -109,7 +141,25 @@ export default function BookingStep3_Schedule({
               aria-label="Đồng ý điều khoản"
             />
             <span style={{ fontSize: '1rem' }}>
-              Tôi đã đọc và đồng ý với <a href="#terms" style={{ color: '#0066cc' }}>Điều khoản &amp; Dịch vụ</a>
+              Tôi đã đọc và đồng ý với{' '}
+              <button
+                type="button"
+                onClick={() => setShowTerms(true)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#0066cc',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  fontSize: '1rem',
+                  padding: 0,
+                  fontFamily: 'inherit',
+                }}
+                onMouseOver={(e) => (e.target.style.color = '#0052a3')}
+                onMouseOut={(e) => (e.target.style.color = '#0066cc')}
+              >
+                Điều khoản &amp; Dịch vụ
+              </button>
             </span>
           </label>
         </div>
@@ -120,6 +170,8 @@ export default function BookingStep3_Schedule({
           <span>{bookingError}</span>
         </div>
       )}
+
+      <TermsAndServices isOpen={showTerms} onClose={() => setShowTerms(false)} />
     </div>
   )
 }

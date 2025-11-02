@@ -249,24 +249,9 @@ export default function BookingNew() {
         return
       }
 
-      // 2) Check availability (nếu API lỗi vẫn cho xem preview)
+      // 2) Convert dates to ISO format
       const fromISO = new Date(pickupDate).toISOString()
       const toISO = new Date(dropoffDate).toISOString()
-
-      try {
-        const availabilityRes = await vehicleApi.checkVehicleAvailability({
-          vehicleId,
-          fromDate: fromISO,
-          toDate: toISO,
-        }, token)
-
-        if (availabilityRes?.data && availabilityRes.data.isAvailable === false) {
-          setPreviewError(`Vehicle is not available in this time range. ${availabilityRes.data?.reason || 'Please choose another time.'}`)
-          return
-        }
-      } catch (availErr) {
-        console.warn('[BookingNew] Availability check failed, continue preview:', availErr)
-      }
 
       // 3) Lấy userId an toàn
       const previewUserId =
@@ -306,7 +291,16 @@ export default function BookingNew() {
         return
       }
 
-      setPreview(previewRes.data)
+      // Map backend field names to frontend expected names (PascalCase → camelCase)
+      const mappedPreview = {
+        ...previewRes.data,
+        totalRentalCost: previewRes.data.TotalRentalCost,
+        depositCost: previewRes.data.DepositAmount,
+        serviceFee: previewRes.data.ServiceFee,
+        totalPaymentCost: previewRes.data.TotalPaymentAmount,
+      }
+
+      setPreview(mappedPreview)
     } catch (err) {
       console.error('Error getting preview:', err)
       setPreviewError(err?.message || 'Error calculating cost. Please try again.')
@@ -397,9 +391,10 @@ export default function BookingNew() {
 
       const bookingDataToStore = {
         orderId,
-        totalCost: orderRes.data.TotalCost,
-        depositCost: orderRes.data.DepositCost || 0,
-        serviceFee: orderRes.data.ServiceFee || 0,
+        totalCost: preview?.totalPaymentCost || 0,
+        totalRentalCost: preview?.totalRentalCost || 0,
+        depositCost: preview?.depositCost || 0,
+        serviceFee: preview?.serviceFee || 0,
         expiresAt: orderRes.data.ExpiresAt,
         vehicleInfo: {
           vehicleId: Number(vehicleId),
