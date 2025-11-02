@@ -124,10 +124,7 @@ namespace StationService.Services
 
             var feedbacks = await _repository.GetByStationIdAsync(stationId, onlyPublished);
 
-            var dtos = feedbacks.Select(MapToDto).ToList();
-            await EnrichWithUserNamesAsync(dtos);
-            
-            return dtos;
+            return feedbacks.Select(MapToDto).ToList();
         }
         /// Lấy feedback của user cho một station
         public async Task<FeedbackDTO?> GetMyFeedbackForStationAsync(int userId, int stationId)
@@ -146,10 +143,7 @@ namespace StationService.Services
 
             var feedbacks = await _repository.GetByUserIdAsync(userId);
 
-            var dtos = feedbacks.Select(MapToDto).ToList();
-            await EnrichWithUserNamesAsync(dtos);
-
-            return dtos;
+            return feedbacks.Select(MapToDto).ToList();
         }
 
         /// Lấy tất cả feedback (Admin only)
@@ -159,10 +153,7 @@ namespace StationService.Services
 
             var feedbacks = await _repository.GetAllAsync();
 
-            var dtos = feedbacks.Select(MapToDto).ToList();
-            await EnrichWithUserNamesAsync(dtos);
-
-            return dtos;
+            return feedbacks.Select(MapToDto).ToList();
         }
 
         /// Lấy thống kê feedback của station
@@ -259,43 +250,6 @@ namespace StationService.Services
                 IsVerified = feedback.IsVerified,
                 IsPublished = feedback.IsPublished
             };
-        }
-
-        /// Enrich DTOs with userName from UserService
-        private async Task EnrichWithUserNamesAsync(List<FeedbackDTO> feedbacks)
-        {
-            if (!feedbacks.Any())
-            {
-                return;
-            }
-
-            try
-            {
-                // Get unique user IDs
-                var userIds = feedbacks.Select(f => f.UserId).Distinct().ToList();
-
-                // Fetch usernames in batch
-                var userNames = await _userIntegrationService.GetUserNamesByIdsAsync(userIds);
-
-                // Enrich each feedback
-                foreach (var feedback in feedbacks)
-                {
-                    if (userNames.TryGetValue(feedback.UserId, out var userName))
-                    {
-                        feedback.UserName = userName;
-                    }
-                    else
-                    {
-                        feedback.UserName = $"User #{feedback.UserId}"; // Fallback
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to enrich feedbacks with usernames");
-                // Không throw exception, chỉ log warning
-                // Feedback vẫn được trả về nhưng không có userName
-            }
         }
     }
 }
