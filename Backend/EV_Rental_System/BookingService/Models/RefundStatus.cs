@@ -11,18 +11,28 @@ namespace BookingService.Models
         Pending = 0,
 
         /// <summary>
+        /// Đang xử lý hoàn tiền tự động qua VNPay API
+        /// </summary>
+        Processing = 1,
+
+        /// <summary>
         /// Đã hoàn tiền thành công
         /// </summary>
-        Processed = 1,
+        Processed = 2,
 
         /// <summary>
         /// Hoàn tiền thất bại
         /// </summary>
-        Failed = 2,
+        Failed = 3,
+
+        /// <summary>
+        /// Chờ admin upload minh chứng hoàn tiền thủ công
+        /// </summary>
+        AwaitingManualProof = 4,
 
         /// <summary>
         /// Không cần hoàn tiền (deposit = 0 hoặc customer owes money)
         /// </summary>
-        NotRequired = 3
+        NotRequired = 5
     }
 }

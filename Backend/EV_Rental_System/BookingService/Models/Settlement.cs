@@ -86,6 +86,11 @@ namespace BookingService.Models
         public RefundStatus RefundStatus { get; set; } = RefundStatus.Pending;
 
         /// <summary>
+        /// Phương thức hoàn tiền (automatic qua API hoặc manual)
+        /// </summary>
+        public RefundMethod RefundMethod { get; set; } = RefundMethod.NotSet;
+
+        /// <summary>
         /// Thời gian xử lý hoàn tiền
         /// </summary>
         public DateTime? RefundProcessedAt { get; set; }
@@ -100,6 +105,66 @@ namespace BookingService.Models
         /// </summary>
         [MaxLength(500)]
         public string? RefundNotes { get; set; }
+
+        // ===== Refund Verification Fields =====
+
+        /// <summary>
+        /// VNPay transaction ID cho giao dịch hoàn tiền (automatic refund)
+        /// </summary>
+        [MaxLength(100)]
+        public string? RefundTransactionId { get; set; }
+
+        /// <summary>
+        /// Full response từ VNPay Refund API (JSON)
+        /// </summary>
+        [MaxLength(2000)]
+        public string? RefundGatewayResponse { get; set; }
+
+        /// <summary>
+        /// S3 URL của tài liệu minh chứng hoàn tiền thủ công (screenshot VNPay portal, bank transfer, etc.)
+        /// </summary>
+        [MaxLength(500)]
+        public string? RefundProofDocumentUrl { get; set; }
+
+        /// <summary>
+        /// Thời gian admin upload minh chứng hoàn tiền
+        /// </summary>
+        public DateTime? RefundProofUploadedAt { get; set; }
+
+        /// <summary>
+        /// FK to Payment table - original deposit payment
+        /// </summary>
+        public int? OriginalPaymentId { get; set; }
+
+        /// <summary>
+        /// Navigation property to original deposit payment
+        /// </summary>
+        [JsonIgnore]
+        public Payment? OriginalPayment { get; set; }
+
+        // ===== Additional Payment Tracking =====
+
+        /// <summary>
+        /// Status of additional payment collection (when deposit is insufficient)
+        /// </summary>
+        public AdditionalPaymentStatus AdditionalPaymentStatus { get; set; } = AdditionalPaymentStatus.NotRequired;
+
+        /// <summary>
+        /// FK to Payment table - additional payment for charges exceeding deposit
+        /// </summary>
+        public int? AdditionalPaymentId { get; set; }
+
+        /// <summary>
+        /// Navigation property to additional payment
+        /// </summary>
+        [JsonIgnore]
+        public Payment? AdditionalPayment { get; set; }
+
+        /// <summary>
+        /// VNPay payment URL for customer to pay additional charges
+        /// </summary>
+        [MaxLength(500)]
+        public string? AdditionalPaymentUrl { get; set; }
 
         // ===== Business Methods =====
 

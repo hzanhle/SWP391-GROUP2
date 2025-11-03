@@ -23,8 +23,9 @@ namespace BookingService.Models
         public int OnlineContractId { get; set; }
         public OnlineContract? OnlineContract { get; set; }
 
-        public int PaymentId { get; set; }
-        public Payment? Payment { get; set; }
+        // One Order can have multiple Payments (deposit + additional charges)
+        public ICollection<Payment> Payments { get; set; } = new List<Payment>();
+
         public Feedback? Feedback { get; set; }
         public decimal HourlyRate { get; set; }
         public decimal TotalCost { get; set; }
@@ -101,6 +102,22 @@ namespace BookingService.Models
                 throw new InvalidOperationException("Only InProgress orders can be completed.");
 
             Status = OrderStatus.Completed;
+        }
+
+        // Helper methods for payment access
+        public Payment? GetDepositPayment()
+        {
+            return Payments?.FirstOrDefault(p => p.Type == PaymentType.Deposit);
+        }
+
+        public IEnumerable<Payment> GetAdditionalPayments()
+        {
+            return Payments?.Where(p => p.Type == PaymentType.AdditionalCharge) ?? Enumerable.Empty<Payment>();
+        }
+
+        public Payment? GetPaymentById(int paymentId)
+        {
+            return Payments?.FirstOrDefault(p => p.PaymentId == paymentId);
         }
     }
 }

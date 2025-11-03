@@ -506,7 +506,9 @@ namespace BookingService.Services
                     ConditionNotes = request.ConditionNotes,
                     HasDamage = request.HasDamage,
                     DamageDescription = request.DamageDescription,
-                    DamageCharge = request.DamageCharge,
+                    // DamageCharge removed - customers should not set monetary charges
+                    // Staff will add actual damage charges via POST /api/settlement/{orderId}/damage
+                    DamageCharge = 0, // Default to 0 until staff assessment
                     ConfirmedBy = confirmedBy
                 };
 

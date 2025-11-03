@@ -33,6 +33,24 @@ namespace BookingService.DTOs
         public DateTime CreatedAt { get; set; }
         public DateTime? FinalizedAt { get; set; }
 
+        // Refund Tracking
+        public string RefundStatus { get; set; } = "Pending";
+        public string RefundMethod { get; set; } = "NotSet";
+        public DateTime? RefundProcessedAt { get; set; }
+        public int? RefundProcessedBy { get; set; }
+        public string? RefundNotes { get; set; }
+
+        // Refund Verification
+        public string? RefundTransactionId { get; set; }
+        public string? RefundProofDocumentUrl { get; set; }
+        public DateTime? RefundProofUploadedAt { get; set; }
+        public int? OriginalPaymentId { get; set; }
+
+        // Additional Payment Tracking
+        public string AdditionalPaymentStatus { get; set; } = "NotRequired";
+        public int? AdditionalPaymentId { get; set; }
+        public string? AdditionalPaymentUrl { get; set; }
+
         // Calculated Properties
         public string SettlementSummary => AdditionalPaymentRequired > 0
             ? $"Additional payment required: {AdditionalPaymentRequired:N0} VND"

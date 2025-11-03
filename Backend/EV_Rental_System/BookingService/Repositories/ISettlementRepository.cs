@@ -8,6 +8,7 @@ namespace BookingService.Repositories
         Task<Settlement> CreateAsync(Settlement settlement);
         Task<Settlement?> GetByIdAsync(int settlementId);
         Task<Settlement?> GetByOrderIdAsync(int orderId);
+        Task<Settlement?> GetByOrderIdForUpdateAsync(int orderId); // For update operations - returns tracked entity
         Task<bool> UpdateAsync(Settlement settlement);
         Task<bool> DeleteAsync(int settlementId);
 

@@ -27,13 +27,10 @@ namespace BookingService.DTOs
 
         /// <summary>
         /// Mô tả chi tiết hư hỏng (nếu có)
+        /// Khách hàng chỉ mô tả, không xác định số tiền bồi thường
+        /// Nhân viên/Admin sẽ xác định phí bồi thường thực tế trong settlement
         /// </summary>
         public string? DamageDescription { get; set; }
-
-        /// <summary>
-        /// Phí bồi thường hư hỏng (nếu có)
-        /// </summary>
-        public decimal DamageCharge { get; set; }
 
         /// <summary>
         /// Danh sách ảnh xe khi trả (required)

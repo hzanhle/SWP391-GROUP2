@@ -36,13 +36,33 @@ namespace BookingService.Services
         Task<SettlementResponse?> GetSettlementByIdAsync(int settlementId);
 
         /// <summary>
-        /// Mark refund as processed (admin manually refunded via VNPay portal)
+        /// Process automatic refund via VNPay Refund API
         /// </summary>
-        Task<SettlementResponse> MarkRefundAsProcessedAsync(int orderId, int adminId, string? notes = null);
+        Task<SettlementResponse> ProcessAutomaticRefundAsync(int orderId, int adminId);
+
+        /// <summary>
+        /// Mark refund as processed with proof document (manual refund via VNPay portal)
+        /// </summary>
+        Task<SettlementResponse> MarkRefundAsProcessedAsync(int orderId, int adminId, IFormFile proofDocument, string? notes = null);
 
         /// <summary>
         /// Mark refund as failed
         /// </summary>
         Task<SettlementResponse> MarkRefundAsFailedAsync(int orderId, int adminId, string? notes = null);
+
+        /// <summary>
+        /// Process additional payment callback from VNPay
+        /// </summary>
+        Task<SettlementResponse> ProcessAdditionalPaymentCallbackAsync(string txnRef, IQueryCollection queryParams);
+
+        /// <summary>
+        /// Get or regenerate additional payment URL for a settlement
+        /// </summary>
+        Task<string> GetAdditionalPaymentUrlAsync(int orderId);
+
+        /// <summary>
+        /// Check additional payment status for a settlement
+        /// </summary>
+        Task<AdditionalPaymentStatus> CheckAdditionalPaymentStatusAsync(int orderId);
     }
 }

@@ -261,6 +261,9 @@ static void ConfigureSwagger(IServiceCollection services)
         // This respects [AllowAnonymous] attributes (e.g., payment webhooks)
         options.OperationFilter<AuthorizeCheckOperationFilter>();
 
+        // Use operation filter to handle file uploads with IFormFile
+        options.OperationFilter<FileUploadOperationFilter>();
+
         options.CustomSchemaIds(type => type.FullName);
     });
 }

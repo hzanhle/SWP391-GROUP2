@@ -33,7 +33,18 @@ namespace BookingService.Repositories
         {
             return await _context.Settlements
                 .Include(s => s.Order)
+                .Include(s => s.AdditionalPayment)
                 .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.OrderId == orderId);
+        }
+
+        public async Task<Settlement?> GetByOrderIdForUpdateAsync(int orderId)
+        {
+            // Returns TRACKED entity for update operations
+            // Does NOT use AsNoTracking() so EF Core can track changes
+            return await _context.Settlements
+                .Include(s => s.Order)
+                .Include(s => s.AdditionalPayment)
                 .FirstOrDefaultAsync(s => s.OrderId == orderId);
         }
 
@@ -49,7 +60,21 @@ namespace BookingService.Repositories
         // === UPDATE ===
         public async Task<bool> UpdateAsync(Settlement settlement)
         {
-            _context.Settlements.Update(settlement);
+            // Check if entity is already being tracked by EF Core
+            var tracked = _context.ChangeTracker.Entries<Settlement>()
+                .FirstOrDefault(e => e.Entity.SettlementId == settlement.SettlementId);
+
+            if (tracked != null)
+            {
+                // Entity is already tracked - update its values to avoid tracking conflicts
+                _context.Entry(tracked.Entity).CurrentValues.SetValues(settlement);
+            }
+            else
+            {
+                // Entity is not tracked - attach and mark as modified
+                _context.Settlements.Update(settlement);
+            }
+
             return await _context.SaveChangesAsync() > 0;
         }
 
