@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader } from '@mui/material'
 import StaffLayout from '../components/staff/StaffLayout'
 import { getStaffVehicles, updateVehicleStatus, getVehicleHistory } from '../api/staffVehicle'
+import { getAllModels } from '../api/vehicle'
 import '../styles/staff.css'
 
 const VEHICLE_STATUSES = [
@@ -16,7 +17,7 @@ function getStatusBadge(status) {
   return statusObj || { label: status, color: '#f3f4f6', textColor: '#6b7280' }
 }
 
-function VehicleCard({ vehicle, onStatusChange, onViewHistory }) {
+function VehicleCard({ vehicle, onStatusChange, onViewHistory, getModelName }) {
   const [isUpdating, setIsUpdating] = useState(false)
   const currentStatus = vehicle.status || vehicle.Status || 'unknown'
 
@@ -42,7 +43,7 @@ function VehicleCard({ vehicle, onStatusChange, onViewHistory }) {
             {vehicle.licensePlate || vehicle.LicensePlate || 'N/A'}
           </h3>
           <p className="muted mb-0">
-            {vehicle.modelName || vehicle.ModelName || 'Unknown Model'}
+            {vehicle.licensePlate && vehicle.modelId ? getModelName(vehicle.modelId || vehicle.ModelId) : (vehicle.modelName || vehicle.ModelName || 'Unknown Model')}
           </p>
         </div>
         <span
@@ -138,6 +139,7 @@ function VehicleCard({ vehicle, onStatusChange, onViewHistory }) {
 export default function StaffVehicle() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth.token') : ''
   const [vehicles, setVehicles] = useState([])
+  const [models, setModels] = useState([])
   const [filteredVehicles, setFilteredVehicles] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -147,6 +149,11 @@ export default function StaffVehicle() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedHistory, setSelectedHistory] = useState(null)
   const [historyLoading, setHistoryLoading] = useState(false)
+
+  const getModelName = (modelId) => {
+    const m = models.find(x => x.modelId === modelId || x.id === modelId)
+    return m ? `${m.manufacturer} ${m.modelName}` : 'Unknown Model'
+  }
 
   const rawUser = (typeof window !== 'undefined' && localStorage.getItem('auth.user')) || '{}'
   let currentRoleId = 0
@@ -158,10 +165,15 @@ export default function StaffVehicle() {
     ;(async () => {
       try {
         setLoading(true)
-        const response = await getStaffVehicles(null, null, null, token)
+        const [vehiclesRes, modelsRes] = await Promise.all([
+          getStaffVehicles(null, null, null, token),
+          getAllModels(token)
+        ])
         if (!mounted) return
-        const vehicleList = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : [])
+        const vehicleList = Array.isArray(vehiclesRes.data?.data) ? vehiclesRes.data.data : (Array.isArray(vehiclesRes.data) ? vehiclesRes.data : [])
+        const modelsList = Array.isArray(modelsRes.data?.data) ? modelsRes.data.data : (Array.isArray(modelsRes.data) ? modelsRes.data : [])
         setVehicles(vehicleList)
+        setModels(modelsList)
         setError('')
       } catch (e) {
         setError(e.message || 'Failed to load vehicles')
@@ -196,14 +208,14 @@ export default function StaffVehicle() {
     if (searchTerm) {
       filtered = filtered.filter(v => {
         const licensePlate = (v.licensePlate || v.LicensePlate || '').toLowerCase()
-        const modelName = (v.modelName || v.ModelName || '').toLowerCase()
+        const modelName = getModelName(v.modelId || v.ModelId).toLowerCase()
         const search = searchTerm.toLowerCase()
         return licensePlate.includes(search) || modelName.includes(search)
       })
     }
 
     setFilteredVehicles(filtered)
-  }, [vehicles, statusFilter, batteryFilter, searchTerm])
+  }, [vehicles, models, statusFilter, batteryFilter, searchTerm])
 
   async function handleStatusChange(vehicleId, payload) {
     try {
@@ -211,9 +223,14 @@ export default function StaffVehicle() {
       setSuccessMessage('Vehicle status updated successfully!')
       setTimeout(() => setSuccessMessage(''), 3000)
 
-      const response = await getStaffVehicles(null, null, null, token)
-      const vehicleList = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : [])
+      const [vehiclesRes, modelsRes] = await Promise.all([
+        getStaffVehicles(null, null, null, token),
+        getAllModels(token)
+      ])
+      const vehicleList = Array.isArray(vehiclesRes.data?.data) ? vehiclesRes.data.data : (Array.isArray(vehiclesRes.data) ? vehiclesRes.data : [])
+      const modelsList = Array.isArray(modelsRes.data?.data) ? modelsRes.data.data : (Array.isArray(modelsRes.data) ? modelsRes.data : [])
       setVehicles(vehicleList)
+      setModels(modelsList)
     } catch (e) {
       setError(e.message || 'Failed to update vehicle status')
     }
@@ -371,6 +388,7 @@ export default function StaffVehicle() {
                       vehicle={vehicle}
                       onStatusChange={handleStatusChange}
                       onViewHistory={handleViewHistory}
+                      getModelName={getModelName}
                     />
                   ))}
                 </div>

@@ -3,7 +3,8 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-	</PropertyGroup>
+	  <UserSecretsId>d01176d6-bb9d-4d33-9937-eeff00a7c0cf</UserSecretsId>
+  </PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="AWSSDK.S3" Version="4.0.7.14" />

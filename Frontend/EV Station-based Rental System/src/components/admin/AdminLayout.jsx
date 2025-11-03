@@ -27,6 +27,8 @@ export default function AdminLayout({ children, active = 'overview' }) {
     { key: 'overview', label: 'Overview', href: '#admin', icon: 'home' },
     { key: 'users', label: 'Users', href: '#admin-users', icon: 'users' },
     { key: 'models', label: 'Vehicle Models', href: '#admin-models', icon: 'models' },
+    { key: 'vehicles', label: 'Vehicles', href: '#admin-vehicles', icon: 'models' },
+    { key: 'stations', label: 'Charging Stations', href: '#admin-stations', icon: 'home' },
     { key: 'staffshift', label: 'Staff Shifts', href: '#admin-staffshift', icon: 'schedule' },
   ]), []);
 

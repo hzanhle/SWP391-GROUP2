@@ -2206,6 +2206,66 @@ footer {
   }
 }
 
+/* Stations Section (Stations Page) */
+.stations-page-section {
+  width: 100%;
+  padding: 0;
+}
+
+.stations-page-hero {
+  width: 100%;
+  height: 41rem;
+  background: linear-gradient(135deg, #ff4d30 0%, #ff6b5a 100%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 3rem;
+}
+
+.stations-page-hero__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.stations-page-hero__content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: white;
+}
+
+.stations-page-hero__title {
+  font-size: 4.8rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.stations-page-hero__subtitle {
+  font-size: 2rem;
+  font-weight: 300;
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .stations-page-hero {
+    height: 30rem;
+  }
+
+  .stations-page-hero__title {
+    font-size: 3.2rem;
+  }
+
+  .stations-page-hero__subtitle {
+    font-size: 1.6rem;
+  }
+}
+
 /* Auth Pages (Login / Signup) */
 .auth-section {
   width: 100%;

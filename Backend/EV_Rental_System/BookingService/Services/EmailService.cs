@@ -14,11 +14,13 @@ namespace BookingService.Services
         {
             _settings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _logger.LogWarning("📧 Email Config Loaded => Email: {Email}, Pass: {HasPass}, From: {SenderName}",
-            _settings.SenderEmail,
-            string.IsNullOrEmpty(_settings.SenderPassword) ? "❌ No Password" : "✅ Has Password",
-            _settings.SenderName);
 
+            _logger.LogWarning(
+                "📧 Email Config Loaded => Email: {Email}, Pass: {HasPass}, From: {SenderName}",
+                string.IsNullOrWhiteSpace(_settings.SenderEmail) ? "(empty)" : _settings.SenderEmail,
+                string.IsNullOrWhiteSpace(_settings.SenderPassword) ? "❌ No Password" : "✅ Has Password",
+                _settings.SenderName
+            );
         }
 
         // ------------------ Public Methods ------------------
@@ -46,6 +48,17 @@ namespace BookingService.Services
 
         private async Task<bool> SendEmailInternalAsync(string toEmail, string subject, string body)
         {
+            // Validate cấu hình trước khi tạo MailAddress
+            if (string.IsNullOrWhiteSpace(_settings.SenderEmail))
+            {
+                _logger.LogError("❌ SenderEmail is empty. Configure EmailSettings:SenderEmail.");
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(_settings.SenderPassword))
+            {
+                _logger.LogError("❌ SenderPassword is empty. Configure EmailSettings:SenderPassword (use user-secrets).");
+                return false;
+            }
             if (string.IsNullOrWhiteSpace(toEmail))
             {
                 _logger.LogWarning("⚠️ Email người nhận trống, bỏ qua gửi.");
@@ -56,7 +69,7 @@ namespace BookingService.Services
             {
                 using var mail = new MailMessage
                 {
-                    From = new MailAddress(_settings.SenderEmail, _settings.SenderName),
+                    From = new MailAddress(_settings.SenderEmail.Trim(), _settings.SenderName),
                     Subject = subject,
                     Body = body,
                     IsBodyHtml = true
@@ -64,29 +77,36 @@ namespace BookingService.Services
 
                 mail.To.Add(toEmail);
 
-                //using var smtp = new SmtpClient(_settings.SmtpServer, _settings.SmtpPort)
-                //{
-                //    EnableSsl = _settings.EnableSsl,
-                //    DeliveryMethod = SmtpDeliveryMethod.Network,
-                //    UseDefaultCredentials = false,
-                //    Credentials = new NetworkCredential(_settings.SenderEmail, _settings.SenderPassword),
-                //    Timeout = 10000
-                //};
+                // Chọn chế độ SMTP theo cổng:
+                // - 587: STARTTLS (EnableSsl = true) => Gmail yêu cầu MustIssueSTARTTLSFirst
+                // - 465: SSL implicit (EnableSsl = true)
+                var host = _settings.SmtpServer;
+                var port = _settings.SmtpPort > 0 ? _settings.SmtpPort : 587;
+                var enableSsl = _settings.EnableSsl; // nên là true
 
-                using var smtp = new SmtpClient(_settings.SmtpServer, _settings.SmtpPort)
+                using var smtp = new SmtpClient(host, port)
                 {
-                    EnableSsl = true,
+                    EnableSsl = enableSsl,
                     DeliveryMethod = SmtpDeliveryMethod.Network,
                     UseDefaultCredentials = false,
-                    Credentials = new NetworkCredential(_settings.SenderEmail, _settings.SenderPassword)
+                    Credentials = new NetworkCredential(_settings.SenderEmail.Trim(), _settings.SenderPassword),
+                    Timeout = 15000
                 };
 
+                // Hint cho một số môi trường để chắc chắn SMTP chọn STARTTLS trước AUTH khi dùng 587
+                if (host.Equals("smtp.gmail.com", StringComparison.OrdinalIgnoreCase) && port == 587 && enableSsl)
+                {
+                    smtp.TargetName = "STARTTLS/smtp.gmail.com";
+                }
 
-                _logger.LogInformation("📨 Đang gửi email đến {Email}...", toEmail);
-                _logger.LogInformation("📧 Gmail config: {Email} / {Password}", _settings.SenderEmail, _settings.SenderPassword);
+                _logger.LogInformation(
+                    "📨 Đang gửi email đến {Email}... (smtp: {Host}:{Port}, ssl: {Ssl})",
+                    toEmail, host, port, enableSsl
+                );
+
                 await smtp.SendMailAsync(mail);
-                _logger.LogInformation("✅ Gửi email thành công đến {Email}", toEmail);
 
+                _logger.LogInformation("✅ Gửi email thành công đến {Email}", toEmail);
                 return true;
             }
             catch (SmtpException ex)

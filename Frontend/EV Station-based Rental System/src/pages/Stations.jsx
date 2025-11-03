@@ -43,7 +43,7 @@ export default function Stations() {
     <div data-figma-layer="Stations Page">
       <Navbar />
       <main>
-        <section className="stations-page-section">
+        <section className="stations-page-section page-offset">
           <div className="stations-page-hero">
             <div className="stations-page-hero__overlay"></div>
             <div className="container">

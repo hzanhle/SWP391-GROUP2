@@ -11,8 +11,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Microsoft.Extensions.Options;
+
 
 var builder = WebApplication.CreateBuilder(args);
+System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
 
 // ====================== Logging ======================
 builder.Logging.ClearProviders();
@@ -106,7 +109,16 @@ builder.Services.AddHangfireServer();
 
 // ====================== Build App ======================
 var app = builder.Build();
+using (var scope = app.Services.CreateScope())
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("CfgProbe");
+    var opt = scope.ServiceProvider.GetRequiredService<IOptions<EmailSettings>>().Value;
 
+    logger.LogWarning("🔧 EmailSettings probe => Email:{Email} / HasPass:{HasPass} / Host:{Host}:{Port} / SSL:{Ssl}",
+        string.IsNullOrWhiteSpace(opt.SenderEmail) ? "(empty)" : opt.SenderEmail,
+        string.IsNullOrWhiteSpace(opt.SenderPassword) ? "No" : "Yes",
+        opt.SmtpServer, opt.SmtpPort, opt.EnableSsl);
+}
 // ====================== Global Exception Handler ======================
 app.UseExceptionHandler(errorApp =>
 {
