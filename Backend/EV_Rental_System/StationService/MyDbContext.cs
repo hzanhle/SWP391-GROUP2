@@ -43,9 +43,6 @@ namespace StationService
                 entity.Property(e => e.Lng)
                     .IsRequired();
 
-                entity.Property(e => e.ManagerId)
-                    .IsRequired(false);
-
                 entity.Property(e => e.IsActive)
                     .IsRequired()
                     .HasDefaultValue(true);
@@ -214,7 +211,6 @@ namespace StationService
                     Location = "123 Nguyễn Huệ, Quận 1, TP.HCM",
                     Lat = 10.7769,
                     Lng = 106.7009,
-                    ManagerId = null,
                     IsActive = true
                 },
                 new Station
@@ -224,7 +220,6 @@ namespace StationService
                     Location = "456 Võ Văn Ngân, Thủ Đức, TP.HCM",
                     Lat = 10.8505,
                     Lng = 106.7717,
-                    ManagerId = null,
                     IsActive = true
                 },
                 new Station
@@ -234,7 +229,6 @@ namespace StationService
                     Location = "789 Xô Viết Nghệ Tĩnh, Bình Thạnh, TP.HCM",
                     Lat = 10.8014,
                     Lng = 106.7105,
-                    ManagerId = null,
                     IsActive = true
                 }
             );
