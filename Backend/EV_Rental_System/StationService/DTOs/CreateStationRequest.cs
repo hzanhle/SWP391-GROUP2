@@ -10,11 +10,9 @@ namespace StationService.DTOs
         [Required(ErrorMessage = "Vị trí trạm không được để trống.")]
         [StringLength(500, MinimumLength = 10, ErrorMessage = "Vị trí trạm phải từ 10 đến 500 ký tự.")]
         public required string Location { get; set; }
-        public int? ManagerId { get; set; } // User với role là Employee
-
               // Toạ độ cho map
-       [Range(-90, 90, ErrorMessage = "Lat phải trong [-90, 90].")]
-       public double Lat { get; set; }
+        [Range(-90, 90, ErrorMessage = "Lat phải trong [-90, 90].")]
+        public double Lat { get; set; }
         [Range(-180, 180, ErrorMessage = "Lng phải trong [-180, 180].")]
         public double Lng { get; set; }
     }
