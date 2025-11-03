@@ -86,7 +86,7 @@ namespace BookingService.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating order for User {UserId}", userId);
-                return StatusCode(500, new { Message = "Lỗi hệ thống khi tạo đơn hàng." });
+                return StatusCode(500, new { Message = "Lỗi h�� thống khi tạo đơn hàng." });
             }
         }
 
@@ -178,7 +178,7 @@ namespace BookingService.Controllers
         }
 
         /// <summary>
-        /// Lấy thông tin chi tiết đơn hàng
+        /// Lấy thông tin chi tiết đơn hàng (including OnlineContract)
         /// Admin, Employee có thể xem tất cả đơn
         /// Member chỉ xem được đơn của mình (validate trong service)
         /// </summary>
@@ -188,7 +188,7 @@ namespace BookingService.Controllers
         {
             try
             {
-                var order = await _orderService.GetOrderByIdAsync(orderId);
+                var order = await _orderService.GetOrderByIdWithDetailsAsync(orderId);
                 if (order == null)
                 {
                     return NotFound(new { Message = $"Không tìm thấy đơn hàng {orderId}." });

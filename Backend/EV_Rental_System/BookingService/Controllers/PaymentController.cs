@@ -1,6 +1,8 @@
 ﻿using BookingService.Services;
+using BookingService.Services.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 
 namespace BookingService.Controllers
@@ -13,15 +15,18 @@ namespace BookingService.Controllers
         private readonly IVNPayService _vnpayService;
         private readonly IPaymentService _paymentService;
         private readonly ILogger<PaymentController> _logger;
+        private readonly IHubContext<OrderTimerHub> _hubContext;
 
         public PaymentController(
             IVNPayService vnpayService,
             IPaymentService paymentService,
-            ILogger<PaymentController> logger)
+            ILogger<PaymentController> logger,
+            IHubContext<OrderTimerHub> hubContext)
         {
             _vnpayService = vnpayService;
             _paymentService = paymentService;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         /// <summary>
@@ -213,16 +218,29 @@ namespace BookingService.Controllers
                             orderId, transactionNo
                         );
 
+                        // Send SignalR notification to waiting clients
+                        try
+                        {
+                            var txnIdInt = int.TryParse(transactionNo, out var txnId) ? txnId : 0;
+                            await _hubContext.Clients.Group($"order_{orderId}")
+                                .SendAsync("PaymentSuccess", new { OrderId = orderId, TransactionId = transactionNo });
+                            _logger.LogInformation("📡 SignalR PaymentSuccess sent for Order {OrderId}", orderId);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "⚠️ Failed to send SignalR notification for Order {OrderId}", orderId);
+                        }
+
                         // Get FE URL from environment or config
                         var feUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
-                        var redirectUrl = $"{feUrl}#payment?success=true&orderId={orderId}";
+                        var redirectUrl = $"{feUrl}?success=true&orderId={orderId}#payment";
                         return Redirect(redirectUrl);
                     }
                     else
                     {
                         _logger.LogError("Failed to mark payment completed for Order {OrderId}", orderId);
                         var feUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
-                        var redirectUrl = $"{feUrl}#payment?success=false&orderId={orderId}&error=payment_update_failed";
+                        var redirectUrl = $"{feUrl}?success=false&orderId={orderId}&error=payment_update_failed#payment";
                         return Redirect(redirectUrl);
                     }
                 }
@@ -318,6 +336,18 @@ namespace BookingService.Controllers
 
                     await _paymentService.MarkPaymentCompletedAsync(orderId, transactionNo, gatewayResponse);
                     _logger.LogInformation("VNPay IPN - Payment completed for Order {OrderId}", orderId);
+
+                    // Send SignalR notification to waiting clients
+                    try
+                    {
+                        await _hubContext.Clients.Group($"order_{orderId}")
+                            .SendAsync("PaymentSuccess", new { OrderId = orderId, TransactionId = transactionNo });
+                        _logger.LogInformation("📡 SignalR PaymentSuccess sent for Order {OrderId} (IPN)", orderId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "⚠️ Failed to send SignalR notification (IPN) for Order {OrderId}", orderId);
+                    }
                 }
                 else
                 {

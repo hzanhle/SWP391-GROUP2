@@ -20,6 +20,7 @@ namespace BookingService.Services
 
         // (Giữ nguyên)
         Task<Order?> GetOrderByIdAsync(int orderId);
+        Task<Order?> GetOrderByIdWithDetailsAsync(int orderId);
         Task<IEnumerable<Order>> GetOrdersByUserIdAsync(int userId);
 
         //Task<bool> CancelOrderAsync(int orderId, int userId);

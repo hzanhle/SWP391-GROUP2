@@ -142,16 +142,45 @@ export default function Payment() {
           console.warn('SignalR not available or failed to connect:', hubErr)
         }
 
-        // Check URL params for payment callback (fallback)
+        // Check URL params for payment callback
+        // When returning from VNPay, check if contract was already created
         const params = new URLSearchParams(window.location.search)
         const paymentSuccess = params.get('success')
-        const orderId = params.get('orderId')
+        const urlOrderId = params.get('orderId')
 
-        if (paymentSuccess === 'true' && orderId) {
-          setPaymentStatus('success')
-        } else if (paymentSuccess === 'false' && orderId) {
+        if (paymentSuccess === 'false' && urlOrderId) {
           setPaymentStatus('failed')
           setError('Thanh toán thất bại. Vui lòng thử lại.')
+        } else if (paymentSuccess === 'true' && urlOrderId) {
+          // Returning from VNPay - check if contract was created while we were away
+          try {
+            const order = await bookingApi.getOrderById(Number(urlOrderId), authToken)
+            console.log('[Payment] Order status on return:', order.data)
+
+            // Check if contract exists (OnlineContract.ContractFilePath is the S3 URL)
+            if (order.data && order.data.OnlineContract && order.data.OnlineContract.ContractFilePath) {
+              // Contract exists - show success immediately
+              const contractUrl = order.data.OnlineContract.ContractFilePath
+              setContractUrl(contractUrl)
+              setContractDetails({ downloadUrl: contractUrl })
+              console.log('[Payment] Contract found on return:', contractUrl)
+              setPaymentStatus('success')
+            } else {
+              // Contract not ready yet - wait for SignalR event (with timeout)
+              console.log('[Payment] Contract not yet created on return, waiting for SignalR...')
+              const contractCheckTimer = setTimeout(() => {
+                console.log('[Payment] Contract check timeout - showing success anyway')
+                setPaymentStatus('success')
+              }, 8000)
+            }
+          } catch (err) {
+            console.warn('[Payment] Could not fetch order status:', err)
+            // On error, still set success status with timeout
+            console.log('[Payment] Error fetching order, will show success with timeout')
+            setTimeout(() => {
+              setPaymentStatus('success')
+            }, 5000)
+          }
         }
 
         setLoading(false)
@@ -313,7 +342,7 @@ export default function Payment() {
                     </div>
                   ) : (
                     <div>
-                      <p className="card-subtext">Contract is being created — you will receive an email with download link when complete.</p>
+                      <p className="card-subtext">Contract is being created �� you will receive an email with download link when complete.</p>
                       <CTA as="button" onClick={handleConfirmSuccess} variant="primary">View Order Details</CTA>
                     </div>
                   )}

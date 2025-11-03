@@ -31,5 +31,19 @@ namespace BookingService.Services.SignalR
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
             _logger.LogInformation($"Client {Context.ConnectionId} left group {groupName}");
         }
+
+        /// <summary>
+        /// Server gọi từ PaymentController để notify clients khi payment success
+        /// </summary>
+        public async Task SendPaymentSuccess(int orderId, int transactionId)
+        {
+            var groupName = $"order_{orderId}";
+            await Clients.Group(groupName).SendAsync("PaymentSuccess", new
+            {
+                OrderId = orderId,
+                TransactionId = transactionId
+            });
+            _logger.LogInformation($"Sent PaymentSuccess to group {groupName}, TxnId: {transactionId}");
+        }
     }
 }
