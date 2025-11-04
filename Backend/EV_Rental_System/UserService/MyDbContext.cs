@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using UserService.Models;
-using UserService.Models.UserService.Models;
 
 namespace UserService
 {
@@ -56,21 +55,6 @@ namespace UserService
                 new Role(1, "Member"),
                 new Role(2, "Employee"),
                 new Role(3, "Admin")
-            );
-
-            // ==================== Seed Admin User ====================
-            modelBuilder.Entity<User>().HasData(
-                new User
-                {
-                    Id = 1,
-                    UserName = "admin",
-                    Email = "admin@example.com",
-                    PhoneNumber = "0123456789",
-                    Password = "$2a$11$eW8Gm1/ZVGw7Xu0R6q8OiOxXkdyI6g1A0Fh0Z0R0HJ0a5rXaIu3zq",
-                    RoleId = 3,
-                    CreatedAt = new DateTime(2025, 1, 1),
-                    IsActive = true
-                }
             );
 
             // ==================== Configure Image ====================

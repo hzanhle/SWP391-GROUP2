@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using UserService.Models.UserService.Models;
 
 namespace UserService.Models
 {

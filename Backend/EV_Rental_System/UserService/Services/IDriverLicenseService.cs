@@ -1,6 +1,5 @@
 ﻿using UserService.DTOs;
 using UserService.Models;
-using UserService.Models.UserService.Models;
 
 namespace UserService.Services
 {
