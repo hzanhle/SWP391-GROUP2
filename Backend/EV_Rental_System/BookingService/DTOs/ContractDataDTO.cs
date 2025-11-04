@@ -14,7 +14,7 @@
         public string CustomerName { get; set; }
         public string CustomerEmail { get; set; }
         public string CustomerPhone { get; set; }
-        public string CustomerIdCard { get; set; }
+        public string? CustomerIdCard { get; set; } // ✅ Optional
         public string CustomerAddress { get; set; }
         public string CustomerDateOfBirth { get; set; } // Format: DD-MM-YYYY
 
@@ -41,7 +41,7 @@
         public decimal TotalPaymentAmount { get; set; }
 
         // ===== Thông tin thanh toán =====
-        public string TransactionId { get; set; }  // ID giao dịch
+        public string? TransactionId { get; set; }  // ✅ Optional - ID giao dịch
         public string PaymentMethod { get; set; }  // Ví dụ: "VNPay"
         public DateTime PaymentDate { get; set; }
     }

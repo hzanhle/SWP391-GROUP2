@@ -99,9 +99,9 @@ export default function Payment() {
                 FromDate: new Date(bookingData.dates?.from).toISOString(),
                 ToDate: new Date(bookingData.dates?.to).toISOString(),
                 TotalRentalCost: Number(bookingData.totalRentalCost || 0),
-                DepositCost: Number(bookingData.depositCost || 0),
+                DepositAmount: Number(bookingData.depositCost || 0),
                 ServiceFee: Number(bookingData.serviceFee || 0),
-                TotalPaymentCost: Number(bookingData.totalCost || 0),
+                TotalPaymentAmount: Number(bookingData.totalCost || 0),
                 TransactionId: transactionId || '',
                 PaymentMethod: 'VNPay',
                 PaymentDate: new Date().toISOString(),
@@ -109,21 +109,28 @@ export default function Payment() {
 
               console.log('[Payment] Contract data prepared:', contractData)
 
-              const res = await bookingApi.createContract(contractData, authToken)
-              console.log('[Payment] Contract creation response:', res)
+              try {
+                const res = await bookingApi.createContract(contractData, authToken)
+                console.log('[Payment] Contract creation response:', res)
 
-              if (res && res.data) {
-                const contractUrl = res.data.downloadUrl || res.data.DownloadUrl || ''
-                setContractDetails(res.data)
-                setContractUrl(contractUrl)
-                console.log('[Payment] Contract URL received:', contractUrl)
-                localStorage.removeItem('pending_booking')
-                localStorage.setItem('active_order', String(bookingData.orderId))
-              } else {
-                console.warn('[Payment] No contract URL in response')
+                if (res && res.data) {
+                  const contractUrl = res.data.downloadUrl || res.data.DownloadUrl || ''
+                  setContractDetails(res.data)
+                  setContractUrl(contractUrl)
+                  console.log('[Payment] Contract URL received:', contractUrl)
+                  localStorage.removeItem('pending_booking')
+                  localStorage.setItem('active_order', String(bookingData.orderId))
+                  setPaymentStatus('success')
+                } else {
+                  console.warn('[Payment] No contract URL in response')
+                  setPaymentStatus('success')
+                }
+              } catch (contractErr) {
+                console.error('[Payment] Contract creation failed via SignalR:', contractErr)
+                // Contract creation failed, but payment succeeded - still show success
+                // The contract may be created via the VNPay callback redirect instead
+                setPaymentStatus('success')
               }
-
-              setPaymentStatus('success')
             } catch (err) {
               console.error('[Payment] Error handling PaymentSuccess event:', err)
               setPaymentStatus('success')
@@ -143,43 +150,162 @@ export default function Payment() {
         }
 
         // Check URL params for payment callback
-        // When returning from VNPay, check if contract was already created
+        // When returning from VNPay, actively create contract instead of waiting for SignalR
         const params = new URLSearchParams(window.location.search)
         const paymentSuccess = params.get('success')
         const urlOrderId = params.get('orderId')
+        const urlTransactionId = params.get('transactionId')  // ✅ Extract from VNPay redirect
 
         if (paymentSuccess === 'false' && urlOrderId) {
           setPaymentStatus('failed')
           setError('Thanh toán thất bại. Vui lòng thử lại.')
         } else if (paymentSuccess === 'true' && urlOrderId) {
-          // Returning from VNPay - check if contract was created while we were away
+          // Returning from VNPay - create contract immediately instead of waiting for SignalR
+          console.log('[Payment] VNPay callback received with success=true, creating contract...')
+
           try {
+            // First, fetch the order to verify payment was completed
             const order = await bookingApi.getOrderById(Number(urlOrderId), authToken)
             console.log('[Payment] Order status on return:', order.data)
 
-            // Check if contract exists (OnlineContract.ContractFilePath is the S3 URL)
+            // ✅ CRITICAL: Verify payment is actually CONFIRMED before proceeding
+            // Order.Status becomes "Confirmed" after payment completes
+            const orderStatus = order.data?.Status
+
+            console.log('[Payment] Order status:', orderStatus)
+
+            // Check if order is confirmed (payment succeeded)
+            const isPaymentConfirmed = orderStatus === 'Confirmed'
+
+            if (!isPaymentConfirmed) {
+              console.warn('[Payment] Order not confirmed yet. Order Status:', orderStatus)
+              // Don't show success if order isn't confirmed
+              // Just show the normal payment page instead
+              setLoading(false)
+              return
+            }
+
+            // Check if contract already exists
             if (order.data && order.data.OnlineContract && order.data.OnlineContract.ContractFilePath) {
-              // Contract exists - show success immediately
+              // Contract already exists - show success immediately
               const contractUrl = order.data.OnlineContract.ContractFilePath
               setContractUrl(contractUrl)
               setContractDetails({ downloadUrl: contractUrl })
-              console.log('[Payment] Contract found on return:', contractUrl)
+              console.log('[Payment] Contract already exists on return:', contractUrl)
               setPaymentStatus('success')
             } else {
-              // Contract not ready yet - wait for SignalR event (with timeout)
-              console.log('[Payment] Contract not yet created on return, waiting for SignalR...')
-              const contractCheckTimer = setTimeout(() => {
-                console.log('[Payment] Contract check timeout - showing success anyway')
+              // Contract doesn't exist yet - create it NOW instead of waiting
+              console.log('[Payment] Contract not found, creating contract...')
+
+              const userJson = localStorage.getItem('auth.user') || '{}'
+              const user = JSON.parse(userJson)
+
+              console.log('[Payment] User data from localStorage:', {
+                name: user.fullName || user.fullname || user.name,
+                email: user.email,
+                phone: user.phone || user.phoneNumber,
+                idCard: user.idCard || user.id_card || user.identityNumber,
+              })
+
+              // Use booking data from localStorage OR extract from Order API response
+              const bookingToUse = bookingData || {
+                orderId: Number(urlOrderId),
+                vehicleInfo: {},
+                dates: {
+                  from: order.data?.FromDate,
+                  to: order.data?.ToDate,
+                },
+                totalRentalCost: order.data?.TotalCost || 0,
+                depositCost: order.data?.DepositAmount || 0,
+                serviceFee: 0, // Not available in Order model directly
+                totalCost: order.data?.TotalCost || 0,
+              }
+
+              // Calculate service fee if not available
+              const rentalCost = Number(bookingToUse.totalRentalCost || 0)
+              const depositCost = Number(bookingToUse.depositCost || 0)
+              const serviceFee = Number(bookingToUse.serviceFee || 0)
+              const totalCost = Number(bookingToUse.totalCost || (rentalCost + depositCost + serviceFee))
+
+              // Validate required financial data
+              if (totalCost <= 0) {
+                console.error('[Payment] Invalid total cost:', totalCost)
+                setError('Lỗi: Không thể xác định chi phí đơn hàng')
+                setLoading(false)
+                return
+              }
+
+              const contractData = {
+                OrderId: Number(urlOrderId),
+                PaidAt: new Date().toISOString(),
+                CustomerName: user.fullName || user.fullname || user.name || 'Khách hàng',
+                CustomerEmail: user.email || '',
+                CustomerPhone: user.phone || user.phoneNumber || '',
+                CustomerIdCard: user.idCard || user.id_card || user.identityNumber || '',
+                CustomerAddress: user.address || '',
+                CustomerDateOfBirth: user.dateOfBirth || user.dob || '',
+                VehicleModel: bookingToUse.vehicleInfo?.model || order.data?.Vehicle?.Model || 'N/A',
+                LicensePlate: bookingToUse.vehicleInfo?.licensePlate || order.data?.Vehicle?.LicensePlate || 'N/A',
+                VehicleColor: bookingToUse.vehicleInfo?.color || order.data?.Vehicle?.Color || 'N/A',
+                VehicleType: bookingToUse.vehicleInfo?.type || order.data?.Vehicle?.Type || 'N/A',
+                FromDate: bookingToUse.dates?.from ? new Date(bookingToUse.dates.from).toISOString() : new Date().toISOString(),
+                ToDate: bookingToUse.dates?.to ? new Date(bookingToUse.dates.to).toISOString() : new Date().toISOString(),
+                TotalRentalCost: rentalCost,
+                DepositAmount: depositCost,
+                ServiceFee: serviceFee,
+                TotalPaymentAmount: totalCost,
+                TransactionId: urlTransactionId || '',  // ✅ Use from VNPay URL callback
+                PaymentMethod: 'VNPay',
+                PaymentDate: new Date().toISOString(),
+              }
+
+              console.log('[Payment] Submitting contract creation with data:', contractData)
+
+              // Validate contract data before sending
+              const missingFields = []
+              if (!contractData.CustomerName) missingFields.push('CustomerName')
+              if (!contractData.CustomerEmail) missingFields.push('CustomerEmail')
+              if (!contractData.CustomerPhone) missingFields.push('CustomerPhone')
+              // ✅ CustomerIdCard is now optional
+              // ✅ TransactionId is now optional - VNPay callback may not provide it
+
+              if (missingFields.length > 0) {
+                console.error('[Payment] Missing required fields:', missingFields)
+                setError(`Lỗi: Thiếu dữ liệu bắt buộc: ${missingFields.join(', ')}`)
+                setLoading(false)
+                return
+              }
+
+              try {
+                const res = await bookingApi.createContract(contractData, authToken)
+                console.log('[Payment] Contract creation response:', res)
+
+                if (res && res.data) {
+                  const contractUrl = res.data.downloadUrl || res.data.DownloadUrl || ''
+                  setContractDetails(res.data)
+                  setContractUrl(contractUrl)
+                  console.log('[Payment] Contract created successfully:', contractUrl)
+                  localStorage.removeItem('pending_booking')
+                  localStorage.setItem('active_order', String(Number(urlOrderId)))
+                } else {
+                  console.warn('[Payment] No contract URL in response')
+                }
+
                 setPaymentStatus('success')
-              }, 8000)
+              } catch (contractErr) {
+                console.error('[Payment] Contract creation error:', contractErr)
+                setError(`Lỗi tạo hợp đồng: ${contractErr.message}`)
+                setLoading(false)
+                return
+              }
             }
+
+            // ✅ Clear URL params to prevent re-triggering on page refresh
+            window.history.replaceState({}, document.title, window.location.pathname)
           } catch (err) {
-            console.warn('[Payment] Could not fetch order status:', err)
-            // On error, still set success status with timeout
-            console.log('[Payment] Error fetching order, will show success with timeout')
-            setTimeout(() => {
-              setPaymentStatus('success')
-            }, 5000)
+            console.error('[Payment] Error handling VNPay callback:', err)
+            // Don't show success if there's an error
+            setLoading(false)
           }
         }
 

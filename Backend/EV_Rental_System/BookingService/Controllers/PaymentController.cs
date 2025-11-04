@@ -233,7 +233,7 @@ namespace BookingService.Controllers
 
                         // Get FE URL from environment or config
                         var feUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
-                        var redirectUrl = $"{feUrl}?success=true&orderId={orderId}#payment";
+                        var redirectUrl = $"{feUrl}?success=true&orderId={orderId}&transactionId={transactionNo}#payment";
                         return Redirect(redirectUrl);
                     }
                     else

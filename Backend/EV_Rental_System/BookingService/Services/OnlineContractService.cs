@@ -154,13 +154,14 @@ namespace BookingService.Services
             if (string.IsNullOrWhiteSpace(data.CustomerName)) errors.Add("Tên khách hàng trống");
             if (string.IsNullOrWhiteSpace(data.CustomerEmail)) errors.Add("Email trống");
             if (string.IsNullOrWhiteSpace(data.CustomerPhone)) errors.Add("SĐT trống");
-            if (string.IsNullOrWhiteSpace(data.CustomerIdCard)) errors.Add("CMND/CCCD trống");
+            // ✅ CustomerIdCard is now optional - can be empty
             if (string.IsNullOrWhiteSpace(data.VehicleModel)) errors.Add("Model xe trống");
             if (string.IsNullOrWhiteSpace(data.LicensePlate)) errors.Add("Biển số trống");
             if (data.FromDate >= data.ToDate) errors.Add("Ngày bắt đầu >= ngày kết thúc");
             if (data.TotalRentalCost <= 0) errors.Add("Chi phí thuê <= 0");
             if (data.TotalPaymentAmount <= 0) errors.Add("Tổng thanh toán <= 0");
-            if (string.IsNullOrWhiteSpace(data.TransactionId)) errors.Add("Mã giao dịch trống");
+            // ✅ TransactionId is now optional - can be empty (VNPay callback may not always provide it)
+            // if (string.IsNullOrWhiteSpace(data.TransactionId)) errors.Add("Mã giao dịch trống");
 
             if (errors.Any())
             {
@@ -358,7 +359,7 @@ namespace BookingService.Services
                 ContractNumber = data.ContractNumber,
                 ContractFilePath = s3Url, // ✅ S3 URL thay vì local path
                 SignedAt = data.PaidAt ?? data.PaymentDate,
-                SignatureData = data.TransactionId,
+                SignatureData = data.TransactionId ?? string.Empty, // ✅ Default to empty string if null
                 TemplateVersion = 1,
                 CreatedAt = DateTime.UtcNow
             };
