@@ -31,14 +31,6 @@ namespace StationService.Repositories
             return await _context.Stations.Where(s => !s.IsActive).ToListAsync();
         }
 
-        public async Task<List<Station>> GetStationsByManagerId(int managerId)
-        {
-            return await _context.Stations
-                                 .Where(s => s.ManagerId == managerId)
-                                 .ToListAsync();
-        }
-
-
         public async Task<Station> AddStation(Station station)
         {
             await _context.Stations.AddAsync(station);

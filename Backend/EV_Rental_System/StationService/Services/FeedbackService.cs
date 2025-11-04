@@ -10,16 +10,13 @@ namespace StationService.Services
     public class FeedbackService : IFeedbackService
     {
         private readonly IFeedbackRepository _repository;
-        private readonly IUserIntegrationService _userIntegrationService;
         private readonly ILogger<FeedbackService> _logger;
 
         public FeedbackService(
             IFeedbackRepository repository,
-            IUserIntegrationService userIntegrationService,
             ILogger<FeedbackService> logger)
         {
             _repository = repository;
-            _userIntegrationService = userIntegrationService;
             _logger = logger;
         }
 
