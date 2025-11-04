@@ -171,14 +171,21 @@ export default function Payment() {
             // ✅ CRITICAL: Verify payment is actually CONFIRMED before proceeding
             // Order.Status becomes "Confirmed" after payment completes
             const orderStatus = order.data?.Status
+            const payment = order.data?.Payment
 
             console.log('[Payment] Order status:', orderStatus)
+            console.log('[Payment] Payment status:', payment?.Status)
 
             // Check if order is confirmed (payment succeeded)
-            const isPaymentConfirmed = orderStatus === 'Confirmed'
+            // BOTH conditions must be true: order is Confirmed AND payment status is Completed
+            const isOrderConfirmed = orderStatus === 'Confirmed'
+            const isPaymentCompleted = payment?.Status === 'Completed' || payment?.status === 'Completed'
+            const isPaymentConfirmed = isOrderConfirmed && isPaymentCompleted
 
             if (!isPaymentConfirmed) {
-              console.warn('[Payment] Order not confirmed yet. Order Status:', orderStatus)
+              console.warn('[Payment] ❌ Payment not fully confirmed yet')
+              console.warn('[Payment]   - Order Status:', orderStatus, '(expected: Confirmed)')
+              console.warn('[Payment]   - Payment Status:', payment?.Status, '(expected: Completed)')
               // Don't show success if order isn't confirmed
               // Just show the normal payment page instead
               setLoading(false)

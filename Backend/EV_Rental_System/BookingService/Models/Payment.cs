@@ -18,6 +18,7 @@ namespace BookingService.Models
 
         // === Foreign Key đến Order ===
         public int OrderId { get; set; }
+        [JsonIgnore] // ✅ Prevent circular reference when serializing
         public Order? Order { get; set; }
 
         // === Payment details ===

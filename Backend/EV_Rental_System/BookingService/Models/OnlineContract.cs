@@ -1,4 +1,6 @@
-﻿namespace BookingService.Models
+﻿using System.Text.Json.Serialization;
+
+namespace BookingService.Models
 {
     /// <summary>
     /// Lưu thông tin hợp đồng đã được tạo sau khi thanh toán thành công.
@@ -9,6 +11,7 @@
 
         // === Foreign Key đến Order ===
         public int OrderId { get; set; }
+        [JsonIgnore] // ✅ Prevent circular reference when serializing
         public Order? Order { get; set; }
 
         // === Contract identification ===
