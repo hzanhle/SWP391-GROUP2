@@ -30,6 +30,7 @@ export default function Profile() {
     licenseType: 'B1',
     registerDate: '',
     registerOffice: '',
+    sex: 'Nam',
   })
   const [idFront, setIdFront] = useState(null)
   const [idBack, setIdBack] = useState(null)
@@ -103,45 +104,71 @@ export default function Profile() {
     }
 
     try {
-      setSubmittingCitizen(true)
-      setCitizenError('')
-      
-      const userId = Number((user?.userId || user?.UserId))
-      if (!userId) throw new Error('Không thể xác định ID người dùng')
+  setSubmittingCitizen(true)
+  setCitizenError('')
 
-      await clientApi.createCitizenInfo({
-        UserId: userId,
-        CitizenId: citizenFormData.citizenId,
-        Sex: citizenFormData.sex,
-        DayOfBirth: citizenFormData.dayOfBirth,
-        CitiRegisDate: citizenFormData.citiRegisDate,
-        CitiRegisOffice: citizenFormData.citiRegisOffice,
-        FullName: formData.fullName,
-        Address: formData.address,
-        Files: [citizenLicenseFront, citizenLicenseBack],
-      }, authToken)
-      
-      setCitizenSuccess(true)
-      setCitizenFormData({
-        citizenId: '',
-        sex: 'Nam',
-        dayOfBirth: '',
-        citiRegisDate: '',
-        citiRegisOffice: '',
-      })
-      setCitizenLicenseFront(null)
-      setCitizenLicenseBack(null)
-      
-      setTimeout(() => {
-        setCitizenSuccess(false)
-      }, 3000)
-    } catch (err) {
-      console.error('Error submitting citizen info:', err)
-      setCitizenError(err.message || 'Không gửi được CCCD')
-    } finally {
-      setSubmittingCitizen(false)
-    }
+  const userId = Number(user?.userId || user?.UserId)
+  if (!userId) throw new Error('Không thể xác định ID người dùng')
+
+  // === LOG TRƯỚC KHI GỬI ===
+  console.group('%c[CitizenInfo Submit]', 'color: #00bfff; font-weight: bold;')
+  console.log('🧾 UserId:', userId)
+  console.log('🔐 Auth Token:', authToken ? '(đã có token)' : '❌ không có token')
+  console.log('📦 Payload chuẩn bị gửi:', {
+    CitizenId: citizenFormData.citizenId,
+    Sex: citizenFormData.sex,
+    DayOfBirth: citizenFormData.dayOfBirth,
+    CitiRegisDate: citizenFormData.citiRegisDate,
+    CitiRegisOffice: citizenFormData.citiRegisOffice,
+    FullName: citizenFormData.fullName,
+    Address: citizenFormData.address,
+    Files: [citizenLicenseFront, citizenLicenseBack]
+  })
+  console.groupEnd()
+
+  const res = await clientApi.createCitizenInfo({
+    CitizenId: citizenFormData.citizenId,
+    Sex: citizenFormData.sex,
+    DayOfBirth: citizenFormData.dayOfBirth,
+    CitiRegisDate: citizenFormData.citiRegisDate,
+    CitiRegisOffice: citizenFormData.citiRegisOffice,
+    FullName: citizenFormData.fullName,
+    Address: citizenFormData.address,
+    Files: [citizenLicenseFront, citizenLicenseBack]
+  }, authToken)
+
+  // === LOG PHẢN HỒI ===
+  console.group('%c[CitizenInfo Response]', 'color: #4caf50; font-weight: bold;')
+  console.log('✅ Response từ BE:', res)
+  console.groupEnd()
+
+  setCitizenSuccess(true)
+  setCitizenFormData({
+    citizenId: '',
+    sex: 'Nam',
+    dayOfBirth: '',
+    citiRegisDate: '',
+    citiRegisOffice: '',
+  })
+  setCitizenLicenseFront(null)
+  setCitizenLicenseBack(null)
+
+  setTimeout(() => setCitizenSuccess(false), 3000)
+
+} catch (err) {
+  console.group('%c[CitizenInfo Error]', 'color: #f44336; font-weight: bold;')
+  console.error('❌ Lỗi khi gửi CitizenInfo:', err)
+  if (err.response) {
+    console.error('📥 Response lỗi từ BE:', err.response)
   }
+  console.groupEnd()
+
+  setCitizenError(err.message || 'Không gửi được CCCD')
+
+} finally {
+  setSubmittingCitizen(false)
+}}
+
 
   const handleDriverLicenseSubmit = async (e) => {
     e.preventDefault()
@@ -157,41 +184,60 @@ export default function Profile() {
     }
 
     try {
-      setSubmittingLicense(true)
-      setLicenseError('')
-      
-      const userId = Number((user?.userId || user?.UserId))
-      if (!userId) throw new Error('Không thể xác định ID người dùng')
+  setSubmittingLicense(true);
+  setLicenseError('');
 
-      await clientApi.createDriverLicense({
-        UserId: userId,
-        LicenseId: licenseFormData.licenseId,
-        LicenseType: licenseFormData.licenseType,
-        RegisterDate: licenseFormData.registerDate,
-        RegisterOffice: licenseFormData.registerOffice,
-        Files: [idFront, idBack],
-      }, authToken)
-      
-      setLicenseSuccess(true)
-      setLicenseFormData({
-        licenseId: '',
-        licenseType: 'B1',
-        registerDate: '',
-        registerOffice: '',
-      })
-      setIdFront(null)
-      setIdBack(null)
-      
-      setTimeout(() => {
-        setLicenseSuccess(false)
-      }, 3000)
-    } catch (err) {
-      console.error('Error submitting driver license:', err)
-      setLicenseError(err.message || 'Không gửi được GPLX')
-    } finally {
-      setSubmittingLicense(false)
-    }
+  const userId = Number(user?.userId || user?.UserId);
+  if (!userId) throw new Error('Không thể xác định ID người dùng');
+
+  // Tạo payload trước để log dễ
+  const payload = {
+    LicenseId: licenseFormData.licenseId,
+    LicenseType: licenseFormData.licenseType,
+    RegisterDate: licenseFormData.registerDate,
+    RegisterOffice: licenseFormData.registerOffice,
+    DayOfBirth: licenseFormData.dayOfBirth,
+    FullName: licenseFormData.fullName,
+    Sex: licenseFormData.sex,
+    Address: licenseFormData.address,
+    Files: [idFront, idBack],
+  };
+
+  // Log object tổng thể
+  console.log('🧾 DriverLicenseRequest payload:', payload);
+  console.table(payload);
+
+  // Log kiểu dữ liệu từng trường
+  for (const [key, value] of Object.entries(payload)) {
+    console.log(`${key}:`, value, `→ type: ${typeof value}`);
   }
+
+  const res = await clientApi.createDriverLicense(payload, authToken);
+  console.log('✅ API Response:', res);
+
+  setLicenseSuccess(true);
+  setLicenseFormData({
+  licenseId: '',
+  licenseType: 'B1',
+  registerDate: '',
+  registerOffice: '',
+  sex: 'Nam',           // ✅
+  dayOfBirth: '',       // ✅
+  fullName: '',         // ✅
+  address: '',          // ✅
+});
+  setIdFront(null);
+  setIdBack(null);
+
+  setTimeout(() => {
+    setLicenseSuccess(false);
+  }, 3000);
+} catch (err) {
+  console.error('❌ Error submitting driver license:', err);
+  setLicenseError(err.message || 'Không gửi được GPLX');
+} finally {
+  setSubmittingLicense(false);
+}}
 
   if (loading) {
     return (
@@ -349,6 +395,18 @@ export default function Profile() {
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
+                      <label htmlFor="address" className="label">Địa chỉ</label>
+                      <input
+                        id="address"
+                        type="text"
+                        name="address"
+                        value={citizenFormData.Address}
+                        onChange={handleCitizenInputChange}
+                        className="input"
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '1.5rem' }}>
                       <label htmlFor="citiRegisDate" className="label">Ngày đăng ký CCCD</label>
                       <input
                         id="citiRegisDate"
@@ -437,7 +495,62 @@ export default function Profile() {
                     </div>
                   )}
 
+                  
+
                   <form onSubmit={handleDriverLicenseSubmit}>
+
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label htmlFor="fullName" className="label">Full Name</label>
+                      <input
+                        id="fullName"
+                        type="text"
+                        name="fullName"
+                        value={licenseFormData.fullName}
+                        onChange={handleLicenseInputChange}
+                        className="input"
+                        placeholder="VD: Le Nguyen Hoang Anh"
+                      />
+                    </div> 
+
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label htmlFor="sex" className="label">Giới tính</label>
+                      <select
+                        id="sex"
+                        name="sex"
+                        value={licenseFormData.sex}
+                        onChange={handleLicenseInputChange}
+                        className="input"
+                      >
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
+                      </select>
+                    </div>
+
+                  <div style={{ marginBottom: '1.5rem' }}>
+                      <label htmlFor="dayOfBirth" className="label">Ngày sinh</label>
+                      <input
+                        id="dayOfBirth"
+                        type="date"
+                        name="dayOfBirth"
+                        value={licenseFormData.dayOfBirth}
+                        onChange={handleLicenseInputChange}
+                        className="input"
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label htmlFor="address" className="label">Địa chỉ</label>
+                      <input
+                        id="address"
+                        type="text"
+                        name="address"
+                        value={licenseFormData.Address}
+                        onChange={handleLicenseInputChange}
+                        className="input"
+                      />
+                    </div>
+
                     <div style={{ marginBottom: '1.5rem' }}>
                       <label htmlFor="licenseId" className="label">Số GPLX</label>
                       <input

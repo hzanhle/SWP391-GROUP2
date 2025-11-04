@@ -54,10 +54,10 @@ export function sendRegistrationOtp(user) {
   return request('/api/User/register/send-otp', {
     method: 'POST',
     body: {
-      userName: user.userName,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      password: user.password,
+      UserName: user.userName,
+      Email: user.email,
+      PhoneNumber: user.phoneNumber,
+      Password: user.password
     },
   })
 }
@@ -148,20 +148,27 @@ export function updateCitizenInfo(payload, token) {
   return request('/api/CitizenInfo', { method: 'PUT', body: fd, token })
 }
 
-export function getCitizenInfo(userId, token) {
-  return request(`/api/CitizenInfo/${userId}`, { method: 'GET', token })
+export function getCitizenInfo(token) {
+  return request(`/api/CitizenInfo`, { method: 'GET', token })
 }
 
 // DriverLicense APIs (multipart/form-data)
 export function createDriverLicense(payload, token) {
   const fd = new FormData()
+  
   if (payload.UserId != null) fd.append('UserId', String(payload.UserId))
   if (payload.LicenseId) fd.append('LicenseId', payload.LicenseId)
   if (payload.LicenseType) fd.append('LicenseType', payload.LicenseType)
   if (payload.RegisterDate) fd.append('RegisterDate', payload.RegisterDate)
   if (payload.RegisterOffice) fd.append('RegisterOffice', payload.RegisterOffice)
+  if (payload.DayOfBirth) fd.append('DayOfBirth', payload.DayOfBirth)
+  if (payload.FullName) fd.append('FullName', payload.FullName)
+  if (payload.Sex) fd.append('Sex', payload.Sex)
+  if (payload.Address) fd.append('Address', payload.Address)
+  
   const files = payload.Files || []
   for (const f of files) if (f) fd.append('Files', f)
+  
   return request('/api/DriverLicense', { method: 'POST', body: fd, token })
 }
 
@@ -177,7 +184,7 @@ export function updateDriverLicense(payload, token) {
   return request('/api/DriverLicense', { method: 'PUT', body: fd, token })
 }
 
-export function getDriverLicense(userId, token) {
+export function getDriverLicense(token) {
   return request(`/api/DriverLicense/${userId}`, { method: 'GET', token })
 }
 

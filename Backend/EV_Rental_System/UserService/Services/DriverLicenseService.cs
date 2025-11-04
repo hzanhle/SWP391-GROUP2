@@ -53,13 +53,16 @@ namespace UserService.Services
                 if (request.Files == null || request.Files.Count == 0)
                     return new ResponseDTO
                     {
-                        Message = "Vui lòng tải lên ít nhất một hình ảnh của Giấy phép lái xe"
+                        IsSuccess = false,
+                        Message = "Vui lòng tải lên ít nhất một hình ảnh của Giấy phép lái xe",
+                        Data = request
                     };
 
                 var entity = await CreatePendingDriverLicense(request, userId);
 
                 return new ResponseDTO
                 {
+                    IsSuccess = true,
                     Message = "Yêu cầu tạo Giấy phép lái xe đã được gửi. Vui lòng chờ xác thực",
                     Data = entity
                 };
@@ -83,6 +86,10 @@ namespace UserService.Services
                     Id = entity.Id,
                     UserId = entity.UserId,
                     LicenseId = entity.LicenseId,
+                    FullName = entity.FullName,
+                    Address = entity.Address,
+                    Sex = entity.Sex,
+                    DayOfBirth = entity.DayOfBirth,
                     LicenseType = entity.LicenseType,
                     RegisterDate = entity.RegisterDate,
                     RegisterOffice = entity.RegisterOffice,
@@ -144,19 +151,15 @@ namespace UserService.Services
         {
             try
             {
-                // Lấy thông tin CitizenInfo
-                var citizenInfo = await _citizenInfoService.GetCitizenInfoByUserId(userId);
-                if (citizenInfo == null)
-                {
-                    throw new Exception($"Không tìm thấy CitizenInfo cho UserId {userId}");
-                }
-
                 var entity = new DriverLicense
                 {
-                    FullName = citizenInfo.FullName,
+                    FullName = request.FullName,
                     UserId = userId,
                     LicenseId = request.LicenseId,
                     LicenseType = request.LicenseType,
+                    Address = request.Address,
+                    Sex = request.Sex,
+                    DayOfBirth = request.DayOfBirth,
                     RegisterDate = request.RegisterDate,
                     RegisterOffice = request.RegisterOffice,
                     Status = StatusInformation.Pending,

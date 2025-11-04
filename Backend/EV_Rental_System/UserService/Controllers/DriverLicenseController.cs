@@ -12,11 +12,13 @@ namespace UserService.Controllers
     {
         private readonly IDriverLicenseService _driverLicenseService;
         private readonly IJwtService _jwtService;
+        private readonly ILogger<DriverLicenseController> _logger;
 
-        public DriverLicenseController(IDriverLicenseService driverLicenseService, IJwtService jwtService)
+        public DriverLicenseController(IDriverLicenseService driverLicenseService, IJwtService jwtService, ILogger<DriverLicenseController> logger)
         {
             _driverLicenseService = driverLicenseService;
             _jwtService = jwtService;
+            _logger = logger;
         }
 
         // ============================================
@@ -38,24 +40,7 @@ namespace UserService.Controllers
         // ============================================
         // 🔹 Helper: trả về lỗi model
         // ============================================
-        private IActionResult HandleInvalidModel()
-        {
-            var errors = ModelState
-                .Where(x => x.Value.Errors.Any())
-                .Select(x => new
-                {
-                    Field = x.Key,
-                    Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                })
-                .ToList();
 
-            return BadRequest(new ResponseDTO
-            {
-                IsSuccess = false,
-                Message = "Dữ liệu không hợp lệ",
-                Data = errors
-            });
-        }
 
         // ============================================
         // ✅ Member: gửi yêu cầu thêm bằng lái
@@ -64,13 +49,53 @@ namespace UserService.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateDriverLicense([FromForm] DriverLicenseRequest request)
         {
+            // ✅ Thêm logging chi tiết ngay đầu
+            _logger.LogInformation("=== [CreateDriverLicense] ===");
+            _logger.LogInformation("LicenseId: {LicenseId}", request.LicenseId);
+            _logger.LogInformation("LicenseType: {LicenseType}", request.LicenseType);
+            _logger.LogInformation("RegisterDate: {RegisterDate}", request.RegisterDate);
+            _logger.LogInformation("RegisterOffice: {RegisterOffice}", request.RegisterOffice);
+            _logger.LogInformation("DayOfBirth: {DayOfBirth}", request.DayOfBirth);
+            _logger.LogInformation("FullName: {FullName}", request.FullName);
+            _logger.LogInformation("Sex: {Sex}", request.Sex);
+            _logger.LogInformation("Address: {Address}", request.Address);
+            _logger.LogInformation("Files count: {FileCount}", request.Files?.Count ?? 0);
+
+            if (request.Files != null)
+            {
+                foreach (var f in request.Files)
+                {
+                    _logger.LogInformation("File received: {FileName} ({Length} bytes)", f.FileName, f.Length);
+                }
+            }
+
             if (!ModelState.IsValid)
-                return HandleInvalidModel();
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new
+                    {
+                        Field = x.Key,
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage)
+                    })
+                    .ToList();
+                _logger.LogWarning("Invalid model state: {@Errors}", errors);
+                return BadRequest(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
 
             try
             {
                 var userId = GetUserIdFromToken();
+                _logger.LogInformation("UserId from token: {UserId}", userId);
+
                 var result = await _driverLicenseService.AddDriverLicense(request, userId);
+
+                _logger.LogInformation("Driver license created successfully for UserId {UserId}", userId);
 
                 return Ok(new ResponseDTO
                 {
@@ -81,6 +106,7 @@ namespace UserService.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
+                _logger.LogWarning(ex, "Unauthorized access while creating driver license");
                 return Unauthorized(new ResponseDTO
                 {
                     IsSuccess = false,
@@ -89,6 +115,7 @@ namespace UserService.Controllers
             }
             catch (ArgumentException ex)
             {
+                _logger.LogWarning(ex, "Argument error while creating driver license");
                 return BadRequest(new ResponseDTO
                 {
                     IsSuccess = false,
@@ -97,6 +124,7 @@ namespace UserService.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Unexpected error while creating driver license");
                 return StatusCode(500, new ResponseDTO
                 {
                     IsSuccess = false,
@@ -114,7 +142,25 @@ namespace UserService.Controllers
         public async Task<IActionResult> UpdateDriverLicense([FromForm] DriverLicenseRequest request)
         {
             if (!ModelState.IsValid)
-                return HandleInvalidModel();
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new
+                    {
+                        Field = x.Key,
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage)
+                    })
+                    .ToList();
+
+                _logger.LogWarning("Invalid model state: {@Errors}", errors);
+
+                return BadRequest(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
 
             try
             {
@@ -174,15 +220,46 @@ namespace UserService.Controllers
             }
         }
 
-        // ============================================
-        // ✅ Admin + Employee + Member: xem hồ sơ
-        // ============================================
-        [Authorize(Roles = "Admin,Employee,Member")]
-        [HttpGet("{userId}")]
-        public async Task<IActionResult> GetDriverLicenseByUserId(int userId)
+        [HttpGet("{userId:int}")]
+        [Authorize(Roles = "Admin,Employee")]
+        public async Task<IActionResult> SearchDriverLicenseByUserId(int userId)
         {
             try
             {
+                var driverLicense = await _driverLicenseService.GetDriverLicenseByUserId(userId);
+                if (driverLicense == null)
+                {
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Không tìm thấy hồ sơ bằng lái."
+                    });
+                }
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Lấy thông tin bằng lái thành công",
+                    Data = driverLicense
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
+            }
+        }
+
+        [Authorize(Roles = "Member")]
+        [HttpGet]
+        public async Task<IActionResult> GetDriverLicenseByUserId()
+        {
+            try
+            {
+                int userId = GetUserIdFromToken();
                 var driverLicense = await _driverLicenseService.GetDriverLicenseByUserId(userId);
                 if (driverLicense == null)
                 {
@@ -214,7 +291,7 @@ namespace UserService.Controllers
         // ============================================
         // ✅ Admin + Employee + Staff: duyệt hoặc từ chối hồ sơ
         // ============================================
-        [Authorize(Roles = "Admin,Employee,Staff")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPost("set-status/{userId}/{isApproved}")]
         public async Task<IActionResult> SetStatus(int userId, bool isApproved)
         {
