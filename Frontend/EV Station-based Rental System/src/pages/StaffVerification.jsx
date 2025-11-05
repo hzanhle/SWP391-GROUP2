@@ -52,8 +52,8 @@ export default function StaffVerification() {
     setLicense(null)
     try {
       const [cRes, lRes] = await Promise.allSettled([
-        api.getCitizenInfo(userId, token),
-        api.getDriverLicense(userId, token),
+        api.getCitizenInfoByUserIdForStaff(userId, token),
+        api.getDriverLicenseByUserIdForStaff(userId, token),
       ])
       if (cRes.status === 'fulfilled') setCitizen(cRes.value.data)
       if (lRes.status === 'fulfilled') setLicense(lRes.value.data)
@@ -91,9 +91,17 @@ export default function StaffVerification() {
       const uid = Number((citizen?.userId) || (license?.userId))
       if (!uid) throw new Error('Missing UserId')
       if (type === 'citizen') {
-        await api.setCitizenInfoStatus(uid, approve, token)
+        if (approve) {
+          await api.approveCitizenInfo(uid, token)
+        } else {
+          await api.rejectCitizenInfo(uid, token)
+        }
       } else {
-        await api.setDriverLicenseStatus(uid, approve, token)
+        if (approve) {
+          await api.approveDriverLicense(uid, token)
+        } else {
+          await api.rejectDriverLicense(uid, token)
+        }
       }
       await loadUserData(uid)
       window.alert(approve ? 'Approved' : 'Rejected')

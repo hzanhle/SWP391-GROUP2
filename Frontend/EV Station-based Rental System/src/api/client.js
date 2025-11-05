@@ -185,7 +185,7 @@ export function updateDriverLicense(payload, token) {
 }
 
 export function getDriverLicense(token) {
-  return request(`/api/DriverLicense/${userId}`, { method: 'GET', token })
+  return request(`/api/DriverLicense`, { method: 'GET', token })
 }
 
 export function getNotifications(token) {
@@ -212,6 +212,32 @@ export function listVerificationUsers({ status, query, page = 1, pageSize = 10 }
   q.set('page', String(page))
   q.set('pageSize', String(pageSize))
   return request(`/api/Verification/users?${q.toString()}`, { token })
+}
+
+// Staff verification - get documents by userId for verification (Admin/Employee only)
+export function getCitizenInfoByUserIdForStaff(userId, token) {
+  return request(`/api/CitizenInfo/${userId}`, { method: 'GET', token })
+}
+
+export function getDriverLicenseByUserIdForStaff(userId, token) {
+  return request(`/api/DriverLicense/${userId}`, { method: 'GET', token })
+}
+
+// Staff verification - approve/reject documents
+export function approveCitizenInfo(userId, token) {
+  return setCitizenInfoStatus(userId, true, token)
+}
+
+export function rejectCitizenInfo(userId, token) {
+  return setCitizenInfoStatus(userId, false, token)
+}
+
+export function approveDriverLicense(userId, token) {
+  return setDriverLicenseStatus(userId, true, token)
+}
+
+export function rejectDriverLicense(userId, token) {
+  return setDriverLicenseStatus(userId, false, token)
 }
 
 // Password reset via OTP
@@ -241,4 +267,4 @@ export function resetPassword(payload) {
   })
 }
 
-export default { request, sendRegistrationOtp, verifyRegistrationOtp, registerUser, login, getUserById, getUserDetail, getAllUsers, deleteUser, toggleUserActive, toggleStaffAdmin, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense, getNotifications, clearNotifications, setCitizenInfoStatus, setDriverLicenseStatus, listVerificationUsers, sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword }
+export default { request, sendRegistrationOtp, verifyRegistrationOtp, registerUser, login, getUserById, getUserDetail, getAllUsers, deleteUser, toggleUserActive, toggleStaffAdmin, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense, getNotifications, clearNotifications, setCitizenInfoStatus, setDriverLicenseStatus, listVerificationUsers, getCitizenInfoByUserIdForStaff, getDriverLicenseByUserIdForStaff, approveCitizenInfo, rejectCitizenInfo, approveDriverLicense, rejectDriverLicense, sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword }
