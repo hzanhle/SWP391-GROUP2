@@ -27,7 +27,7 @@ export default function AdminStaffShift() {
         setShifts(Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []))
         setError('')
       } catch (e) {
-        setError(e.message || 'Không tải được ca làm việc')
+        setError(e.message || 'Failed to load shifts')
       } finally { 
         if (mounted) setLoading(false) 
       }
@@ -53,7 +53,7 @@ export default function AdminStaffShift() {
       setOpenDialog(false)
       setError('')
     } catch (e) {
-      setError(e.message || 'Tạo ca thất bại')
+      setError(e.message || 'Failed to create shift')
     } finally { 
       setSubmitting(false) 
     }
@@ -172,7 +172,7 @@ export default function AdminStaffShift() {
                   />
                   <TextField
                     fullWidth
-                    label="Ngày"
+                    label="Date"
                     type="date"
                     value={form.shiftDate}
                     onChange={e => setForm({ ...form, shiftDate: e.target.value })}
@@ -182,7 +182,7 @@ export default function AdminStaffShift() {
                   />
                   <TextField
                     fullWidth
-                    label="Giờ bắt đầu"
+                    label="Start Time"
                     type="time"
                     value={form.startTime}
                     onChange={e => setForm({ ...form, startTime: e.target.value })}
@@ -192,7 +192,7 @@ export default function AdminStaffShift() {
                   />
                   <TextField
                     fullWidth
-                    label="Giờ kết thúc"
+                    label="End Time"
                     type="time"
                     value={form.endTime}
                     onChange={e => setForm({ ...form, endTime: e.target.value })}
@@ -204,10 +204,10 @@ export default function AdminStaffShift() {
               </DialogContent>
               <DialogActions>
                 <Button onClick={() => { setOpenDialog(false); setForm({ userId: '', stationId: '', shiftDate: '', startTime: '', endTime: '' }) }}>
-                  Hủy
+                  Cancel
                 </Button>
                 <Button onClick={handleCreate} variant="contained" disabled={submitting}>
-                  {submitting ? 'Đang tạo...' : 'Tạo ca'}
+                  {submitting ? 'Creating...' : 'Create Shift'}
                 </Button>
               </DialogActions>
             </Dialog>

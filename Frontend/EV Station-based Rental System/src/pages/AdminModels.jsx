@@ -38,34 +38,34 @@ function ModelForm({ initial, onSubmit, onCancel }) {
     <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Grid container spacing={2} sx={{ width: '100%' }}>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth label="Tên mẫu" value={form.modelName} onChange={e=>updateField('modelName', e.target.value)} required />
+          <TextField fullWidth label="Model Name" value={form.modelName} onChange={e=>updateField('modelName', e.target.value)} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth label="Hãng" value={form.manufacturer} onChange={e=>updateField('manufacturer', e.target.value)} required />
+          <TextField fullWidth label="Brand" value={form.manufacturer} onChange={e=>updateField('manufacturer', e.target.value)} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Năm" value={form.year} onChange={e=>updateField('year', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Year" value={form.year} onChange={e=>updateField('year', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Tốc độ tối đa (km/h)" value={form.maxSpeed} onChange={e=>updateField('maxSpeed', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Max speed (km/h)" value={form.maxSpeed} onChange={e=>updateField('maxSpeed', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Dung lượng pin (mAh)" value={form.batteryCapacity} onChange={e=>updateField('batteryCapacity', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Battery capacity (mAh)" value={form.batteryCapacity} onChange={e=>updateField('batteryCapacity', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Thời gian sạc (phút)" value={form.chargingTime} onChange={e=>updateField('chargingTime', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Charging time (min)" value={form.chargingTime} onChange={e=>updateField('chargingTime', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Quãng đường (km)" value={form.batteryRange} onChange={e=>updateField('batteryRange', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Range (km)" value={form.batteryRange} onChange={e=>updateField('batteryRange', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Số chỗ" value={form.vehicleCapacity} onChange={e=>updateField('vehicleCapacity', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Seats" value={form.vehicleCapacity} onChange={e=>updateField('vehicleCapacity', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Giá mẫu (VNĐ)" value={form.modelCost} onChange={e=>updateField('modelCost', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Model price (VND)" value={form.modelCost} onChange={e=>updateField('modelCost', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Giá thuê/giờ (VNĐ)" value={form.rentFeeForHour} onChange={e=>updateField('rentFeeForHour', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Rent per hour (VND)" value={form.rentFeeForHour} onChange={e=>updateField('rentFeeForHour', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12 }}>
           <TextField fullWidth type="file" onChange={handleFiles} slotProps={{
@@ -74,8 +74,8 @@ function ModelForm({ initial, onSubmit, onCancel }) {
         </Grid>
       </Grid>
       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-        <Button variant="outlined" onClick={onCancel}>Hủy</Button>
-        <Button variant="contained" type="submit">Lưu</Button>
+        <Button variant="outlined" onClick={onCancel}>Cancel</Button>
+        <Button variant="contained" type="submit">Save</Button>
       </Box>
     </Box>
   );
@@ -102,7 +102,7 @@ export default function AdminModels() {
       const { data } = await getAllModels(token)
       setModels(Array.isArray(data) ? data : [])
     } catch (e) {
-      setError(e?.message || 'Không tải được danh sách mẫu')
+      setError(e?.message || 'Failed to load models')
     } finally {
       setLoading(false)
     }
@@ -247,7 +247,7 @@ export default function AdminModels() {
             {/* Form Dialog */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
               <DialogTitle>
-                {editing?.modelId ? 'Sửa mẫu xe' : 'Thêm mẫu xe mới'}
+                {editing?.modelId ? 'Edit model' : 'Add new model'}
               </DialogTitle>
               <DialogContent sx={{ pt: 2 }}>
                 <ModelForm 

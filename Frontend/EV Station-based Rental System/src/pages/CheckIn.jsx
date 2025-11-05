@@ -74,7 +74,7 @@ export default function CheckIn() {
                   <p className="card-subtext" style={{ marginBottom: '2rem', fontSize: '1.6rem' }}>
                     You have successfully received the vehicle. Enjoy your trip!
                   </p>
-                  <p className="card-subtext">Đang chuyển hướng...</p>
+                  <p className="card-subtext">Redirecting...</p>
                 </div>
               </div>
             </div>

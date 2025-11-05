@@ -186,7 +186,7 @@ export default function Payment() {
 
         if (paymentSuccess === 'false' && urlOrderId) {
           setPaymentStatus('failed')
-          setError('Thanh toán thất bại. Vui lòng thử lại.')
+          setError('Payment failed. Please try again.')
         } else if (paymentSuccess === 'true' && urlOrderId) {
           // Returning from VNPay - create contract immediately instead of waiting for SignalR
           console.log('[Payment] VNPay callback received with success=true, creating contract...')
@@ -645,13 +645,13 @@ export default function Payment() {
                           borderRadius: '0.5rem',
                           marginTop: '1rem'
                         }}>
-                          ⏰ Thanh toán trước: {new Date(booking.expiresAt).toLocaleString('vi-VN')}
+                          ⏰ Pay before: {new Date(booking.expiresAt).toLocaleString('vi-VN')}
                         </p>
                       )}
                     </div>
                   ) : (
                     <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
-                      <p>Không có dữ liệu đơn hàng. Vui lòng thử lại.</p>
+                      <p>No order data. Please try again.</p>
                     </div>
                   )}
                 </div>
@@ -659,7 +659,7 @@ export default function Payment() {
 
               <div className="card">
                 <div className="card-body">
-                  <h3 className="card-title">Phương thức thanh toán</h3>
+                  <h3 className="card-title">Payment Method</h3>
                   
                   <div style={{ marginTop: '2rem' }}>
                     <div style={{
@@ -670,10 +670,10 @@ export default function Payment() {
                       backgroundColor: '#fff5f0'
                     }}>
                       <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏦</div>
-                      <h4 style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>Ví điện tử VNPay</h4>
-                      <p className="card-subtext">Thanh toán nhanh chóng và an toàn</p>
+                      <h4 style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>VNPay e-wallet</h4>
+                      <p className="card-subtext">Fast and secure payment</p>
                       <p className="card-subtext" style={{ marginTop: '1rem', color: '#2a6817' }}>
-                        ✓ Bảo mật 100%
+                        ✓ 100% secure
                       </p>
                     </div>
 
@@ -690,7 +690,7 @@ export default function Payment() {
                         disabled={paymentProcessing}
                         variant="primary"
                       >
-                        {paymentProcessing ? 'Đang xử lý...' : 'Thanh toán qua VNPay'}
+                        {paymentProcessing ? 'Processing...' : 'Pay with VNPay'}
                       </CTA>
                       <CTA 
                         as="a" 
@@ -698,7 +698,7 @@ export default function Payment() {
                         variant="secondary"
                         style={{ marginTop: '1rem', display: 'block', textAlign: 'center' }}
                       >
-                        Huỷ bỏ
+                        Cancel
                       </CTA>
                     </div>
                   </div>
