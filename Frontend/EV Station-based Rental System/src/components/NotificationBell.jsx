@@ -13,9 +13,9 @@ function formatTime(ts) {
   const d = new Date(ts)
   if (isNaN(d.getTime())) return ''
   const diff = (Date.now() - d.getTime()) / 1000
-  if (diff < 60) return 'vừa xong'
-  if (diff < 3600) return `${Math.floor(diff/60)} phút trước`
-  if (diff < 86400) return `${Math.floor(diff/3600)} giờ trước`
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff/60)} minutes ago`
+  if (diff < 86400) return `${Math.floor(diff/3600)} hours ago`
   return d.toLocaleString()
 }
 
@@ -46,7 +46,7 @@ export default function NotificationBell() {
         const { data } = await api.getNotifications(token)
         if (!cancelled) setItems(Array.isArray(data) ? data : [])
       } catch (e) {
-        if (!cancelled) setError(e?.message || 'Không thể tải thông báo')
+        if (!cancelled) setError(e?.message || 'Failed to load notifications')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -77,9 +77,9 @@ export default function NotificationBell() {
         <div className="dropdown-menu card" role="menu">
           <div className="card-body">
             <div className="row-between">
-              <h4 className="card-title">Thông báo</h4>
+              <h4 className="card-title">Notifications</h4>
               <div className="row">
-                {items.length > 0 && (<small className="card-subtext">{unreadCount} chưa đọc</small>)}
+                {items.length > 0 && (<small className="card-subtext">{unreadCount} unread</small>)}
                 {items.length > 0 && (
                   <button className="btn-ghost" onClick={async () => {
                     try {
@@ -87,9 +87,9 @@ export default function NotificationBell() {
                       setItems([])
                       setError('')
                     } catch (e) {
-                      setError(e?.message || 'Không thể xóa thông báo')
+                      setError(e?.message || 'Failed to clear notifications')
                     }
-                  }}>Xóa tất cả</button>
+                  }}>Clear All</button>
                 )}
               </div>
             </div>
@@ -102,7 +102,7 @@ export default function NotificationBell() {
             )}
 
             {!loading && !error && items.length === 0 && (
-              <div className="py-6 text-center card-subtext">Không có thông báo mới</div>
+              <div className="py-6 text-center card-subtext">No new notifications</div>
             )}
 
             {!loading && !error && items.length > 0 && (
@@ -119,7 +119,7 @@ export default function NotificationBell() {
 
             {!loading && !error && items.length > 0 && (
               <div className="mt-3">
-                <a href="#profile" className="btn-gradient">Xem tất cả</a>
+                <a href="#profile" className="btn-gradient">View All</a>
               </div>
             )}
           </div>

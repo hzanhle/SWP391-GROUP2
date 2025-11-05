@@ -30,22 +30,22 @@ export default function BookingStep3_Schedule({
     <div className="booking-grid">
       <div className="booking-notes-container">
         <div className="booking-note booking-note-warning">
-          <span className="booking-note-icon">⏱️</span>
+          <span className="booking-note-icon">���️</span>
           <div className="booking-note-content">
-            <p className="booking-note-text"><strong>Lưu ý:</strong> Thời gian đặt và trả xe phải cách nhau ít nhất <strong>3 tiếng</strong></p>
+            <p className="booking-note-text"><strong>Note:</strong> Pickup and return times must be at least <strong>3 hours</strong> apart</p>
           </div>
         </div>
         <div className="booking-note booking-note-info">
           <span className="booking-note-icon">⚠️</span>
           <div className="booking-note-content">
-            <p className="booking-note-text"><strong>Hạn chế:</strong> Bạn có tối đa <strong>15 phút</strong> để đến điểm nhận xe sau thời gian được chỉ định</p>
+            <p className="booking-note-text"><strong>Restriction:</strong> You have a maximum of <strong>15 minutes</strong> to arrive at the pickup point after the specified time</p>
           </div>
         </div>
       </div>
 
       <div className="field">
         <label htmlFor="pickup-date" className="label">
-          <span>Thời gian nhận xe</span>
+          <span>Pickup Time</span>
         </label>
         <input
           id="pickup-date"
@@ -57,7 +57,7 @@ export default function BookingStep3_Schedule({
       </div>
       <div className="field">
         <label htmlFor="dropoff-date" className="label">
-          <span>Thời gian trả xe</span>
+          <span>Return Time</span>
         </label>
         <input
           id="dropoff-date"
@@ -68,7 +68,7 @@ export default function BookingStep3_Schedule({
         />
         {pickupDate && dropoffDate && !isValidTimeRange && (
           <div className="field-error-message">
-            <span className="error-icon">⚠️</span> Thời gian trả xe phải sau nhân xe ít nhất 3 tiếng
+            <span className="error-icon">⚠️</span> Return time must be at least 3 hours after pickup
           </div>
         )}
       </div>
@@ -86,39 +86,39 @@ export default function BookingStep3_Schedule({
             onClick={onPreview}
             disabled={!selectedModel || !pickupDate || !dropoffDate || !isValidTimeRange}
           >
-            Xem trước chi phí
+            View Cost Estimate
           </CTA>
         </div>
       )}
 
       {previewLoading && (
         <div className="field grid-span-full text-center">
-          <p>Đang tính toán...</p>
+          <p>Calculating...</p>
         </div>
       )}
 
       {preview && (
         <div className="summary grid-span-full">
-          <h3 className="card-title">Tóm tắt đơn hàng</h3>
+          <h3 className="card-title">Order Summary</h3>
           <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span className="card-subtext">Địa điểm:</span>
+              <span className="card-subtext">Location:</span>
               <span className="card-subtext" style={{ fontWeight: 'bold' }}>{selectedStation?.name}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span className="card-subtext">Xe:</span>
+              <span className="card-subtext">Vehicle:</span>
               <span className="card-subtext" style={{ fontWeight: 'bold' }}>{selectedModel?.manufacturer} {selectedModel?.modelName}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span className="card-subtext">Giá thuê:</span>
+              <span className="card-subtext">Rental Price:</span>
               <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.totalRentalCost?.toFixed(2)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span className="card-subtext">Tiền cọc:</span>
+              <span className="card-subtext">Deposit:</span>
               <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.depositCost?.toFixed(2)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span className="card-subtext">Phí dịch vụ:</span>
+              <span className="card-subtext">Service Fee:</span>
               <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.serviceFee?.toFixed(2)}</span>
             </div>
             <hr style={{ margin: '1rem 0' }} />
@@ -141,7 +141,7 @@ export default function BookingStep3_Schedule({
               aria-label="Đồng ý điều khoản"
             />
             <span style={{ fontSize: '1rem' }}>
-              Tôi đã đọc và đồng ý với{' '}
+              I have read and agree with{' '}
               <button
                 type="button"
                 onClick={() => setShowTerms(true)}
@@ -158,7 +158,7 @@ export default function BookingStep3_Schedule({
                 onMouseOver={(e) => (e.target.style.color = '#0052a3')}
                 onMouseOut={(e) => (e.target.style.color = '#0066cc')}
               >
-                Điều khoản &amp; Dịch vụ
+                Terms &amp; Services
               </button>
             </span>
           </label>

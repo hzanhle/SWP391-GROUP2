@@ -8,7 +8,7 @@ export default function TermsAndServices({ isOpen, onClose }) {
     <div className="terms-overlay">
       <div className="terms-modal">
         <div className="terms-header">
-          <h2 className="terms-title">Điều khoản &amp; Dịch vụ</h2>
+          <h2 className="terms-title">Terms &amp; Services</h2>
           <button 
             className="terms-close-btn" 
             onClick={onClose}
@@ -20,65 +20,65 @@ export default function TermsAndServices({ isOpen, onClose }) {
         
         <div className="terms-content">
           <section className="terms-section">
-            <h3>1. Thời gian chuẩn bị</h3>
+            <h3>1. Preparation Time</h3>
             <p>
-              Khách hàng có tối đa 15 phút để đến điểm nhận xe sau thời gian được chỉ định. 
-              Nếu trễ hơn 15 phút, đơn hàng sẽ bị hủy và có thể mất phí.
+              Customers have a maximum of 15 minutes to arrive at the pickup point after the specified time. 
+              If late by more than 15 minutes, the order will be cancelled and a fee may be charged.
             </p>
           </section>
 
           <section className="terms-section">
-            <h3>2. Thời gian thuê xe</h3>
+            <h3>2. Rental Duration</h3>
             <p>
-              Thời gian đặt xe và trả xe phải cách nhau ít nhất 3 tiếng. 
-              Thời gian thuê xe bắt đầu từ lúc nhận xe tại điểm nhận và kết thúc khi trả xe tại điểm trả được chỉ định.
+              The pickup and return times must be at least 3 hours apart. 
+              The rental period starts from the time you pick up the vehicle at the designated pickup point and ends when you return it at the designated return point.
             </p>
           </section>
 
           <section className="terms-section">
-            <h3>3. Tiền cọc và thanh toán</h3>
+            <h3>3. Deposit and Payment</h3>
             <p>
-              Tiền cọc sẽ được giữ lại trong suốt quá trình thuê. 
-              Nếu xe bị hư hỏng hoặc mất mát, tiền cọc sẽ được dùng để bù đắp thiệt hại.
+              The deposit will be held throughout the rental period. 
+              If the vehicle is damaged or lost, the deposit will be used to cover the damages.
             </p>
           </section>
 
           <section className="terms-section">
-            <h3>4. Trách nhiệm và bảo hiểm</h3>
+            <h3>4. Liability and Insurance</h3>
             <p>
-              Người thuê xe chịu trách nhiệm về tất cả các hư hỏng, mất mát hoặc vi phạm luật lệ giao thông. 
-              Chiếc xe được bảo hiểm cơ bản. Chi tiết bảo hiểm sẽ được cung cấp tại thời điểm nhận xe.
+              The renter is responsible for all damages, loss, or traffic violations. 
+              The vehicle has basic insurance. Insurance details will be provided at pickup.
             </p>
           </section>
 
           <section className="terms-section">
-            <h3>5. Hủy đơn hàng</h3>
+            <h3>5. Cancellation Policy</h3>
             <p>
-              Khách hàng có thể hủy đơn hàng miễn phí nếu hủy trước 24 giờ. 
-              Hủy sau 24 giờ sẽ mất 50% chi phí thuê. Hủy sau khi nhận xe sẽ mất 100% chi phí.
+              Customers can cancel for free if cancelled before 24 hours. 
+              Cancellation after 24 hours will forfeit 50% of the rental fee. Cancellation after pickup will forfeit 100% of the fee.
             </p>
           </section>
 
           <section className="terms-section">
-            <h3>6. Quy tắc giao thông</h3>
+            <h3>6. Traffic Rules</h3>
             <p>
-              Người thuê xe phải tuân thủ tất cả luật lệ giao thông và an toàn đường bộ. 
-              Bất kỳ vi phạm nào sẽ được thanh toán bởi người thuê.
+              The renter must comply with all traffic laws and road safety regulations. 
+              Any violations will be paid by the renter.
             </p>
           </section>
 
           <section className="terms-section">
-            <h3>7. Bảo trì và vệ sinh</h3>
+            <h3>7. Maintenance and Cleanliness</h3>
             <p>
-              Xe phải được trả lại trong tình trạng sạch sẽ và đầy nhiên liệu. 
-              Nếu không, sẽ có phí bảo trì hoặc vệ sinh bổ sung.
+              The vehicle must be returned in clean condition and with a full fuel tank. 
+              If not, additional maintenance or cleaning fees will be charged.
             </p>
           </section>
 
           <section className="terms-section">
-            <h3>8. Liên hệ hỗ trợ</h3>
+            <h3>8. Customer Support</h3>
             <p>
-              Nếu có bất kỳ câu hỏi hoặc vấn đề nào trong quá trình thuê, vui lòng liên hệ ngay với đội hỗ trợ khách hàng của chúng tôi.
+              If you have any questions or issues during the rental period, please contact our customer support team immediately.
             </p>
           </section>
         </div>
@@ -88,7 +88,7 @@ export default function TermsAndServices({ isOpen, onClose }) {
             className="btn btn-secondary" 
             onClick={onClose}
           >
-            Đóng
+            Close
           </button>
         </div>
       </div>

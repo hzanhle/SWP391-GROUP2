@@ -110,7 +110,7 @@ export default function Payment() {
                 const contractData = {
                   OrderId: incomingOrderId,
                   PaidAt: new Date().toISOString(),
-                  CustomerName: user.fullName || user.fullname || user.name || 'Khách hàng',
+                  CustomerName: user.fullName || user.fullname || user.name || 'Guest',
                   CustomerEmail: user.email || '',
                   CustomerPhone: user.phone || user.phoneNumber || '',
                   CustomerIdCard: user.idCard || user.id_card || user.identityNumber || '',
@@ -265,7 +265,7 @@ export default function Payment() {
               // Validate required financial data
               if (totalCost <= 0) {
                 console.error('[Payment] Invalid total cost:', totalCost)
-                setError('Lỗi: Không thể xác định chi phí đơn hàng')
+                setError('Error: Unable to determine order cost')
                 setLoading(false)
                 return
               }
@@ -273,7 +273,7 @@ export default function Payment() {
               const contractData = {
                 OrderId: Number(urlOrderId),
                 PaidAt: new Date().toISOString(),
-                CustomerName: user.fullName || user.fullname || user.name || 'Khách hàng',
+                CustomerName: user.fullName || user.fullname || user.name || 'Guest',
                 CustomerEmail: user.email || '',
                 CustomerPhone: user.phone || user.phoneNumber || '',
                 CustomerIdCard: user.idCard || user.id_card || user.identityNumber || '',

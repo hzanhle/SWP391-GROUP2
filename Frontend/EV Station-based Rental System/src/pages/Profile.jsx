@@ -13,7 +13,7 @@ export default function Profile() {
   // CCCD document states
   const [citizenFormData, setCitizenFormData] = useState({
     citizenId: '',
-    sex: 'Nam',
+    sex: 'Male',
     dayOfBirth: '',
     citiRegisDate: '',
     citiRegisOffice: '',
@@ -30,7 +30,7 @@ export default function Profile() {
     licenseType: 'B1',
     registerDate: '',
     registerOffice: '',
-    sex: 'Nam',
+    sex: 'Male',
   })
   const [idFront, setIdFront] = useState(null)
   const [idBack, setIdBack] = useState(null)
@@ -46,7 +46,7 @@ export default function Profile() {
       try {
         setLoading(true)
         if (!authToken || !authUser) {
-          setError('Vui lòng đăng nhập')
+          setError('Please log in')
           window.location.hash = 'login'
           return
         }
@@ -55,7 +55,7 @@ export default function Profile() {
         const userId = Number(userData?.userId || userData?.UserId || userData?.id || userData?.Id)
 
         if (!userId || isNaN(userId)) {
-          setError('Không thể xác định ID người dùng')
+          setError('Unable to determine user ID')
           return
         }
 
@@ -64,7 +64,7 @@ export default function Profile() {
         setError(null)
       } catch (err) {
         console.error('Error fetching profile:', err)
-        setError(err.message || 'Không tải được thông tin hồ sơ')
+        setError(err.message || 'Failed to load profile information')
       } finally {
         setLoading(false)
       }
@@ -94,12 +94,12 @@ export default function Profile() {
     e.preventDefault()
     
     if (!citizenLicenseFront || !citizenLicenseBack) {
-      setCitizenError('Vui lòng tải lên cả hai mặt CCCD')
+      setCitizenError('Please upload both sides of the ID')
       return
     }
 
     if (!citizenFormData.citizenId || !citizenFormData.dayOfBirth || !citizenFormData.citiRegisDate || !citizenFormData.citiRegisOffice) {
-      setCitizenError('Vui lòng điền đầy đủ thông tin CCCD')
+      setCitizenError('Please fill in all ID information')
       return
     }
 
@@ -108,13 +108,13 @@ export default function Profile() {
   setCitizenError('')
 
   const userId = Number(user?.userId || user?.UserId)
-  if (!userId) throw new Error('Không thể xác định ID người dùng')
+  if (!userId) throw new Error('Unable to determine user ID')
 
-  // === LOG TRƯỚC KHI GỬI ===
+  // === LOG BEFORE SUBMIT ===
   console.group('%c[CitizenInfo Submit]', 'color: #00bfff; font-weight: bold;')
   console.log('🧾 UserId:', userId)
-  console.log('🔐 Auth Token:', authToken ? '(đã có token)' : '❌ không có token')
-  console.log('📦 Payload chuẩn bị gửi:', {
+  console.log('🔐 Auth Token:', authToken ? '(token available)' : '❌ no token')
+  console.log('📦 Payload to submit:', {
     CitizenId: citizenFormData.citizenId,
     Sex: citizenFormData.sex,
     DayOfBirth: citizenFormData.dayOfBirth,
@@ -137,15 +137,15 @@ export default function Profile() {
     Files: [citizenLicenseFront, citizenLicenseBack]
   }, authToken)
 
-  // === LOG PHẢN HỒI ===
+  // === LOG RESPONSE ===
   console.group('%c[CitizenInfo Response]', 'color: #4caf50; font-weight: bold;')
-  console.log('✅ Response từ BE:', res)
+  console.log('✅ Response from BE:', res)
   console.groupEnd()
 
   setCitizenSuccess(true)
   setCitizenFormData({
     citizenId: '',
-    sex: 'Nam',
+    sex: 'Male',
     dayOfBirth: '',
     citiRegisDate: '',
     citiRegisOffice: '',
@@ -157,13 +157,13 @@ export default function Profile() {
 
 } catch (err) {
   console.group('%c[CitizenInfo Error]', 'color: #f44336; font-weight: bold;')
-  console.error('❌ Lỗi khi gửi CitizenInfo:', err)
+  console.error('❌ Error submitting CitizenInfo:', err)
   if (err.response) {
-    console.error('📥 Response lỗi từ BE:', err.response)
+    console.error('📥 Error response from BE:', err.response)
   }
   console.groupEnd()
 
-  setCitizenError(err.message || 'Không gửi được CCCD')
+  setCitizenError(err.message || 'Failed to submit ID')
 
 } finally {
   setSubmittingCitizen(false)
@@ -174,12 +174,12 @@ export default function Profile() {
     e.preventDefault()
     
     if (!idFront || !idBack) {
-      setLicenseError('Vui lòng tải lên cả hai mặt GPLX')
+      setLicenseError('Please upload both sides of the license')
       return
     }
 
     if (!licenseFormData.licenseId || !licenseFormData.registerDate || !licenseFormData.registerOffice) {
-      setLicenseError('Vui lòng điền đầy đủ thông tin GPLX')
+      setLicenseError('Please fill in all license information')
       return
     }
 
@@ -188,9 +188,9 @@ export default function Profile() {
   setLicenseError('');
 
   const userId = Number(user?.userId || user?.UserId);
-  if (!userId) throw new Error('Không thể xác định ID người dùng');
+  if (!userId) throw new Error('Unable to determine user ID');
 
-  // Tạo payload trước để log dễ
+  // Create payload before logging
   const payload = {
     LicenseId: licenseFormData.licenseId,
     LicenseType: licenseFormData.licenseType,
@@ -203,11 +203,11 @@ export default function Profile() {
     Files: [idFront, idBack],
   };
 
-  // Log object tổng thể
+  // Log overall object
   console.log('🧾 DriverLicenseRequest payload:', payload);
   console.table(payload);
 
-  // Log kiểu dữ liệu từng trường
+  // Log data type of each field
   for (const [key, value] of Object.entries(payload)) {
     console.log(`${key}:`, value, `→ type: ${typeof value}`);
   }
@@ -221,7 +221,7 @@ export default function Profile() {
   licenseType: 'B1',
   registerDate: '',
   registerOffice: '',
-  sex: 'Nam',           // ✅
+  sex: 'Male',           // ✅
   dayOfBirth: '',       // ✅
   fullName: '',         // ✅
   address: '',          // ✅
@@ -234,7 +234,7 @@ export default function Profile() {
   }, 3000);
 } catch (err) {
   console.error('❌ Error submitting driver license:', err);
-  setLicenseError(err.message || 'Không gửi được GPLX');
+  setLicenseError(err.message || 'Failed to submit license');
 } finally {
   setSubmittingLicense(false);
 }}
@@ -247,7 +247,7 @@ export default function Profile() {
           <section className="section page-offset">
             <div className="container">
               <div className="text-center" style={{ padding: '4rem 0' }}>
-                <p>Đang tải...</p>
+                <p>Loading...</p>
               </div>
             </div>
           </section>
@@ -264,8 +264,8 @@ export default function Profile() {
         <section className="section page-offset">
           <div className="container">
             <div className="section-header">
-              <h1 className="section-title">Thông tin cá nhân</h1>
-              <p className="section-subtitle">Quản lý thông tin tài khoản và tài liệu xác minh của bạn.</p>
+              <h1 className="section-title">Personal Information</h1>
+              <p className="section-subtitle">Manage your account information and verification documents.</p>
             </div>
 
             {error && (
@@ -276,24 +276,24 @@ export default function Profile() {
 
             <div className="card">
               <div className="card-body">
-                <h3 className="card-title">Thông tin cá nhân</h3>
+                <h3 className="card-title">Personal Information</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
                   <div>
-                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Tên đăng nhập</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Username</p>
                     <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
-                      {user?.userName || user?.UserName || 'Chưa cập nhật'}
+                      {user?.userName || user?.UserName || 'Not updated'}
                     </p>
                   </div>
                   <div>
                     <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Email</p>
                     <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
-                      {user?.email || user?.Email || 'Chưa cập nhật'}
+                      {user?.email || user?.Email || 'Not updated'}
                     </p>
                   </div>
                   <div>
-                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Số điện thoại</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Phone Number</p>
                     <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
-                      {user?.phoneNumber || user?.PhoneNumber || 'Chưa cập nhật'}
+                      {user?.phoneNumber || user?.PhoneNumber || 'Not updated'}
                     </p>
                   </div>
                 </div>
@@ -301,16 +301,16 @@ export default function Profile() {
             </div>
 
             <div className="section-header" style={{ marginTop: '3rem' }}>
-              <h2 className="section-title">Tài liệu xác minh</h2>
-              <p className="section-subtitle">Tải lên và quản lý các giấy tờ cần thiết để xác minh danh tính.</p>
+              <h2 className="section-title">Verification Documents</h2>
+              <p className="section-subtitle">Upload and manage documents needed to verify your identity.</p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
               <div className="card">
                 <div className="card-body">
-                  <h3 className="card-title">CCCD / CMND</h3>
+                  <h3 className="card-title">National ID Card</h3>
                   <p className="card-subtext" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
-                    Điền thông tin và tải lên ảnh mặt trước, mặt sau
+                    Fill in information and upload front and back photos
                   </p>
 
                   {citizenError && (
@@ -334,13 +334,13 @@ export default function Profile() {
                       marginBottom: '1.5rem',
                       textAlign: 'center',
                     }}>
-                      ✅ Gửi CCCD thành công!
+                      ✅ ID card submitted successfully!
                     </div>
                   )}
 
                   <form onSubmit={handleCitizenInfoSubmit}>
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="citizenId" className="label">Số CCCD</label>
+                      <label htmlFor="citizenId" className="label">ID Number</label>
                       <input
                         id="citizenId"
                         type="text"
@@ -348,9 +348,9 @@ export default function Profile() {
                         value={citizenFormData.citizenId}
                         onChange={handleCitizenInputChange}
                         className="input"
-                        placeholder="VD: 123456789"
+                        placeholder="E.g: 123456789"
                         pattern="^[0-9]{9,12}$"
-                        title="S��� CCCD phải từ 9-12 ký tự"
+                        title="ID number must be 9-12 characters"
                       />
                     </div>
                      <div style={{ marginBottom: '1.5rem' }}>
@@ -362,13 +362,13 @@ export default function Profile() {
                         value={citizenFormData.fullName}
                         onChange={handleCitizenInputChange}
                         className="input"
-                        placeholder="VD: Le Nguyen Hoang Anh"
+                        placeholder="E.g: John Smith"
                       />
                     </div> 
 
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="sex" className="label">Giới tính</label>
+                      <label htmlFor="sex" className="label">Gender</label>
                       <select
                         id="sex"
                         name="sex"
@@ -376,14 +376,14 @@ export default function Profile() {
                         onChange={handleCitizenInputChange}
                         className="input"
                       >
-                        <option value="Nam">Nam</option>
-                        <option value="Nữ">Nữ</option>
-                        <option value="Khác">Khác</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
                       </select>
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="dayOfBirth" className="label">Ngày sinh</label>
+                      <label htmlFor="dayOfBirth" className="label">Date of Birth</label>
                       <input
                         id="dayOfBirth"
                         type="date"
@@ -395,7 +395,7 @@ export default function Profile() {
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="address" className="label">Địa chỉ</label>
+                      <label htmlFor="address" className="label">Address</label>
                       <input
                         id="address"
                         type="text"
@@ -407,7 +407,7 @@ export default function Profile() {
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="citiRegisDate" className="label">Ngày đăng ký CCCD</label>
+                      <label htmlFor="citiRegisDate" className="label">ID Registration Date</label>
                       <input
                         id="citiRegisDate"
                         type="date"
@@ -419,7 +419,7 @@ export default function Profile() {
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="citiRegisOffice" className="label">Nơi đăng ký CCCD</label>
+                      <label htmlFor="citiRegisOffice" className="label">ID Registration Office</label>
                       <input
                         id="citiRegisOffice"
                         type="text"
@@ -427,20 +427,20 @@ export default function Profile() {
                         value={citizenFormData.citiRegisOffice}
                         onChange={handleCitizenInputChange}
                         className="input"
-                        placeholder="VD: Công an Quận 1, TP HCM"
+                        placeholder="E.g: District 1 Police, HCM City"
                       />
                     </div>
 
                     <div className="doc-uploaders" style={{ marginBottom: '1.5rem' }}>
                       <DocumentUploader
-                        label="CCCD - Mặt trước"
-                        hint="JPG, PNG hoặc PDF"
+                        label="ID - Front"
+                        hint="JPG, PNG or PDF"
                         value={citizenLicenseFront}
                         onChange={setCitizenLicenseFront}
                       />
                       <DocumentUploader
-                        label="CCCD - Mặt sau"
-                        hint="JPG, PNG hoặc PDF"
+                        label="ID - Back"
+                        hint="JPG, PNG or PDF"
                         value={citizenLicenseBack}
                         onChange={setCitizenLicenseBack}
                       />
@@ -448,7 +448,7 @@ export default function Profile() {
 
                     <div style={{ marginBottom: '1rem' }}>
                       <span className={citizenLicenseFront && citizenLicenseBack ? 'badge green' : 'badge gray'}>
-                        {citizenLicenseFront && citizenLicenseBack ? 'Đã tải đủ' : 'Chưa đủ tài liệu'}
+                        {citizenLicenseFront && citizenLicenseBack ? 'Fully uploaded' : 'Incomplete documents'}
                       </span>
                     </div>
 
@@ -457,7 +457,7 @@ export default function Profile() {
                       type="submit"
                       disabled={submittingCitizen || !citizenLicenseFront || !citizenLicenseBack}
                     >
-                      {submittingCitizen ? 'Đang gửi...' : 'Gửi CCCD'}
+                      {submittingCitizen ? 'Submitting...' : 'Submit ID Card'}
                     </CTA>
                   </form>
                 </div>
@@ -465,9 +465,9 @@ export default function Profile() {
 
               <div className="card">
                 <div className="card-body">
-                  <h3 className="card-title">Giấy phép lái xe</h3>
+                  <h3 className="card-title">Driver License</h3>
                   <p className="card-subtext" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
-                    Điền thông tin và tải lên ảnh mặt trước, mặt sau
+                    Fill in information and upload front and back photos
                   </p>
 
                   {licenseError && (
@@ -491,7 +491,7 @@ export default function Profile() {
                       marginBottom: '1.5rem',
                       textAlign: 'center',
                     }}>
-                      ✅ Gửi GPLX thành công!
+                      ✅ Driver license submitted successfully!
                     </div>
                   )}
 
@@ -508,12 +508,12 @@ export default function Profile() {
                         value={licenseFormData.fullName}
                         onChange={handleLicenseInputChange}
                         className="input"
-                        placeholder="VD: Le Nguyen Hoang Anh"
+                        placeholder="E.g: John Smith"
                       />
                     </div> 
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="sex" className="label">Giới tính</label>
+                      <label htmlFor="sex" className="label">Gender</label>
                       <select
                         id="sex"
                         name="sex"
@@ -521,14 +521,14 @@ export default function Profile() {
                         onChange={handleLicenseInputChange}
                         className="input"
                       >
-                        <option value="Nam">Nam</option>
-                        <option value="Nữ">Nữ</option>
-                        <option value="Khác">Khác</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
                       </select>
                     </div>
 
                   <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="dayOfBirth" className="label">Ngày sinh</label>
+                      <label htmlFor="dayOfBirth" className="label">Date of Birth</label>
                       <input
                         id="dayOfBirth"
                         type="date"
@@ -540,7 +540,7 @@ export default function Profile() {
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="address" className="label">Địa chỉ</label>
+                      <label htmlFor="address" className="label">Address</label>
                       <input
                         id="address"
                         type="text"
@@ -552,7 +552,7 @@ export default function Profile() {
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="licenseId" className="label">Số GPLX</label>
+                      <label htmlFor="licenseId" className="label">License Number</label>
                       <input
                         id="licenseId"
                         type="text"
@@ -560,14 +560,14 @@ export default function Profile() {
                         value={licenseFormData.licenseId}
                         onChange={handleLicenseInputChange}
                         className="input"
-                        placeholder="VD: 1234567890"
+                        placeholder="E.g: 1234567890"
                         pattern="^[0-9]{10,12}$"
-                        title="Số GPLX phải từ 10-12 ký tự"
+                        title="License number must be 10-12 characters"
                       />
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="licenseType" className="label">Hạng bằng</label>
+                      <label htmlFor="licenseType" className="label">License Class</label>
                       <select
                         id="licenseType"
                         name="licenseType"
@@ -591,7 +591,7 @@ export default function Profile() {
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="registerDate" className="label">Ngày cấp GPLX</label>
+                      <label htmlFor="registerDate" className="label">License Issue Date</label>
                       <input
                         id="registerDate"
                         type="date"
@@ -603,7 +603,7 @@ export default function Profile() {
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="registerOffice" className="label">Nơi cấp GPLX</label>
+                      <label htmlFor="registerOffice" className="label">License Issuing Office</label>
                       <input
                         id="registerOffice"
                         type="text"
@@ -611,20 +611,20 @@ export default function Profile() {
                         value={licenseFormData.registerOffice}
                         onChange={handleLicenseInputChange}
                         className="input"
-                        placeholder="VD: Công an TP HCM"
+                        placeholder="E.g: HCM City Police"
                       />
                     </div>
 
                     <div className="doc-uploaders" style={{ marginBottom: '1.5rem' }}>
                       <DocumentUploader
-                        label="GPLX - Mặt trước"
-                        hint="JPG, PNG hoặc PDF"
+                        label="License - Front"
+                        hint="JPG, PNG or PDF"
                         value={idFront}
                         onChange={setIdFront}
                       />
                       <DocumentUploader
-                        label="GPLX - Mặt sau"
-                        hint="JPG, PNG hoặc PDF"
+                        label="License - Back"
+                        hint="JPG, PNG or PDF"
                         value={idBack}
                         onChange={setIdBack}
                       />
@@ -632,7 +632,7 @@ export default function Profile() {
 
                     <div style={{ marginBottom: '1rem' }}>
                       <span className={idFront && idBack ? 'badge green' : 'badge gray'}>
-                        {idFront && idBack ? 'Đã tải đủ' : 'Chưa đủ tài liệu'}
+                        {idFront && idBack ? 'Fully uploaded' : 'Incomplete documents'}
                       </span>
                     </div>
 
@@ -641,7 +641,7 @@ export default function Profile() {
                       type="submit"
                       disabled={submittingLicense || !idFront || !idBack}
                     >
-                      {submittingLicense ? 'Đang gửi...' : 'Gửi GPLX'}
+                      {submittingLicense ? 'Submitting...' : 'Submit License'}
                     </CTA>
                   </form>
                 </div>
