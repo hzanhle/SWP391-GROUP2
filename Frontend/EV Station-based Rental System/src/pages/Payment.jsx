@@ -77,63 +77,91 @@ export default function Payment() {
                 return
               }
 
-              console.log('[Payment] Creating contract for order', bookingData.orderId)
-
-              // Create contract on backend
-              const userJson = localStorage.getItem('auth.user') || '{}'
-              const user = JSON.parse(userJson)
-
-              const contractData = {
-                OrderId: bookingData.orderId,
-                PaidAt: new Date().toISOString(),
-                CustomerName: user.fullName || user.fullname || user.name || 'Khách hàng',
-                CustomerEmail: user.email || '',
-                CustomerPhone: user.phone || user.phoneNumber || '',
-                CustomerIdCard: user.idCard || user.id_card || user.identityNumber || '',
-                CustomerAddress: user.address || '',
-                CustomerDateOfBirth: user.dateOfBirth || user.dob || '',
-                VehicleModel: bookingData.vehicleInfo?.model || 'N/A',
-                LicensePlate: bookingData.vehicleInfo?.licensePlate || 'N/A',
-                VehicleColor: bookingData.vehicleInfo?.color || 'N/A',
-                VehicleType: bookingData.vehicleInfo?.type || 'N/A',
-                FromDate: new Date(bookingData.dates?.from).toISOString(),
-                ToDate: new Date(bookingData.dates?.to).toISOString(),
-                TotalRentalCost: Number(bookingData.totalRentalCost || 0),
-                DepositAmount: Number(bookingData.depositCost || 0),
-                ServiceFee: Number(bookingData.serviceFee || 0),
-                TotalPaymentAmount: Number(bookingData.totalCost || 0),
-                TransactionId: transactionId || '',
-                PaymentMethod: 'VNPay',
-                PaymentDate: new Date().toISOString(),
-              }
-
-              console.log('[Payment] Contract data prepared:', contractData)
+              console.log('[Payment] ⭐ Verifying payment status before creating contract...')
 
               try {
-                const res = await bookingApi.createContract(contractData, authToken)
-                console.log('[Payment] Contract creation response:', res)
+                // ✅ CRITICAL: Fetch order and verify payment is ACTUALLY completed
+                const orderResponse = await bookingApi.getOrderById(incomingOrderId, authToken)
+                const orderStatus = orderResponse.data?.Status
+                const payment = orderResponse.data?.Payment
 
-                if (res && res.data) {
-                  const contractUrl = res.data.downloadUrl || res.data.DownloadUrl || ''
-                  setContractDetails(res.data)
-                  setContractUrl(contractUrl)
-                  console.log('[Payment] Contract URL received:', contractUrl)
-                  localStorage.removeItem('pending_booking')
-                  localStorage.setItem('active_order', String(bookingData.orderId))
-                  setPaymentStatus('success')
-                } else {
-                  console.warn('[Payment] No contract URL in response')
+                console.log('[Payment] Order status:', orderStatus)
+                console.log('[Payment] Payment status:', payment?.Status)
+
+                // BOTH conditions must be true: order is Confirmed AND payment status is Completed
+                const isOrderConfirmed = orderStatus === 'Confirmed'
+                const isPaymentCompleted = payment?.Status === 'Completed' || payment?.status === 'Completed'
+                const isPaymentConfirmed = isOrderConfirmed && isPaymentCompleted
+
+                if (!isPaymentConfirmed) {
+                  console.warn('[Payment] ❌ SignalR received but payment NOT fully confirmed!')
+                  console.warn('[Payment]   - Order Status:', orderStatus, '(expected: Confirmed)')
+                  console.warn('[Payment]   - Payment Status:', payment?.Status, '(expected: Completed)')
+                  // ❌ DO NOT create contract - payment not confirmed
+                  return
+                }
+
+                console.log('[Payment] ✅ Payment confirmed! Creating contract for order', incomingOrderId)
+
+                // Create contract on backend
+                const userJson = localStorage.getItem('auth.user') || '{}'
+                const user = JSON.parse(userJson)
+
+                const contractData = {
+                  OrderId: incomingOrderId,
+                  PaidAt: new Date().toISOString(),
+                  CustomerName: user.fullName || user.fullname || user.name || 'Khách hàng',
+                  CustomerEmail: user.email || '',
+                  CustomerPhone: user.phone || user.phoneNumber || '',
+                  CustomerIdCard: user.idCard || user.id_card || user.identityNumber || '',
+                  CustomerAddress: user.address || '',
+                  CustomerDateOfBirth: user.dateOfBirth || user.dob || '',
+                  VehicleModel: bookingData.vehicleInfo?.model || 'N/A',
+                  LicensePlate: bookingData.vehicleInfo?.licensePlate || 'N/A',
+                  VehicleColor: bookingData.vehicleInfo?.color || 'N/A',
+                  VehicleType: bookingData.vehicleInfo?.type || 'N/A',
+                  FromDate: new Date(bookingData.dates?.from).toISOString(),
+                  ToDate: new Date(bookingData.dates?.to).toISOString(),
+                  TotalRentalCost: Number(bookingData.totalRentalCost || 0),
+                  DepositAmount: Number(bookingData.depositCost || 0),
+                  ServiceFee: Number(bookingData.serviceFee || 0),
+                  TotalPaymentAmount: Number(bookingData.totalCost || 0),
+                  TransactionId: transactionId || '',
+                  PaymentMethod: 'VNPay',
+                  PaymentDate: new Date().toISOString(),
+                }
+
+                console.log('[Payment] Contract data prepared:', contractData)
+
+                try {
+                  const res = await bookingApi.createContract(contractData, authToken)
+                  console.log('[Payment] Contract creation response:', res)
+
+                  if (res && res.data) {
+                    const contractUrl = res.data.downloadUrl || res.data.DownloadUrl || ''
+                    setContractDetails(res.data)
+                    setContractUrl(contractUrl)
+                    console.log('[Payment] Contract URL received:', contractUrl)
+                    localStorage.removeItem('pending_booking')
+                    localStorage.setItem('active_order', String(incomingOrderId))
+                    setPaymentStatus('success')
+                  } else {
+                    console.warn('[Payment] No contract URL in response')
+                    setPaymentStatus('success')
+                  }
+                } catch (contractErr) {
+                  console.error('[Payment] Contract creation failed via SignalR:', contractErr)
+                  // Contract creation failed, but payment succeeded - still show success
+                  // The contract may be created via the VNPay callback redirect instead
                   setPaymentStatus('success')
                 }
-              } catch (contractErr) {
-                console.error('[Payment] Contract creation failed via SignalR:', contractErr)
-                // Contract creation failed, but payment succeeded - still show success
-                // The contract may be created via the VNPay callback redirect instead
-                setPaymentStatus('success')
+              } catch (verifyErr) {
+                console.error('[Payment] Error verifying payment status:', verifyErr)
+                // Cannot verify payment - do not create contract to be safe
+                console.warn('[Payment] ⚠️ Skipping contract creation due to verification error')
               }
             } catch (err) {
               console.error('[Payment] Error handling PaymentSuccess event:', err)
-              setPaymentStatus('success')
             }
           })
 
@@ -278,7 +306,7 @@ export default function Payment() {
 
               if (missingFields.length > 0) {
                 console.error('[Payment] Missing required fields:', missingFields)
-                setError(`Lỗi: Thiếu dữ liệu bắt buộc: ${missingFields.join(', ')}`)
+                setError(`Lỗi: Thiếu dữ li��u bắt buộc: ${missingFields.join(', ')}`)
                 setLoading(false)
                 return
               }
