@@ -143,13 +143,13 @@ export default function AdminModels() {
 
   return (
     <AdminLayout active="models">
-      <Box sx={{ py: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <Box className="admin-page">
         <Container maxWidth="lg">
-          <Stack spacing={3}>
+          <Stack className="admin-stack" spacing={3}>
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box className="admin-header">
               <Box>
-                <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
+                <Typography variant="h4" component="h1" gutterBottom className="font-600">
                   Model Management
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
@@ -188,16 +188,22 @@ export default function AdminModels() {
 
             {/* Models Table */}
             {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress />
-              </Box>
+              <Card className="admin-card">
+                <CardContent>
+                  <div className="skeleton skeleton-bar"></div>
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="skeleton skeleton-line"></div>
+                  ))}
+                </CardContent>
+              </Card>
             ) : (
               <TableContainer component={Paper}>
+}
                 <Table>
-                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableHead className="thead-muted">
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>Model Name</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Brand</TableCell>
+                      <TableCell className="font-600">Model Name</TableCell>
+                      <TableCell className="font-600">Brand</TableCell>
                       <TableCell sx={{ fontWeight: 600 }} align="right">Year</TableCell>
                       <TableCell sx={{ fontWeight: 600 }} align="right">Speed (km/h)</TableCell>
                       <TableCell sx={{ fontWeight: 600 }} align="right">Battery (mAh)</TableCell>
@@ -249,7 +255,7 @@ export default function AdminModels() {
               <DialogTitle>
                 {editing?.modelId ? 'Edit model' : 'Add new model'}
               </DialogTitle>
-              <DialogContent sx={{ pt: 2 }}>
+              <DialogContent className="pt-2">
                 <ModelForm 
                   initial={editing} 
                   onSubmit={handleSubmit} 

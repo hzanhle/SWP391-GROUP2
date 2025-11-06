@@ -102,13 +102,13 @@ export default function AdminStations() {
 
   return (
     <AdminLayout active="stations">
-      <Box sx={{ py: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <Box className="admin-page">
         <Container maxWidth="lg">
-          <Stack spacing={3}>
+          <Stack className="admin-stack" spacing={3}>
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box className="admin-header">
               <Box>
-                <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
+                <Typography variant="h4" component="h1" gutterBottom className="font-600">
                   Charging Stations
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
@@ -147,17 +147,17 @@ export default function AdminStations() {
 
             {/* Stations Table */}
             {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <Box className="center-justify pad-y-4">
                 <CircularProgress />
               </Box>
             ) : (
               <TableContainer component={Paper}>
                 <Table>
-                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableHead className="thead-muted">
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>Station ID</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Station Name</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Location</TableCell>
+                      <TableCell className="font-600">Station ID</TableCell>
+                      <TableCell className="font-600">Station Name</TableCell>
+                      <TableCell className="font-600">Location</TableCell>
                       <TableCell sx={{ fontWeight: 600 }} align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
@@ -202,7 +202,7 @@ export default function AdminStations() {
               <DialogTitle>
                 {editing?.stationId ? 'Edit Station' : 'Add New Station'}
               </DialogTitle>
-              <DialogContent sx={{ pt: 2 }}>
+              <DialogContent className="pt-2">
                 <StationForm 
                   initial={editing} 
                   onSubmit={handleSubmit} 

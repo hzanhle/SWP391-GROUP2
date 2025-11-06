@@ -150,7 +150,7 @@ export default function History() {
             {error && (
               <div className="card">
                 <div className="card-body">
-                  <div className="error-message" style={{ marginBottom: 0 }}>
+                  <div className="error-message no-margin">
                     <span>{error}</span>
                   </div>
                 </div>
@@ -161,7 +161,7 @@ export default function History() {
               <div className="card">
                 <div className="card-body text-center">
                   <p className="card-subtext">You have no rental history yet.</p>
-                  <CTA as="a" href="#booking-new" style={{ marginTop: '1rem' }}>Book Now</CTA>
+                  <CTA as="a" href="#booking-new" className="mt-4">Book Now</CTA>
                 </div>
               </div>
             )}

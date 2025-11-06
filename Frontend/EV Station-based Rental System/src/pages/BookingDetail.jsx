@@ -108,7 +108,7 @@ export default function BookingDetail() {
         <main>
           <section className="section page-offset">
             <div className="container">
-              <div className="text-center" style={{ padding: '4rem 0' }}>
+              <div className="text-center pad-y-4">
                 <p>Loading...</p>
               </div>
             </div>
@@ -131,7 +131,7 @@ export default function BookingDetail() {
                   <div className="error-message">
                     <span>{error}</span>
                   </div>
-                  <CTA as="a" href="#booking" style={{ marginTop: '1rem' }}>Back to List</CTA>
+                  <CTA as="a" href="#booking" className="mt-4">Back to List</CTA>
                 </div>
               </div>
             </div>
@@ -152,7 +152,7 @@ export default function BookingDetail() {
               <div className="card">
                 <div className="card-body text-center">
                   <p>Order information not found</p>
-                  <CTA as="a" href="#booking" style={{ marginTop: '1rem' }}>Back</CTA>
+                  <CTA as="a" href="#booking" className="mt-4">Back</CTA>
                 </div>
               </div>
             </div>
@@ -181,61 +181,61 @@ export default function BookingDetail() {
 
             <div className="card">
               <div className="card-body">
-                <div className="row-between" style={{ marginBottom: '1.5rem' }}>
+                <div className="row-between mb-6">
                   <h3 className="card-title">Order ID: #{orderId}</h3>
                   <span className={`badge ${getStatusBadgeClass(status)}`}>{status}</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+                <div className="two-col-grid mb-8">
                   <div>
-                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Pickup Time</p>
-                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                    <p className="muted-small mb-0">Pickup Time</p>
+                    <p className="value-strong">
                       {fromDate.toLocaleString('vi-VN')}
                     </p>
                   </div>
                   <div>
-                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Return Time</p>
-                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                    <p className="muted-small mb-0">Return Time</p>
+                    <p className="value-strong">
                       {toDate.toLocaleString('vi-VN')}
                     </p>
                   </div>
                 </div>
 
                 {order?.vehicle && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+                  <div className="two-col-grid mb-8">
                     <div>
-                      <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Vehicle</p>
-                      <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                      <p className="muted-small mb-0">Vehicle</p>
+                      <p className="value-strong">
                         {order.vehicle.model || order.Vehicle?.Model || 'N/A'}
                       </p>
                     </div>
                     <div>
-                      <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Color</p>
-                      <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                      <p className="muted-small mb-0">Color</p>
+                      <p className="value-strong">
                         {order.vehicle.color || order.Vehicle?.Color || 'N/A'}
                       </p>
                     </div>
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+                <div className="two-col-grid mb-8">
                   <div>
-                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Total Amount</p>
-                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.6rem', fontWeight: '500', color: '#ff4d30' }}>
+                    <p className="muted-small mb-0">Total Amount</p>
+                    <p className="value-strong value-accent">
                       ${Number(order?.totalCost || order?.TotalCost || 0).toFixed(2)}
                     </p>
                   </div>
                   <div>
-                    <p style={{ margin: 0, color: '#999', fontSize: '1.2rem' }}>Payment Method</p>
-                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.4rem', fontWeight: '500' }}>
+                    <p className="muted-small mb-0">Payment Method</p>
+                    <p className="value-strong">
                       {order?.paymentMethod || order?.PaymentMethod || 'VNPay'}
                     </p>
                   </div>
                 </div>
 
-                <hr style={{ margin: '2rem 0' }} />
+                <hr className="divider-lg" />
 
-                <div className="row" aria-label="Next actions" style={{ gap: '1rem', flexWrap: 'wrap' }}>
+                <div className="row" aria-label="Next actions">
                   {getNextActions(status)}
                 </div>
               </div>

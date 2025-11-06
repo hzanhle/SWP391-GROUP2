@@ -1,21 +1,3 @@
-// Avatar placeholder
-const AvatarPlaceholder = ({ initials }) => (
-  <div style={{
-    width: "70px",
-    height: "70px",
-    borderRadius: "50%",
-    background: "linear-gradient(135deg, #ff4d30 0%, #fa4226 100%)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "white",
-    fontSize: "1.5rem",
-    fontWeight: "bold"
-  }}>
-    {initials}
-  </div>
-);
-
 function Testimonials() {
   return (
     <>
@@ -33,14 +15,14 @@ function Testimonials() {
             <div className="all-testimonials">
               <div className="all-testimonials__box">
                 <span className="quotes-icon">
-                  <i className="fa-solid fa-quote-right"></i>
+                  <i className="fa-solid fa-quote-right" aria-hidden="true"></i>
                 </span>
                 <p>
                   "I rented an EV from this service and had an amazing experience! The booking was easy, the rates were affordable, and the vehicles were in perfect condition. Highly recommended!"
                 </p>
                 <div className="all-testimonials__box__name">
                   <div className="all-testimonials__box__name__profile">
-                    <AvatarPlaceholder initials="SJ" />
+                    <div className="avatar-badge" aria-hidden="true">SJ</div>
                     <span>
                       <h4>Sarah Johnson</h4>
                       <p>San Francisco</p>
@@ -51,14 +33,14 @@ function Testimonials() {
 
               <div className="all-testimonials__box box-2">
                 <span className="quotes-icon">
-                  <i className="fa-solid fa-quote-right"></i>
+                  <i className="fa-solid fa-quote-right" aria-hidden="true"></i>
                 </span>
                 <p>
                   "The electric vehicle was in great condition and made my trip fantastic. The charging stations were convenient, and the entire experience was seamless. Will definitely rent again!"
                 </p>
                 <div className="all-testimonials__box__name">
                   <div className="all-testimonials__box__name__profile">
-                    <AvatarPlaceholder initials="MC" />
+                    <div className="avatar-badge" aria-hidden="true">MC</div>
                     <span>
                       <h4>Michael Chen</h4>
                       <p>Los Angeles</p>

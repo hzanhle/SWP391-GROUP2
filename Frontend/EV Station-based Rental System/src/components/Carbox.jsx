@@ -25,11 +25,13 @@ function CarBox({ model }) {
   return (
     <div className="box-cars">
       <div className="pick-car">
-        {imageLoading && <span className="loader"></span>}
+        {imageLoading && <span className="loader" aria-hidden="true"></span>}
         <img
-          style={{ display: imageLoading ? "none" : "block" }}
+          className={imageLoading ? 'hidden-img' : ''}
           src={imageUrl}
           alt={`${model.manufacturer} ${model.modelName}`}
+          loading="lazy"
+          decoding="async"
           onLoad={() => setImageLoading(false)}
           onError={() => {
             setImageLoading(false);

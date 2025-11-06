@@ -119,7 +119,7 @@ export default function AdminDashboard() {
                         xAxis={[{ scaleType: 'point', data: revenueSeries.months.map((m, idx) => `T${m}`).filter(label => label !== null && label !== undefined) }]}
                       />
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>No data</div>
+                      <div className="empty-placeholder">No data</div>
                     )}
                   </CardContent>
                 </Card>
@@ -137,7 +137,7 @@ export default function AdminDashboard() {
                         layout="horizontal"
                       />
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
+                      <div className="empty-placeholder">No data</div>
                     )}
                   </CardContent>
                 </Card>
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
                         xAxis={[{ scaleType: 'point', data: (userGrowth || []).map((u, idx) => String(u.label || u.Label || u.month || u.Month || `Month ${idx + 1}`)).filter(label => label !== null && label !== undefined) }]}
                       />
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
+                      <div className="empty-placeholder">No data</div>
                     )}
                   </CardContent>
                 </Card>
@@ -180,7 +180,7 @@ export default function AdminDashboard() {
                         }]}
                       />
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>No data</div>
+                      <div className="empty-placeholder">No data</div>
                     )}
                   </CardContent>
                 </Card>

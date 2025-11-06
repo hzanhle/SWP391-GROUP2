@@ -80,7 +80,7 @@ export default function Return() {
               <p className="section-subtitle">Check condition and complete payment if applicable.</p>
             </div>
 
-            {error && <div className="error-message" style={{ marginBottom: '1rem' }}>{error}</div>}
+            {error && <div className="error-message mb-4">{error}</div>}
 
             <div className="card">
               <form className="card-body" onSubmit={handleSubmit}>

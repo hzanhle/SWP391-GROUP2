@@ -166,13 +166,13 @@ export default function AdminVehicles() {
 
   return (
     <AdminLayout active="vehicles">
-      <Box sx={{ py: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <Box className="admin-page">
         <Container maxWidth="lg">
-          <Stack spacing={3}>
+          <Stack className="admin-stack" spacing={3}>
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box className="admin-header">
               <Box>
-                <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
+                <Typography variant="h4" component="h1" gutterBottom className="font-600">
                   Vehicles
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
@@ -211,19 +211,24 @@ export default function AdminVehicles() {
 
             {/* Vehicles Table */}
             {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress />
-              </Box>
+              <Card className="admin-card">
+                <CardContent>
+                  <div className="skeleton skeleton-bar"></div>
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="skeleton skeleton-line"></div>
+                  ))}
+                </CardContent>
+              </Card>
             ) : (
               <TableContainer component={Paper}>
                 <Table>
-                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableHead className="thead-muted">
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>Vehicle ID</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Model</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Color</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Active</TableCell>
+                      <TableCell className="font-600">Vehicle ID</TableCell>
+                      <TableCell className="font-600">Model</TableCell>
+                      <TableCell className="font-600">Color</TableCell>
+                      <TableCell className="font-600">Status</TableCell>
+                      <TableCell className="font-600">Active</TableCell>
                       <TableCell sx={{ fontWeight: 600 }} align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
@@ -270,7 +275,7 @@ export default function AdminVehicles() {
               <DialogTitle>
                 {editing?.vehicleId ? 'Edit Vehicle' : 'Add New Vehicle'}
               </DialogTitle>
-              <DialogContent sx={{ pt: 2 }}>
+              <DialogContent className="pt-2">
                 <VehicleForm 
                   initial={editing} 
                   onSubmit={handleSubmit} 

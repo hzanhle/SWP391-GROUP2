@@ -25,7 +25,7 @@ export default function FeaturedStations() {
         setError(null)
       } catch (e) {
         if (mounted) {
-          setError(e.message)
+          setError('Failed to load stations. Please try again later.')
         }
       } finally {
         if (mounted) {
@@ -47,15 +47,19 @@ export default function FeaturedStations() {
       </div>
 
       {loading && (
-        <div className="container text-center py-8">
-          <p className="text-lg text-gray-600">Loading stations...</p>
+        <div className="container">
+          <div className="carousel-track" aria-hidden="true">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="skeleton skeleton-card" aria-hidden="true"></div>
+            ))}
+          </div>
         </div>
       )}
 
       {error && (
         <div className="container">
-          <div role="alert" className="card card-body">
-            <p className="card-subtext">Error: {error}</p>
+          <div role="alert" className="error-card">
+            <p className="card-subtext">{error}</p>
           </div>
         </div>
       )}
@@ -68,7 +72,7 @@ export default function FeaturedStations() {
                 <div
                   role="listitem"
                   key={s.id || `${s.name}-${s.address}`}
-                  style={{ cursor: 'pointer' }}
+                  className="clickable-card"
                   onClick={() => setSelectedStation(s)}
                 >
                   <StationCard {...s} isSelected={selectedStation?.id === s.id} />
@@ -84,8 +88,8 @@ export default function FeaturedStations() {
       )}
 
       {!loading && !error && stations.length === 0 && (
-        <div className="container text-center py-8">
-          <p className="text-lg text-gray-600">No stations available.</p>
+        <div className="container">
+          <div className="state-wrapper"><p className="state-message">No stations available.</p></div>
         </div>
       )}
     </section>

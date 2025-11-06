@@ -1,18 +1,5 @@
-// Icon components as placeholders
 const IconBox = ({ icon }) => (
-  <div style={{
-    width: "100px",
-    height: "100px",
-    background: "#ff4d30",
-    borderRadius: "10px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "white",
-    fontSize: "2.5rem"
-  }}>
-    {icon}
-  </div>
+  <div className="icon-box" aria-hidden="true">{icon}</div>
 );
 
 function HowItWorks() {

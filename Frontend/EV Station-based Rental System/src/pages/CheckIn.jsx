@@ -68,10 +68,10 @@ export default function CheckIn() {
           <section className="section">
             <div className="container">
               <div className="card">
-                <div className="card-body" style={{ textAlign: 'center', padding: '4rem' }}>
-                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✅</div>
-                  <h2 className="card-title" style={{ color: '#2a6817', marginBottom: '1rem' }}>Check-in Successful!</h2>
-                  <p className="card-subtext" style={{ marginBottom: '2rem', fontSize: '1.6rem' }}>
+                <div className="card-body center-text pad-4">
+                  <div className="icon-xl">✅</div>
+                  <h2 className="card-title text-success mb-4">Check-in Successful!</h2>
+                  <p className="card-subtext mb-8 text-16">
                     You have successfully received the vehicle. Enjoy your trip!
                   </p>
                   <p className="card-subtext">Redirecting...</p>
@@ -97,7 +97,7 @@ export default function CheckIn() {
             </div>
 
             {error && (
-              <div className="error-message error-visible" style={{ marginBottom: '1rem' }}>
+              <div className="error-message error-visible mb-4">
                 <span>{error}</span>
               </div>
             )}

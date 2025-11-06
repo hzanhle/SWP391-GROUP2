@@ -156,31 +156,24 @@ export default function Feedback() {
             )}
 
             {!loading && !error && orders.length > 0 && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+              <div className="two-col-grid">
                 <div className="card">
                   <div className="card-body">
                     <h3 className="card-title">Order List</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                    <div className="list-vertical mt-4">
                       {orders.map((order) => (
                         <button
                           key={order.orderId || order.OrderId}
                           onClick={() => handleSelectOrder(order)}
-                          style={{
-                            padding: '1rem',
-                            backgroundColor: selectedOrder?.orderId === order.orderId || selectedOrder?.OrderId === order.OrderId ? '#fff5f0' : '#f9f9f9',
-                            border: selectedOrder?.orderId === order.orderId || selectedOrder?.OrderId === order.OrderId ? '2px solid #ff4d30' : '1px solid #ddd',
-                            borderRadius: '0.5rem',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                          }}
+                          className={`order-option ${selectedOrder?.orderId === order.orderId || selectedOrder?.OrderId === order.OrderId ? 'selected' : ''}`}
                         >
-                          <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1.4rem' }}>
+                          <p className="order-option__id">
                             #{order.orderId || order.OrderId}
                           </p>
-                          <p style={{ margin: '0.5rem 0 0 0', color: '#666', fontSize: '1.2rem' }}>
+                          <p className="order-option__date">
                             {new Date(order.fromDate || order.FromDate).toLocaleDateString('vi-VN')}
                           </p>
-                          <p style={{ margin: '0.25rem 0 0 0', color: '#999', fontSize: '1rem' }}>
+                          <p className="order-option__model">
                             {order.vehicle?.model || order.Vehicle?.Model || 'N/A'}
                           </p>
                         </button>
@@ -196,53 +189,29 @@ export default function Feedback() {
                         <h3 className="card-title">Feedback for Order #{selectedOrder.orderId || selectedOrder.OrderId}</h3>
 
                         {success && (
-                          <div style={{
-                            padding: '1rem',
-                            backgroundColor: '#d4edda',
-                            color: '#155724',
-                            borderRadius: '0.5rem',
-                            marginBottom: '1rem',
-                            textAlign: 'center',
-                          }}>
-                            ✅ Feedback sent successfully!
-                          </div>
+                          <div className="alert-success center-text mb-4">✅ Feedback sent successfully!</div>
                         )}
 
                         {feedback && (
-                          <div style={{
-                            padding: '1rem',
-                            backgroundColor: '#e7f3ff',
-                            borderRadius: '0.5rem',
-                            marginBottom: '1rem',
-                          }}>
-                            <p style={{ margin: 0, color: '#0066cc', fontSize: '1.2rem' }}>
-                              ⭐ Rating: {feedback.vehicleRating || feedback.VehicleRating}/5
-                            </p>
-                            <p style={{ margin: '0.5rem 0 0 0', color: '#666' }}>
-                              {feedback.comments || feedback.Comments}
-                            </p>
+                          <div className="alert-info mb-4">
+                            <p className="info-title">⭐ Rating: {feedback.vehicleRating || feedback.VehicleRating}/5</p>
+                            <p className="info-text">{feedback.comments || feedback.Comments}</p>
                           </div>
                         )}
 
                         {!feedback && (
                           <form onSubmit={handleSubmitFeedback}>
-                            <div style={{ marginBottom: '1.5rem' }}>
-                              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                            <div className="mb-6">
+                              <label className="field-label">
                                 Vehicle Rating (1-5 stars)
                               </label>
-                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <div className="stars">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <button
                                     key={star}
                                     type="button"
                                     onClick={() => setRating(star)}
-                                    style={{
-                                      fontSize: '2.4rem',
-                                      backgroundColor: 'transparent',
-                                      border: 'none',
-                                      cursor: 'pointer',
-                                      opacity: star <= rating ? 1 : 0.3,
-                                    }}
+                                    className={`star-btn ${star <= rating ? 'active' : ''}`}
                                   >
                                     ⭐
                                   </button>
@@ -250,7 +219,7 @@ export default function Feedback() {
                               </div>
                             </div>
 
-                            <div style={{ marginBottom: '1.5rem' }}>
+                            <div className="mb-6">
                               <label htmlFor="comments" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                                 Comments
                               </label>
@@ -259,20 +228,12 @@ export default function Feedback() {
                                 value={comments}
                                 onChange={(e) => setComments(e.target.value)}
                                 placeholder="Share your experience about your rental trip..."
-                                style={{
-                                  width: '100%',
-                                  padding: '0.75rem',
-                                  borderRadius: '0.5rem',
-                                  border: '1px solid #ddd',
-                                  fontFamily: 'inherit',
-                                  fontSize: '1.4rem',
-                                  minHeight: '120px',
-                                }}
+                                className="textarea"
                               />
                             </div>
 
                             {error && (
-                              <div className="error-message" style={{ marginBottom: '1rem' }}>
+                              <div className="error-message mb-4">
                                 <span>{error}</span>
                               </div>
                             )}

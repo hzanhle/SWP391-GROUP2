@@ -43,31 +43,18 @@ function Hero() {
                   onClick={bookBtn}
                   className="hero-content__text__btns__book-ride"
                   href="#booking-new"
-                  style={{color: "white", textDecoration: "none"}}
                 >
-                  Book Now &nbsp; <i className="fa-solid fa-circle-check"></i>
+                  Book Now &nbsp; <i className="fa-solid fa-circle-check" aria-hidden="true"></i>
                 </a>
-                <a className="hero-content__text__btns__learn-more" href="#" style={{color: "white", textDecoration: "none"}}>
-                  Learn More &nbsp; <i className="fa-solid fa-angle-right"></i>
+                <a className="hero-content__text__btns__learn-more" href="#">
+                  Learn More &nbsp; <i className="fa-solid fa-angle-right" aria-hidden="true"></i>
                 </a>
               </div>
             </div>
 
-            {/* img placeholder */}
-            <div
-              style={{
-                width: "65%",
-                height: "400px",
-                background: "linear-gradient(135deg, #ff4d30 0%, #ffe5db 100%)",
-                borderRadius: "10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: "2rem"
-              }}
-            >
-              <img src={vehicle} alt="vehicle-img" class="hero-content__car-img"></img>
+            {/* decorative media */}
+            <div className="hero-media" aria-hidden="true">
+              <img src={vehicle} alt="vehicle-img" className="hero-content__car-img" loading="lazy" decoding="async" />
             </div>
           </div>
         </div>
@@ -76,8 +63,12 @@ function Hero() {
         <div
           onClick={scrollToTop}
           className={`scroll-up ${goUp ? "show-scroll" : ""}`}
+          role="button"
+          aria-label="Scroll to top"
+          tabIndex={0}
+          onKeyDown={(e) => (e.key === 'Enter' ? scrollToTop() : null)}
         >
-          <i className="fa-solid fa-angle-up"></i>
+          <i className="fa-solid fa-angle-up" aria-hidden="true"></i>
         </div>
       </section>
     </>

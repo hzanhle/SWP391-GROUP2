@@ -236,7 +236,7 @@ export default function BookingNew() {
     try {
       setPreviewLoading(true)
 
-      // 1) Lấy xe khả dụng đầu tiên theo model đã chọn
+      // 1) L��y xe khả dụng đầu tiên theo model đã chọn
       const chosenVehicle = getFirstAvailableVehicle()
       if (!chosenVehicle) {
         setPreviewError('No vehicles available for this model. Please choose another model.')
@@ -487,10 +487,10 @@ export default function BookingNew() {
 
             {documentError && (
               <div className="error-message error-visible warning">
-                <span style={{ color: '#856404' }}>
+                <span className="warning-text">
                   ⚠️ {documentError.message}
                   <br />
-                  <a href="#profile-docs" style={{ color: '#0066cc', textDecoration: 'underline', marginTop: '0.5rem', display: 'inline-block' }}>
+                  <a href="#profile-docs" className="link-underline">
                     Update documents →
                   </a>
                 </span>
@@ -541,7 +541,7 @@ export default function BookingNew() {
                   />
                 )}
 
-                <div className="row-between" style={{ marginTop: '2rem' }}>
+                <div className="row-between mt-8">
                   <CTA as="button" variant="ghost" onClick={handleBack}>Back</CTA>
                   {step < steps.length - 1 ? (
                     <CTA as="button" onClick={handleNext}>Continue</CTA>

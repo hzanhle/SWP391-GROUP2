@@ -547,6 +547,21 @@
   gap: 1rem;
 }
 
+/* Empty placeholder */
+.empty-placeholder {
+  text-align: center;
+  padding: 20px;
+  color: #706f7b;
+}
+
+/* Admin page layout helpers */
+.admin-page { padding: 3rem 0; background-color: #f5f5f5; min-height: 100vh; }
+.admin-header { display: flex; justify-content: space-between; align-items: center; }
+.thead-muted { background-color: #f5f5f5; }
+.font-600 { font-weight: 600 !important; }
+.admin-stack { gap: 1.5rem; }
+.pt-2 { padding-top: 0.5rem; }
+
 /* Mobile responsive adjustments */
 @media (max-width: 640px) {
   .admin-shell {

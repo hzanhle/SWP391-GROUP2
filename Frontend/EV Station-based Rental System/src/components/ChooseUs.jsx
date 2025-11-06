@@ -1,27 +1,10 @@
-// Image placeholders
-const ImagePlaceholder = ({ text }) => (
-  <div style={{
-    background: "linear-gradient(135deg, #ff4d30 0%, #ffe5db 100%)",
-    borderRadius: "10px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "white",
-    fontSize: "1.5rem",
-    width: "100%",
-    height: "300px"
-  }}>
-    {text}
-  </div>
-);
-
 function ChooseUs() {
   return (
     <>
       <section className="choose-section">
         <div className="container">
           <div className="choose-container">
-            <ImagePlaceholder text="Why Choose Us" />
+            <div className="image-placeholder" aria-hidden="true">Why Choose Us</div>
             <div className="text-container">
               <div className="text-container__left">
                 <h4>Why Choose Us</h4>
@@ -31,12 +14,12 @@ function ChooseUs() {
                 </p>
                 <a href="#home">
                   Find Details &nbsp;
-                  <i className="fa-solid fa-angle-right"></i>
+                  <i className="fa-solid fa-angle-right" aria-hidden="true"></i>
                 </a>
               </div>
               <div className="text-container__right">
                 <div className="text-container__right__box">
-                  <div style={{width: "80px", height: "80px", background: "#ff4d30", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "2rem"}}>🚗</div>
+                  <div className="feature-icon" aria-hidden="true">🚗</div>
                   <div className="text-container__right__box__text">
                     <h4>Long Distance Drive</h4>
                     <p>
@@ -45,8 +28,7 @@ function ChooseUs() {
                   </div>
                 </div>
                 <div className="text-container__right__box">
-                  {" "}
-                  <div style={{width: "80px", height: "80px", background: "#ff4d30", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "2rem"}}>💰</div>
+                  <div className="feature-icon" aria-hidden="true">💰</div>
                   <div className="text-container__right__box__text">
                     <h4>All Inclusive Pricing</h4>
                     <p>
@@ -55,8 +37,7 @@ function ChooseUs() {
                   </div>
                 </div>
                 <div className="text-container__right__box">
-                  {" "}
-                  <div style={{width: "80px", height: "80px", background: "#ff4d30", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "2rem"}}>✓</div>
+                  <div className="feature-icon" aria-hidden="true">✓</div>
                   <div className="text-container__right__box__text">
                     <h4>No Hidden Charges</h4>
                     <p>

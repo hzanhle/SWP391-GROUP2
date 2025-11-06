@@ -473,29 +473,29 @@ export default function Payment() {
           <section className="section page-offset">
             <div className="container">
               <div className="card">
-                <div className="card-body" style={{ textAlign: 'center', padding: '4rem' }}>
-                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✅</div>
-                  <h2 className="card-title" style={{ color: '#2a6817', marginBottom: '1rem' }}>Payment Successful!</h2>
-                  <p className="card-subtext" style={{ marginBottom: '2rem', fontSize: '1.6rem' }}>
+                <div className="card-body center-text pad-4">
+                  <div className="icon-xl">✅</div>
+                  <h2 className="card-title text-success mb-4">Payment Successful!</h2>
+                  <p className="card-subtext mb-8 text-16">
                     Your order has been confirmed. <br />
                     Order ID: <strong>#{booking?.orderId}</strong>
                   </p>
-                  <p className="card-subtext" style={{ marginBottom: '1rem' }}>
+                  <p className="card-subtext mb-4">
                     Total Amount: <strong style={{ fontSize: '1.8rem', color: '#ff4d30' }}>${booking?.totalCost?.toFixed(2)}</strong>
                   </p>
 
                   {contractUrl ? (
-                    <div style={{ display: 'grid', gap: '1.5rem' }}>
-                      <div style={{ backgroundColor: '#f5f5f5', padding: '2rem', borderRadius: '8px' }}>
-                        <h3 style={{ marginBottom: '1rem', fontSize: '1.4rem', fontWeight: '600' }}>📄 Rental Contract</h3>
+                    <div className="stack">
+                      <div className="contract-container">
+                        <h3 className="contract-title">📄 Rental Contract</h3>
                         <iframe
                           src={`${contractUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                          style={{ width: '100%', height: '600px', border: '1px solid #ddd', borderRadius: '4px' }}
+                          className="contract-frame"
                           title="Contract PDF"
                         />
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-                          <a href={contractUrl} download target="_blank" rel="noreferrer" className="btn" style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>⬇️ Download</a>
-                          <a href={contractUrl} target="_blank" rel="noreferrer" className="btn" style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>👁️ View Full</a>
+                        <div className="contract-actions">
+                          <CTA as="a" href={contractUrl} download target="_blank" rel="noreferrer" className="text-center" variant="secondary">⬇️ Download</CTA>
+                          <CTA as="a" href={contractUrl} target="_blank" rel="noreferrer" className="text-center" variant="secondary">👁️ View Full</CTA>
                         </div>
                       </div>
                       <CTA as="button" onClick={handleStartTrip} variant="primary">Start Rental</CTA>
@@ -527,16 +527,16 @@ export default function Payment() {
           <section className="section page-offset">
             <div className="container">
               <div className="card">
-                <div className="card-body" style={{ textAlign: 'center', padding: '4rem' }}>
+                <div className="card-body center-text pad-4">
                   <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>❌</div>
-                  <h2 className="card-title" style={{ color: '#d32f2f', marginBottom: '1rem' }}>Payment Failed</h2>
-                  <p className="card-subtext" style={{ marginBottom: '2rem', fontSize: '1.6rem' }}>
+                  <h2 className="card-title text-error mb-4">Payment Failed</h2>
+                  <p className="card-subtext mb-8 text-16">
                     {error}
                   </p>
                   <p className="card-subtext" style={{ marginBottom: '2rem' }}>
                     Order ID: <strong>#{booking?.orderId}</strong>
                   </p>
-                  <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  <div className="row center-justify">
                     <CTA as="button" onClick={handleRetry} variant="primary">
                       Retry Payment
                     </CTA>

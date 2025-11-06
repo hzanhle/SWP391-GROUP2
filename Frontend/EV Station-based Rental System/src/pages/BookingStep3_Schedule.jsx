@@ -100,31 +100,31 @@ export default function BookingStep3_Schedule({
       {preview && (
         <div className="summary grid-span-full">
           <h3 className="card-title">Order Summary</h3>
-          <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div className="summary-grid">
+            <div className="summary-row">
               <span className="card-subtext">Location:</span>
-              <span className="card-subtext" style={{ fontWeight: 'bold' }}>{selectedStation?.name}</span>
+              <span className="card-subtext summary-strong">{selectedStation?.name}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="summary-row">
               <span className="card-subtext">Vehicle:</span>
-              <span className="card-subtext" style={{ fontWeight: 'bold' }}>{selectedModel?.manufacturer} {selectedModel?.modelName}</span>
+              <span className="card-subtext summary-strong">{selectedModel?.manufacturer} {selectedModel?.modelName}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="summary-row">
               <span className="card-subtext">Rental Price:</span>
-              <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.totalRentalCost?.toFixed(2)}</span>
+              <span className="card-subtext summary-strong">${preview.totalRentalCost?.toFixed(2)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="summary-row">
               <span className="card-subtext">Deposit:</span>
-              <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.depositCost?.toFixed(2)}</span>
+              <span className="card-subtext summary-strong">${preview.depositCost?.toFixed(2)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="summary-row">
               <span className="card-subtext">Service Fee:</span>
-              <span className="card-subtext" style={{ fontWeight: 'bold' }}>${preview.serviceFee?.toFixed(2)}</span>
+              <span className="card-subtext summary-strong">${preview.serviceFee?.toFixed(2)}</span>
             </div>
-            <hr style={{ margin: '1rem 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <h4 style={{ color: '#ff4d30', fontSize: '1.8rem', margin: 0 }}>Tổng cộng:</h4>
-              <h4 style={{ color: '#ff4d30', fontSize: '1.8rem', margin: 0 }}>${preview.totalPaymentCost?.toFixed(2)}</h4>
+            <hr className="divider" />
+            <div className="summary-row total-row">
+              <h4 className="total-label">Total:</h4>
+              <h4 className="total-value">${preview.totalPaymentCost?.toFixed(2)}</h4>
             </div>
           </div>
         </div>
@@ -132,31 +132,20 @@ export default function BookingStep3_Schedule({
 
       {/* Terms & Conditions checkbox - required before proceeding to payment */}
       {preview && (
-        <div className="field grid-span-full" style={{ marginTop: '1rem' }}>
-          <label className="row" style={{ alignItems: 'center', gap: '0.75rem' }}>
+        <div className="field grid-span-full mt-4">
+          <label className="row">
             <input
               type="checkbox"
               checked={!!termsAccepted}
               onChange={(e) => setTermsAccepted?.(e.target.checked)}
               aria-label="Đồng ý điều khoản"
             />
-            <span style={{ fontSize: '1rem' }}>
+            <span className="text-14">
               I have read and agree with{' '}
               <button
                 type="button"
                 onClick={() => setShowTerms(true)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#0066cc',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                  fontSize: '1rem',
-                  padding: 0,
-                  fontFamily: 'inherit',
-                }}
-                onMouseOver={(e) => (e.target.style.color = '#0052a3')}
-                onMouseOut={(e) => (e.target.style.color = '#0066cc')}
+                className="btn-reset link-underline text-14"
               >
                 Terms &amp; Services
               </button>
