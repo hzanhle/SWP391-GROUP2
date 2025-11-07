@@ -456,9 +456,16 @@ export default function BookingNew() {
         <Navbar />
         <main>
           <section className="section page-offset">
-            <div className="container">
-              <div className="text-center py-12">
-                <p>Loading...</p>
+            <div className="container" role="status" aria-busy="true">
+              <div className="card">
+                <div className="card-body">
+                  <div className="skeleton skeleton-line"></div>
+                  <div className="skeleton skeleton-pill"></div>
+                  <div className="two-col-grid">
+                    <div className="skeleton skeleton-card"></div>
+                    <div className="skeleton skeleton-card"></div>
+                  </div>
+                </div>
               </div>
             </div>
           </section>

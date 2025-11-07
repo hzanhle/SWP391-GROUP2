@@ -306,7 +306,7 @@ export default function Payment() {
 
               if (missingFields.length > 0) {
                 console.error('[Payment] Missing required fields:', missingFields)
-                setError(`Lỗi: Thiếu dữ li��u bắt buộc: ${missingFields.join(', ')}`)
+                setError(`Lỗi: Thiếu d��� li��u bắt buộc: ${missingFields.join(', ')}`)
                 setLoading(false)
                 return
               }
@@ -453,9 +453,22 @@ export default function Payment() {
         <Navbar />
         <main>
           <section className="section page-offset">
-            <div className="container">
-              <div className="text-center" style={{ padding: '4rem 0' }}>
-                <p style={{ fontSize: '1.8rem' }}>Loading...</p>
+            <div className="container" role="status" aria-busy="true">
+              <div className="two-col-grid">
+                <div className="card">
+                  <div className="card-body">
+                    <div className="skeleton skeleton-line"></div>
+                    <div className="skeleton skeleton-line"></div>
+                    <div className="skeleton skeleton-card"></div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="card-body">
+                    <div className="skeleton skeleton-line"></div>
+                    <div className="skeleton skeleton-pill"></div>
+                    <div className="skeleton skeleton-line"></div>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -481,7 +494,7 @@ export default function Payment() {
                     Order ID: <strong>#{booking?.orderId}</strong>
                   </p>
                   <p className="card-subtext mb-4">
-                    Total Amount: <strong style={{ fontSize: '1.8rem', color: '#ff4d30' }}>${booking?.totalCost?.toFixed(2)}</strong>
+                    Total Amount: <strong className="total-value large value-accent">${booking?.totalCost?.toFixed(2)}</strong>
                   </p>
 
                   {contractUrl ? (
@@ -528,12 +541,12 @@ export default function Payment() {
             <div className="container">
               <div className="card">
                 <div className="card-body center-text pad-4">
-                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>❌</div>
+                  <div className="icon-xl mb-4">❌</div>
                   <h2 className="card-title text-error mb-4">Payment Failed</h2>
                   <p className="card-subtext mb-8 text-16">
                     {error}
                   </p>
-                  <p className="card-subtext" style={{ marginBottom: '2rem' }}>
+                  <p className="card-subtext mb-4">
                     Order ID: <strong>#{booking?.orderId}</strong>
                   </p>
                   <div className="row center-justify">
@@ -566,36 +579,36 @@ export default function Payment() {
             </div>
 
             {error && (
-              <div className="error-message" style={{ display: 'flex' }}>
+              <div className="error-message error-visible">
                 <span>{error}</span>
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+            <div className="two-col-grid mb-8">
               <div className="card">
                 <div className="card-body">
                   <h3 className="card-title">Order Summary</h3>
                   
                   {booking ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.5rem' }}>
+                    <div className="stack mt-4">
                       <div>
-                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Order ID</h4>
-                        <p style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#ff4d30' }}>{booking.orderId ? `#${booking.orderId}` : 'N/A'}</p>
+                        <h4 className="muted-title">Order ID</h4>
+                        <p className="order-id">{booking.orderId ? `#${booking.orderId}` : 'N/A'}</p>
                       </div>
 
                       <div>
-                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Vehicle</h4>
-                        <p className="card-subtext" style={{ marginBottom: '0.5rem' }}>{booking.vehicleInfo?.model || 'N/A'}</p>
+                        <h4 className="muted-title">Vehicle</h4>
+                        <p className="card-subtext mb-3">{booking.vehicleInfo?.model || 'N/A'}</p>
                         <p className="card-subtext">Color: {booking.vehicleInfo?.color || 'N/A'}</p>
                       </div>
 
                       <div>
-                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Station</h4>
+                        <h4 className="muted-title">Station</h4>
                         <p className="card-subtext">{booking.vehicleInfo?.station || 'N/A'}</p>
                       </div>
 
                       <div>
-                        <h4 style={{ fontSize: '1.4rem', color: '#666', marginBottom: '0.5rem' }}>Time</h4>
+                        <h4 className="muted-title">Time</h4>
                         {booking.dates?.from && (
                           <p className="card-subtext">
                             Pickup: {new Date(booking.dates.from).toLocaleString('vi-VN')}
@@ -608,50 +621,43 @@ export default function Payment() {
                         )}
                       </div>
 
-                      <hr style={{ margin: '1rem 0' }} />
+                      <hr className="divider-lg" />
 
-                      <div style={{ backgroundColor: '#f9f9f9', padding: '1rem', borderRadius: '0.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                          <span style={{ fontSize: '1.4rem', color: '#666' }}>Rental Fee:</span>
-                          <span style={{ fontSize: '1.4rem', fontWeight: '500' }}>{(booking.totalRentalCost || 0).toLocaleString('vi-VN')} ₫</span>
+                      <div className="breakdown-box">
+                        <div className="summary-row">
+                          <span className="price-label">Rental Fee:</span>
+                          <span className="price-value">{(booking.totalRentalCost || 0).toLocaleString('vi-VN')} ₫</span>
                         </div>
                         {(booking.depositCost || 0) > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                            <span style={{ fontSize: '1.4rem', color: '#666' }}>Deposit:</span>
-                            <span style={{ fontSize: '1.4rem', fontWeight: '500' }}>{(booking.depositCost || 0).toLocaleString('vi-VN')} ₫</span>
+                          <div className="summary-row">
+                            <span className="price-label">Deposit:</span>
+                            <span className="price-value">{(booking.depositCost || 0).toLocaleString('vi-VN')} ₫</span>
                           </div>
                         )}
                         {(booking.serviceFee || 0) > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                            <span style={{ fontSize: '1.4rem', color: '#666' }}>Service Fee:</span>
-                            <span style={{ fontSize: '1.4rem', fontWeight: '500' }}>{(booking.serviceFee || 0).toLocaleString('vi-VN')} ₫</span>
+                          <div className="summary-row">
+                            <span className="price-label">Service Fee:</span>
+                            <span className="price-value">{(booking.serviceFee || 0).toLocaleString('vi-VN')} ₫</span>
                           </div>
                         )}
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem' }}>
-                        <h4 style={{ fontSize: '1.8rem', color: '#ff4d30', margin: 0 }}>Total Payment:</h4>
-                        <h2 style={{ fontSize: '2.4rem', color: '#ff4d30', margin: 0 }}>
+                      <div className="summary-row total-row">
+                        <h4 className="total-label">Total Payment:</h4>
+                        <h2 className="total-value large">
                           {(booking.totalCost || 0).toLocaleString('vi-VN')} ₫
                         </h2>
                       </div>
 
                       {booking.expiresAt && (
-                        <p style={{
-                          fontSize: '1.4rem',
-                          color: '#d32f2f',
-                          backgroundColor: '#ffebee',
-                          padding: '1rem',
-                          borderRadius: '0.5rem',
-                          marginTop: '1rem'
-                        }}>
+                        <p className="deadline-box">
                           ⏰ Pay before: {new Date(booking.expiresAt).toLocaleString('vi-VN')}
                         </p>
                       )}
                     </div>
                   ) : (
-                    <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
-                      <p>No order data. Please try again.</p>
+                    <div className="state-wrapper">
+                      <p className="state-message">No order data. Please try again.</p>
                     </div>
                   )}
                 </div>
@@ -661,58 +667,43 @@ export default function Payment() {
                 <div className="card-body">
                   <h3 className="card-title">Payment Method</h3>
                   
-                  <div style={{ marginTop: '2rem' }}>
-                    <div style={{
-                      padding: '2rem',
-                      border: '2px solid #ff4d30',
-                      borderRadius: '0.8rem',
-                      textAlign: 'center',
-                      backgroundColor: '#fff5f0'
-                    }}>
-                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏦</div>
-                      <h4 style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>VNPay e-wallet</h4>
+                  <div className="mt-8">
+                    <div className="payment-method-card" aria-busy={paymentProcessing} aria-live="polite">
+                      <div className="icon-xl">🏦</div>
+                      <h4 className="payment-title">VNPay e-wallet</h4>
                       <p className="card-subtext">Fast and secure payment</p>
-                      <p className="card-subtext" style={{ marginTop: '1rem', color: '#2a6817' }}>
-                        ✓ 100% secure
-                      </p>
+                      <p className="card-subtext text-success mt-4">✓ 100% secure</p>
                     </div>
 
                     {paymentError && (
-                      <div className="error-message" style={{ display: 'flex', marginTop: '1.5rem' }}>
+                      <div className="error-message error-visible mt-6">
                         <span>{paymentError}</span>
                       </div>
                     )}
 
-                    <div style={{ marginTop: '2rem' }}>
-                      <CTA 
-                        as="button" 
+                    <div className="mt-8">
+                      <CTA
+                        as="button"
                         onClick={handleCreatePayment}
                         disabled={paymentProcessing}
                         variant="primary"
                       >
                         {paymentProcessing ? 'Processing...' : 'Pay with VNPay'}
                       </CTA>
-                      <CTA 
-                        as="a" 
+                      <CTA
+                        as="a"
                         href="#booking-new"
                         variant="secondary"
-                        style={{ marginTop: '1rem', display: 'block', textAlign: 'center' }}
+                        className="block-link"
                       >
                         Cancel
                       </CTA>
                     </div>
                   </div>
 
-                  <div style={{
-                    marginTop: '2rem',
-                    padding: '1.5rem',
-                    backgroundColor: '#f5f5f5',
-                    borderRadius: '0.5rem',
-                    fontSize: '1.4rem',
-                    color: '#666'
-                  }}>
-                    <h4 style={{ marginBottom: '1rem', fontSize: '1.6rem', color: '#333' }}>ℹ️ Note</h4>
-                    <ul style={{ marginLeft: '1.5rem', lineHeight: '1.8' }}>
+                  <div className="note-box mt-8">
+                    <h4 className="note-title">ℹ️ Note</h4>
+                    <ul className="note-list">
                       <li>You will be redirected to the VNPay payment page</li>
                       <li>Please do not close your browser while paying</li>
                       <li>After successful payment, the system will automatically confirm your order</li>

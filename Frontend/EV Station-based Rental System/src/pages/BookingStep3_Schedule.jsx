@@ -27,7 +27,7 @@ export default function BookingStep3_Schedule({
   const isValidTimeRange = hoursDiff >= 3
 
   return (
-    <div className="booking-grid">
+    <div className="booking-grid" aria-busy={previewLoading || bookingLoading} aria-live="polite">
       <div className="booking-notes-container">
         <div className="booking-note booking-note-warning">
           <span className="booking-note-icon">���️</span>
@@ -92,8 +92,9 @@ export default function BookingStep3_Schedule({
       )}
 
       {previewLoading && (
-        <div className="field grid-span-full text-center">
-          <p>Calculating...</p>
+        <div className="field grid-span-full" role="status" aria-busy="true">
+          <div className="skeleton skeleton-line"></div>
+          <div className="skeleton skeleton-line"></div>
         </div>
       )}
 
