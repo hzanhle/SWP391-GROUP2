@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using TwoWheelVehicleService.DTOs;
 using TwoWheelVehicleService.Models;
 
 namespace TwoWheelVehicleService.Repositories
@@ -40,6 +41,12 @@ namespace TwoWheelVehicleService.Repositories
         public Task<Model> GetModelById(int modelId)
         {
             return _context.Models.FirstOrDefaultAsync(m => m.ModelId == modelId);
+        }
+
+        public Task<List<Model>?> SearchModelsAsync(string searchValue)
+        {
+            return _context.Models
+                .Where(m => m.ModelName.Contains(searchValue) || m.Manufacturer.Contains(searchValue)).ToListAsync();
         }
 
         public async Task UpdateModel(Model model)

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using TwoWheelVehicleService.DTOs;
 using TwoWheelVehicleService.Models;
 
 namespace TwoWheelVehicleService.Repositories
@@ -12,6 +13,26 @@ namespace TwoWheelVehicleService.Repositories
             _context = context;
         }
 
+        public async Task<VehicleDTO?> GetAvailableVehicleAsync(int modelId, string color, int stationId)
+        {
+            return await _context.Vehicles
+                .Where(v => v.ModelId == modelId
+                         && v.Color == color
+                         && v.StationId == stationId
+                         && v.IsActive == true
+                         && v.Status == "Available")
+                .Select(v => new VehicleDTO
+                {
+                    VehicleId = v.VehicleId,
+                    StationId = v.StationId,
+                    ModelId = v.ModelId,
+                    LicensePlate = v.LicensePlate,
+                    Color = v.Color,
+                    IsActive = v.IsActive,
+                    Status = v.Status
+                })
+                .FirstOrDefaultAsync();
+        }
         public async Task<List<Vehicle>> GetVehiclesByStatus(string status) // Get Vehicles by Status
         {
             return await _context.Vehicles.Where(v => v.Status == status).ToListAsync();

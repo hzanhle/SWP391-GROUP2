@@ -51,6 +51,28 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
   return { status: res.status, data }
 }
 
+// API Service
+export const findAvailableVehicle = async (modelId, color, stationId) => {
+  try {
+    const response = await fetch(`/api/vehicle/find-available?modelId=${modelId}&color=${color}&stationId=${stationId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Có lỗi xảy ra');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error finding available vehicle:', error);
+    throw error;
+  }
+};
 
 // Vehicle API Service Methods
 
