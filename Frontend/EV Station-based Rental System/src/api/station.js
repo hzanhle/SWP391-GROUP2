@@ -67,12 +67,21 @@ export function createStation(payload, token) {
   return request('/api/station', { method: 'POST', body: {
     name: payload.name,
     location: payload.location,
-    managerId: payload.managerId ?? null,
+    lat: payload.lat ?? 0,
+    lng: payload.lng ?? 0,
   }, token })
 }
 
 export function updateStation(station, token) {
-  return request('/api/station', { method: 'PUT', body: station, token })
+  const id = station.stationId ?? station.id ?? station.Id
+  return request(`/api/station/${id}`, { method: 'PUT', body: {
+    id,
+    name: station.name ?? station.Name,
+    location: station.location ?? station.Location,
+    isActive: (station.isActive ?? station.IsActive ?? true),
+    lat: station.lat ?? station.Lat ?? 0,
+    lng: station.lng ?? station.Lng ?? 0,
+  }, token })
 }
 
 export function deleteStation(id, token) {
@@ -80,7 +89,7 @@ export function deleteStation(id, token) {
 }
 
 export function setStationStatus(id, token) {
-  return request(`/api/station/${id}`, { method: 'PATCH', token })
+  return request(`/api/station/${id}/status`, { method: 'PATCH', token })
 }
 
 export default { request, getAllStations, getActiveStations, getStationById, createStation, updateStation, deleteStation, setStationStatus }
