@@ -100,6 +100,7 @@ namespace TwoWheelVehicleService.Services
             }
         }
 
+
         public async Task<VehicleDTO> GetVehicleByIdAsync(int vehicleId)
         {
             try
@@ -444,6 +445,17 @@ namespace TwoWheelVehicleService.Services
                 LastUpdate = vehicle.LastStatusUpdate?.ToString("HH:mm - dd/MM/yyyy") ?? "Chưa cập nhật",
                 LastUpdatedBy = vehicle.LastUpdatedBy.HasValue ? $"User #{vehicle.LastUpdatedBy}" : "N/A"
             };
+        }
+
+        public async Task<VehicleDTO?> GetAvailableVehicleForBooking(VehicleBookingRequest request)
+        {
+            var vehicle = await _vehicleRepository.GetAvailableVehicleAsync(
+                request.ModelId,
+                request.Color,
+                request.StationId
+            );
+
+            return vehicle;
         }
     }
 

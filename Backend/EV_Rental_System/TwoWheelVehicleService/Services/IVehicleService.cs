@@ -12,6 +12,7 @@ namespace TwoWheelVehicleService.Services
         Task UpdateVehicleAsync(Vehicle vehicle);
         Task DeleteVehicleAsync(int vehicleId);
         Task<VehicleDTO> GetVehicleByIdAsync(int vehicleId);
+        Task<VehicleDTO?> GetAvailableVehicleForBooking(VehicleBookingRequest request);
         Task SetVehicleStatus(int vehicleId, string status); // New method to set vehicle status
         Task ToggleActiveStatus(int id); // New method to toggle isActive status
 

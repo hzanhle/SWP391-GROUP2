@@ -70,6 +70,31 @@ namespace TwoWheelVehicleService.Controllers
         }
 
         [AllowAnonymous]
+        [HttpGet("/Search")]
+        public async Task<IActionResult> SearchModels([FromQuery] string searchValue)
+        {
+            try
+            {
+                var models = await _modelService.SearchModelsAsync(searchValue);
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Tìm kiếm model thành công",
+                    Data = models
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
+            }
+        }
+
+        [AllowAnonymous]
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetModelById(int id)
         {

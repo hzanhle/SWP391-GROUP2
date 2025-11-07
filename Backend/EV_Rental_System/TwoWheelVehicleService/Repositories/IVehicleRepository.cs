@@ -1,10 +1,12 @@
-﻿using TwoWheelVehicleService.Models;
+﻿using TwoWheelVehicleService.DTOs;
+using TwoWheelVehicleService.Models;
 
 namespace TwoWheelVehicleService.Repositories
 {
     public interface IVehicleRepository
     {
         Task<List<Vehicle>> GetVehiclesByStatus(string status); // Get Vehicles by Status
+        Task<VehicleDTO?> GetAvailableVehicleAsync(int modelId, string color, int stationId);
         Task<List<Vehicle>> GetAllVehiclesByModelId(int modelId); // Get Vehicles by ModelId
         Task<List<Vehicle>> GetActiveVehicles(); // Get Active Vehicles
         Task<List<Vehicle>> GetAllVehicles(); // Get All Vehicles
