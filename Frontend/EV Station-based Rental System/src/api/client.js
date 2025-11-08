@@ -179,6 +179,10 @@ export function updateDriverLicense(payload, token) {
   if (payload.LicenseType) fd.append('LicenseType', payload.LicenseType)
   if (payload.RegisterDate) fd.append('RegisterDate', payload.RegisterDate)
   if (payload.RegisterOffice) fd.append('RegisterOffice', payload.RegisterOffice)
+  if (payload.DayOfBirth) fd.append('DayOfBirth', payload.DayOfBirth)
+  if (payload.FullName) fd.append('FullName', payload.FullName)
+  if (payload.Sex) fd.append('Sex', payload.Sex)
+  if (payload.Address) fd.append('Address', payload.Address)
   const files = payload.Files || []
   for (const f of files) if (f) fd.append('Files', f)
   return request('/api/DriverLicense', { method: 'PUT', body: fd, token })

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import NotificationBell from "./NotificationBell";
+import { useThemeMode } from "../theme/ThemeContext";
 
 function Navbar() {
   const [nav, setNav] = useState(false);
@@ -56,6 +57,8 @@ function Navbar() {
   const isStaff = roleId === 2;
   const isAdmin = roleId === 3;
   const isMember = roleId === 1 || (roleId === 0 && user);
+  const { mode, toggleMode } = useThemeMode();
+  const isDark = mode === 'dark';
 
   return (
     <>
@@ -75,6 +78,12 @@ function Navbar() {
             <i className="fa-solid fa-xmark" aria-hidden="true"></i>
           </button>
           <ul className="mobile-navbar__links" role="menu">
+            <li role="none">
+              <button type="button" className="navbar__theme-toggle" onClick={() => { toggleMode(); toggleNav(); }}>
+                <i className={isDark ? "fa-solid fa-sun" : "fa-solid fa-moon"} aria-hidden="true"></i>
+                <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+              </button>
+            </li>
             {!isStaff && (
               <>
                 <li role="none">
@@ -216,6 +225,10 @@ function Navbar() {
           </ul>
 
           <div className="navbar__right">
+            <button type="button" className="navbar__theme-toggle" onClick={toggleMode} title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
+              <i className={isDark ? "fa-solid fa-sun" : "fa-solid fa-moon"} aria-hidden="true"></i>
+              <span className="visually-hidden">Toggle theme</span>
+            </button>
             {user ? (
               <div className="navbar__user">
                 <span className="navbar__greeting">Hello, {userName}</span>

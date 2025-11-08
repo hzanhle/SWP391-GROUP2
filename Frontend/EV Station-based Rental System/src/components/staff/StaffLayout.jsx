@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import '../../styles/staff.css'
+import { useThemeMode } from '../../theme/ThemeContext'
 
 function Icon({ name }) {
   const common = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -16,23 +17,8 @@ function Icon({ name }) {
 
 export default function StaffLayout({ children, active = 'shifts' }) {
   const [collapsed, setCollapsed] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    try {
-      const saved = localStorage.getItem('staff-theme');
-      return saved ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    const el = document.documentElement;
-    el.dataset.theme = isDarkMode ? 'dark' : 'light';
-    try {
-      localStorage.setItem('staff-theme', JSON.stringify(isDarkMode));
-    } catch {}
-    return () => {};
-  }, [isDarkMode]);
+  const { mode, toggleMode } = useThemeMode();
+  const isDarkMode = mode === 'dark';
 
   const links = useMemo(() => ([
     { key: 'shifts', label: 'My Shifts', href: '#staff-shifts', icon: 'shifts' },
@@ -97,7 +83,7 @@ export default function StaffLayout({ children, active = 'shifts' }) {
             </div>
           )}
           <div className="staff-sidebar-actions">
-            <button className="staff-theme-toggle" onClick={() => setIsDarkMode(!isDarkMode)} title={isDarkMode ? 'Light mode' : 'Dark mode'}>
+            <button className="staff-theme-toggle" onClick={toggleMode} title={isDarkMode ? 'Light mode' : 'Dark mode'}>
               <Icon name={isDarkMode ? 'sun' : 'moon'} />
               {!collapsed && <span>{isDarkMode ? 'Light' : 'Dark'}</span>}
             </button>

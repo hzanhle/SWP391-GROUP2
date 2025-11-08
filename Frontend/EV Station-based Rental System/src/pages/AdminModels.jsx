@@ -198,7 +198,7 @@ export default function AdminModels() {
               </Card>
             ) : (
               <TableContainer component={Paper}>
-}
+
                 <Table>
                   <TableHead className="thead-muted">
                     <TableRow>

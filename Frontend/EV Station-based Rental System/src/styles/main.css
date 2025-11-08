@@ -387,6 +387,21 @@ body {
   gap: 0.5rem;
 }
 
+/* Theme toggle button for navbar (non-intrusive) */
+.navbar__theme-toggle {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  color: #010103;
+  padding: 0.6rem 0.9rem;
+  border-radius: 3px;
+  font-size: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+.navbar__theme-toggle:hover { border-color: #ff4d30; color: #ff4d30; }
+
 .navbar__profile-btn:hover {
   color: #ff4d30;
 }
