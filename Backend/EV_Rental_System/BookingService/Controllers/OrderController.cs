@@ -44,23 +44,62 @@ namespace BookingService.Controllers
             return userId;
         }
         /// <summary>
-        /// Xem trước đơn hàng: tính toán chi phí và kiểm tra lịch.
-        /// Chỉ Member mới có thể xem trước đơn hàng của mình
+        /// Xem trước thông tin đơn hàng trước khi tạo
         /// </summary>
         [HttpPost("preview")]
         [Authorize(Roles = "Member")]
+        [ProducesResponseType(typeof(ResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ResponseDTO), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> GetOrderPreview([FromBody] OrderRequest request)
         {
             int userId = GetUserIdFromToken();
+
+            // Kiểm tra validation
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+
+                _logger.LogWarning(
+                    "Validation failed for User {UserId}, Vehicle {VehicleId}. Errors: {Errors}",
+                    userId, request.VehicleId, string.Join("; ", errors));
+
+                return BadRequest(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = new { Errors = errors }
+                });
+            }
+
             try
             {
+                _logger.LogInformation(
+                    "Processing order preview for User {UserId}, Vehicle {VehicleId}, from {FromDate} to {ToDate}",
+                    userId, request.VehicleId, request.FromDate, request.ToDate);
+
                 var preview = await _orderService.GetOrderPreviewAsync(request, userId);
-                return Ok(preview);
+
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Xem trước đơn hàng thành công",
+                    Data = preview
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting order preview for User {UserId}", userId);
-                return BadRequest(new { Message = "Lỗi khi xem trước đơn hàng: " + ex.Message });
+                _logger.LogError(ex, "Error getting order preview for User {UserId}, Vehicle {VehicleId}",
+                    userId, request.VehicleId);
+
+                return BadRequest(new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi khi xem trước đơn hàng",
+                    Data = new { Error = ex.Message }
+                });
             }
         }
 
