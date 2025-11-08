@@ -111,7 +111,7 @@ export default function App() {
   }, [])
 
   // Check if current route is admin route
-  const isAdminRoute = ['admin', 'admin-users', 'admin-models', 'admin-stations', 'admin-vehicles', 'admin-staffshift', 'staff-verify'].includes(routeData)
+  const isAdminRoute = ['admin', 'admin-users', 'admin-models', 'admin-stations', 'admin-vehicles', 'admin-staffshift', 'admin-create-staff', 'staff-verify'].includes(routeData)
   // Check if current route is staff route
   const isStaffRoute = ['staff-shifts', 'staff-vehicles'].includes(routeData)
 
