@@ -78,9 +78,9 @@ export default function AdminCreateStaff() {
   return (
     <AdminLayout active="users">
       <Box className="admin-page">
-        <Container maxWidth="sm">
+        <Container maxWidth="lg">
           <form onSubmit={handleSubmit}>
-            <Stack spacing={3}>
+            <Stack className="admin-stack" spacing={3}>
               <Box className="admin-header">
                 <Box>
                   <Typography variant="h4" component="h1" gutterBottom className="font-600">Create Staff Account</Typography>
