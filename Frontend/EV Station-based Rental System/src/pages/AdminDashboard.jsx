@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getDashboardSummary, getRevenueByMonth, getTopUsedVehicles, getStationStats, getUserGrowth } from '../api/adminDashboard'
+import { getAllStations as fetchAllStations } from '../api/station'
 import { Card, CardContent, CardHeader, Typography } from '@mui/material'
 import { LineChart, BarChart, PieChart } from '@mui/x-charts'
 import AdminLayout from '../components/admin/AdminLayout'
@@ -22,7 +23,8 @@ export default function AdminDashboard() {
   const [summary, setSummary] = useState(null)
   const [revenue, setRevenue] = useState([])
   const [topVehicles, setTopVehicles] = useState([])
-  const [stations, setStations] = useState([])
+  const [stationStats, setStationStatsState] = useState(null)
+  const [stationList, setStationList] = useState([])
   const [userGrowth, setUserGrowth] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -37,18 +39,20 @@ export default function AdminDashboard() {
     ;(async () => {
       try {
         setLoading(true)
-        const [s, r, v, st, ug] = await Promise.all([
+        const [s, r, v, st, ug, sl] = await Promise.all([
           getDashboardSummary(token).catch(e=>{throw e}),
           getRevenueByMonth(new Date().getFullYear(), token),
           getTopUsedVehicles(10, token),
           getStationStats(token),
           getUserGrowth(token),
+          fetchAllStations(token)
         ])
         if (!mounted) return
         setSummary(s.data || null)
         setRevenue(Array.isArray(r.data) ? r.data : [])
         setTopVehicles(Array.isArray(v.data) ? v.data : [])
-        setStations(Array.isArray(st.data) ? st.data : [])
+        setStationStatsState(st.data ?? null)
+        setStationList(Array.isArray(sl.data) ? sl.data : [])
         setUserGrowth(Array.isArray(ug.data) ? ug.data : [])
         setError('')
       } catch (e) {
@@ -164,24 +168,44 @@ export default function AdminDashboard() {
                 <Card className="admin-card">
                   <CardHeader title="Station Status" />
                   <CardContent>
-                    {stations && stations.length > 0 ? (
-                      <PieChart
-                        height={260}
-                        series={[{
-                          data: ((() => {
-                            const items = Array.isArray(stations) ? stations : [];
-                            const on = items.filter(s => s.isOperational ?? s.IsOperational).length;
-                            const off = items.length - on;
-                            return [
-                              { id: 0, value: on, label: 'Operating' },
-                              { id: 1, value: off, label: 'Maintenance' },
-                            ];
-                          })()).filter(item => item && item.value !== null && item.value !== undefined)
-                        }]}
-                      />
-                    ) : (
-                      <div className="empty-placeholder">No data</div>
-                    )}
+                    {(() => {
+                      // Prefer live station list for accurate status; fallback to admin aggregate
+                      let on = 0, off = 0
+                      const toBool = (v) => {
+                        if (typeof v === 'boolean') return v
+                        if (typeof v === 'number') return v === 1
+                        if (typeof v === 'string') { const t = v.toLowerCase(); return t === 'true' || t === 'active' || t === 'operational' || t === 'online' || v === '1' }
+                        return false
+                      }
+                      if (Array.isArray(stationList) && stationList.length > 0) {
+                        const items = stationList
+                        on = items.filter(s => toBool(
+                          s.isOperational ?? s.IsOperational ?? s.isActive ?? s.IsActive ?? s.active ?? s.Active ?? s.status ?? s.Status
+                        )).length
+                        off = items.length - on
+                      } else if (stationStats && typeof stationStats === 'object') {
+                        const obj = stationStats
+                        const getNum = (v) => Number(v ?? 0)
+                        const onKeys = ['operational','Operational','active','Active','on','On','online','Online','operationalStations','OperationalStations','activeStations','ActiveStations','totalActive','TotalActive']
+                        const offKeys = ['maintenance','Maintenance','inactive','Inactive','off','Off','offline','Offline','maintenanceStations','MaintenanceStations','inactiveStations','InactiveStations','notOperational','NotOperational','totalInactive','TotalInactive']
+                        on = onKeys.reduce((acc, k) => acc + getNum(obj[k]), 0)
+                        off = offKeys.reduce((acc, k) => acc + getNum(obj[k]), 0)
+                        if (on === 0 && off === 0 && typeof obj.total === 'number') {
+                          on = getNum(obj.total)
+                        }
+                      }
+                      const hasData = (on + off) > 0
+                      return hasData ? (
+                        <PieChart
+                          height={260}
+                          series={[{ data: [
+                            { id: 0, value: on, label: 'Operating' },
+                            { id: 1, value: off, label: 'Maintenance' },
+                          ] }]} />
+                      ) : (
+                        <div className="empty-placeholder">No data</div>
+                      )
+                    })()}
                   </CardContent>
                 </Card>
               </div>
