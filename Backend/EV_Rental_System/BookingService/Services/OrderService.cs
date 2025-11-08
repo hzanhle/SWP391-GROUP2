@@ -55,11 +55,11 @@ namespace BookingService.Services
                 "Getting order preview for User {UserId}, Vehicle {VehicleId}, from {FromDate} to {ToDate}",
                 userId, request.VehicleId, request.FromDate, request.ToDate);
 
-            // 1. Validate thời gian
+            // 1. Validate thời gian - THROW EXCEPTION nếu invalid
             var validationResult = ValidateDateRange(request.FromDate, request.ToDate);
             if (!validationResult.IsValid)
             {
-                return CreatePreviewResponse(request, isAvailable: false, validationResult.Message, userId);
+                throw new ArgumentException(validationResult.Message);
             }
 
             // 2. Kiểm tra tính khả dụng của xe
@@ -68,7 +68,14 @@ namespace BookingService.Services
                 request.FromDate,
                 request.ToDate);
 
-            // 3. Tính toán chi phí
+            // 3. THROW EXCEPTION nếu xe không available
+            if (!isAvailable)
+            {
+                throw new InvalidOperationException(
+                    "Xe đã được đặt trong khoảng thời gian này. Vui lòng chọn thời gian khác.");
+            }
+
+            // 4. Tính toán chi phí
             var costBreakdown = await CalculateOrderCostAsync(
                 userId,
                 request.FromDate,
@@ -76,7 +83,7 @@ namespace BookingService.Services
                 request.RentFeeForHour,
                 request.ModelPrice);
 
-            // 4. Trả về response
+            // 5. Trả về response - CHỈ KHI MỌI THỨ ĐỀU OK
             return new OrderPreviewResponse
             {
                 UserId = userId,
@@ -87,13 +94,10 @@ namespace BookingService.Services
                 DepositAmount = costBreakdown.Deposit,
                 ServiceFee = costBreakdown.ServiceFee,
                 TotalPaymentAmount = costBreakdown.TotalAmount,
-                IsAvailable = isAvailable,
-                Message = isAvailable
-                    ? "Xe kh��� dụng. Vui lòng xác nhận đặt xe."
-                    : "Xe đã được đặt trong khoảng thời gian này. Vui lòng chọn thời gian khác."
+                IsAvailable = true,
+                Message = "Xe khả dụng. Vui lòng xác nhận đặt xe."
             };
         }
-
         #endregion
 
         #region Create Order

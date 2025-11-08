@@ -14,7 +14,7 @@ namespace TwoWheelVehicleService.Repositories
 
         public async Task<IEnumerable<TransferVehicle>> GetTransferVehicles()
         {
-            return await _context.TransferVehicles.ToListAsync();
+            return await _context.TransferVehicles.OrderByDescending(tv => tv.CreateAt).ToListAsync();
         }
 
         public async Task<IEnumerable<TransferVehicle>> GetTransferVehiclesByModelId(int modelId)
