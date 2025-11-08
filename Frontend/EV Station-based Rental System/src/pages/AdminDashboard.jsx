@@ -40,12 +40,13 @@ export default function AdminDashboard() {
       try {
         setLoading(true)
         const [s, r, v, st, ug, sl] = await Promise.all([
-          getDashboardSummary(token).catch(e=>{throw e}),
-          getRevenueByMonth(new Date().getFullYear(), token),
-          getTopUsedVehicles(10, token),
-          getStationStats(token),
-          getUserGrowth(token),
-          fetchAllStations(token)
+          getDashboardSummary(token).catch(e => { throw e }), // summary is required
+          getRevenueByMonth(new Date().getFullYear(), token).catch(() => ({ data: [] })),
+          getTopUsedVehicles(10, token).catch(() => ({ data: [] })),
+          // Be tolerant to station stats endpoint issues; we'll fallback to station list
+          getStationStats(token).catch(() => ({ data: null })),
+          getUserGrowth(token).catch(() => ({ data: [] })),
+          fetchAllStations(token).catch(() => ({ data: [] }))
         ])
         if (!mounted) return
         setSummary(s.data || null)
