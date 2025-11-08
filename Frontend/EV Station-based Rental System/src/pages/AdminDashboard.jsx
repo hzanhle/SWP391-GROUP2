@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getDashboardSummary, getRevenueByMonth, getTopUsedVehicles, getStationStats, getUserGrowth } from '../api/adminDashboard'
+import { getDashboardSummary, getRevenueByMonth, getTopUsedVehicles, getUserGrowth } from '../api/adminDashboard'
 import { getAllStations as fetchAllStations } from '../api/station'
 import { Card, CardContent, CardHeader, Typography } from '@mui/material'
 import { LineChart, BarChart, PieChart } from '@mui/x-charts'
@@ -43,8 +43,8 @@ export default function AdminDashboard() {
           getDashboardSummary(token).catch(e => { throw e }), // summary is required
           getRevenueByMonth(new Date().getFullYear(), token).catch(() => ({ data: [] })),
           getTopUsedVehicles(10, token).catch(() => ({ data: [] })),
-          // Be tolerant to station stats endpoint issues; we'll fallback to station list
-          getStationStats(token).catch(() => ({ data: null })),
+          // Avoid calling stations stats endpoint (currently failing on server); rely on station list instead
+          Promise.resolve({ data: null }),
           getUserGrowth(token).catch(() => ({ data: [] })),
           fetchAllStations(token).catch(() => ({ data: [] }))
         ])
