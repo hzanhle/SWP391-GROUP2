@@ -102,11 +102,70 @@ export default function StationMap({ stations = [], selectedStation = null }) {
           }
         })
 
-        // Place markers using geocoded coordinates
+        // Place markers using provided coordinates, fallback to geocoded address
         for (const s of data) {
           const name = s.name ?? s.Name
           const address = s.address ?? s.location ?? s.Location
-          const point = await geocode(address)
+
+          let lat = s.lat ?? s.Lat ?? s.latitude ?? s.Latitude
+          let lng = s.lng ?? s.Lng ?? s.longitude ?? s.Longitude
+
+          // Normalize to numbers (support comma decimal from some backends/locales)
+          const toNum = (v) => {
+            if (typeof v === 'number') return v
+            if (typeof v === 'string') {
+              const trimmed = v.trim()
+              // Try standard parse
+              let n = Number.parseFloat(trimmed)
+              if (!Number.isFinite(n)) {
+                // Replace comma decimal
+                n = Number.parseFloat(trimmed.replace(',', '.'))
+              }
+              return n
+            }
+            return NaN
+          }
+
+          lat = toNum(lat)
+          lng = toNum(lng)
+
+          let point = null
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            // Swap if reversed (lng,lat)
+            if ((lat < -90 || lat > 90) && (lng >= -90 && lng <= 90)) {
+              const tmp = lat; lat = lng; lng = tmp
+            }
+            // Validate ranges
+            if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+              point = [lat, lng]
+            }
+          }
+
+          if (!point && typeof address === 'string') {
+            const text = address.trim()
+            const patterns = [
+              /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,            // place lat/lng
+              /[?&]ll=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,      // ll=lat,lng
+              /[?&]q=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,       // q=lat,lng
+              /@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/             // @ center lat,lng
+            ]
+            for (const re of patterns) {
+              const m = text.match(re)
+              if (m) {
+                const plat = parseFloat(m[1])
+                const plng = parseFloat(m[2])
+                if (Number.isFinite(plat) && Number.isFinite(plng)) {
+                  point = [plat, plng]
+                }
+                break
+              }
+            }
+          }
+
+          if (!point) {
+            point = await geocode(address)
+          }
+
           if (point && isFinite(point[0]) && isFinite(point[1])) {
             const marker = L.marker(point)
             marker.addTo(map).bindPopup(`<strong>${name ?? 'Station'}</strong><br/>${address ?? ''}`)

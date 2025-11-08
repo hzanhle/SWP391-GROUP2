@@ -8,8 +8,70 @@ import {
 } from '@mui/material'
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, PowerSettingsNew as PowerIcon } from '@mui/icons-material'
 import AdminLayout from '../components/admin/AdminLayout'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
+import iconUrl from 'leaflet/dist/images/marker-icon.png'
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png'
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png'
 
 function StationForm({ initial, onSubmit, onCancel }) {
+  // Configure default marker icon (bundlers need explicit assets)
+  const DefaultIcon = useMemo(() => L.icon({ iconRetinaUrl, iconUrl, shadowUrl, iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [1,-34], tooltipAnchor: [16,-28], shadowSize: [41,41] }), [])
+  useEffect(() => { L.Marker.prototype.options.icon = DefaultIcon }, [DefaultIcon])
+
+  function StationPickerMap({ lat, lng, onChange }) {
+    const containerRef = useRef(null)
+    const mapRef = useRef(null)
+    const markerRef = useRef(null)
+
+    useEffect(() => {
+      let mounted = true
+      if (!containerRef.current || mapRef.current) return
+      const start = (Number.isFinite(lat) && Number.isFinite(lng)) ? [lat, lng] : [10.776, 106.700]
+      const map = L.map(containerRef.current, { center: start, zoom: 14, scrollWheelZoom: false })
+      mapRef.current = map
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map)
+
+      const pos = (Number.isFinite(lat) && Number.isFinite(lng)) ? [lat, lng] : null
+      if (pos) {
+        markerRef.current = L.marker(pos, { draggable: true }).addTo(map)
+      }
+
+      function setPos(p) {
+        if (!mounted) return
+        if (!markerRef.current) markerRef.current = L.marker(p, { draggable: true }).addTo(map)
+        else markerRef.current.setLatLng(p)
+        onChange?.(p[0], p[1])
+      }
+
+      map.on('click', (e) => setPos([e.latlng.lat, e.latlng.lng]))
+      markerRef.current?.on('dragend', () => {
+        const p = markerRef.current.getLatLng()
+        onChange?.(p.lat, p.lng)
+      })
+
+      // Ensure size
+      setTimeout(() => map.invalidateSize(), 0)
+      return () => { mounted = false; map.remove() }
+    }, [])
+
+    // Keep marker in sync when lat/lng change from inputs
+    useEffect(() => {
+      const map = mapRef.current
+      if (!map) return
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        const p = [lat, lng]
+        if (!markerRef.current) markerRef.current = L.marker(p, { draggable: true }).addTo(map)
+        else markerRef.current.setLatLng(p)
+      }
+    }, [lat, lng])
+
+    return (
+      <div className="map-card">
+        <div ref={containerRef} className="map-canvas" aria-label="Pick station location on map" />
+      </div>
+    )
+  }
   const [form, setForm] = useState(() => ({
     name: initial?.name || '',
     location: initial?.location || '',
@@ -26,29 +88,73 @@ function StationForm({ initial, onSubmit, onCancel }) {
     if (!next.location || next.location.trim().length < 10) e.location = 'Location must be at least 10 characters'
     if (!Number.isFinite(next.lat) || next.lat < -90 || next.lat > 90) e.lat = 'Lat must be between -90 and 90'
     if (!Number.isFinite(next.lng) || next.lng < -180 || next.lng > 180) e.lng = 'Lng must be between -180 and 180'
-    setErrors(e)
-    return Object.values(e).every(x => !x)
+    return e
   }
 
   function updateField(k, v) {
     const next = { ...form, [k]: v }
     setForm(next)
-    validate(next)
+    setErrors(validate(next))
   }
 
   async function geocode() {
     if (!form.location) return
     try {
       setGeoLoading(true)
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(form.location)}`
+      const loc = String(form.location).trim()
+
+      // Parse direct coordinates: "lat, lng"
+      let lat, lng
+      const coordMatch = loc.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/)
+      if (coordMatch) {
+        lat = parseFloat(coordMatch[1]);
+        lng = parseFloat(coordMatch[2]);
+      } else {
+        // Parse Google Maps URLs with various patterns for coordinates
+        const patterns = [
+          /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,            // place lat/lng
+          /[?&]ll=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,      // ll=lat,lng
+          /[?&]q=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,       // q=lat,lng
+          /@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/             // @ center lat,lng
+        ]
+        for (const re of patterns) {
+          const m = loc.match(re)
+          if (m) {
+            lat = parseFloat(m[1])
+            lng = parseFloat(m[2])
+            break
+          }
+        }
+      }
+
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        // If lat seems out of range but lng is in [-90,90], the input might be reversed (lng,lat)
+        if ((lat < -90 || lat > 90) && (lng >= -90 && lng <= 90)) {
+          const tmp = lat; lat = lng; lng = tmp;
+        }
+        setForm(prev => {
+          const next = { ...prev, lat, lng };
+          setErrors(validate(next))
+          return next
+        })
+        return
+      }
+
+      // Fallback to Nominatim search
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(loc)}`
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
       if (!res.ok) throw new Error('Geocode failed')
       const list = await res.json()
       if (Array.isArray(list) && list.length > 0) {
         const best = list[0]
-        const lat = parseFloat(best.lat), lng = parseFloat(best.lon)
-        updateField('lat', lat)
-        updateField('lng', lng)
+        let nlat = parseFloat(best.lat), nlng = parseFloat(best.lon)
+        if (Number.isFinite(nlat) && Number.isFinite(nlng)) {
+          setForm(prev => {
+            const next = { ...prev, lat: nlat, lng: nlng }
+            setErrors(validate(next))
+            return next
+          })
+        }
       }
     } finally {
       setGeoLoading(false)
@@ -57,11 +163,16 @@ function StationForm({ initial, onSubmit, onCancel }) {
 
   async function submit(e) {
     e.preventDefault()
-    if (!validate()) return
+    const eObj = validate(form)
+    setErrors(eObj)
+    const ok = Object.values(eObj).every(x => !x)
+    if (!ok) return
     await onSubmit(form)
   }
 
-  const canSave = validate()
+  const canSave = Object.values(errors).every(x => !x)
+
+  useEffect(() => { setErrors(validate(form)) }, [])
 
   return (
     <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -82,6 +193,15 @@ function StationForm({ initial, onSubmit, onCancel }) {
           <FormControlLabel control={<Switch checked={!!form.isActive} onChange={e=>updateField('isActive', e.target.checked)} />} label="Active" />
         </Grid>
       </Grid>
+      <Typography variant="subtitle2" sx={{ mt: 2 }}>Pick location on map</Typography>
+      <StationPickerMap
+        lat={Number.isFinite(form.lat) ? form.lat : undefined}
+        lng={Number.isFinite(form.lng) ? form.lng : undefined}
+        onChange={(plat, plng) => {
+          setForm(prev => { const next = { ...prev, lat: plat, lng: plng }; setErrors(validate(next)); return next })
+        }}
+      />
+
       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between', alignItems: 'center' }}>
         <Button variant="outlined" onClick={geocode} disabled={geoLoading}>
           {geoLoading ? 'Locating…' : 'Locate from Address'}

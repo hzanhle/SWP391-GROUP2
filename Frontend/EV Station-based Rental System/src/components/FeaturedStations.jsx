@@ -20,6 +20,8 @@ export default function FeaturedStations() {
           id: s.stationId ?? s.id ?? s.Id,
           name: s.name ?? s.Name,
           address: s.location ?? s.Location,
+          lat: s.lat ?? s.Lat ?? s.latitude ?? s.Latitude,
+          lng: s.lng ?? s.Lng ?? s.longitude ?? s.Longitude,
         })) : []
         setStations(mapped)
         setError(null)
