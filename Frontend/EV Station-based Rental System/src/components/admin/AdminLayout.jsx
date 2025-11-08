@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react'
+import { useThemeMode } from '../../theme/ThemeContext';
 
 function Icon({ name }) {
   const common = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -15,13 +16,8 @@ function Icon({ name }) {
 
 export default function AdminLayout({ children, active = 'overview' }) {
   const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    const el = document.documentElement;
-    const prev = el.dataset.theme;
-    el.dataset.theme = 'light';
-    return () => { if (prev) el.dataset.theme = prev; else delete el.dataset.theme; };
-  }, []);
+  const { mode, toggleMode } = useThemeMode?.() || { mode: 'light', toggleMode: () => {} };
+  const isDarkMode = mode === 'dark';
 
   const links = useMemo(() => ([
     { key: 'overview', label: 'Overview', href: '#admin', icon: 'home' },
@@ -89,6 +85,10 @@ export default function AdminLayout({ children, active = 'overview' }) {
               </div>
             </div>
           )}
+          <button className="admin-theme-toggle" onClick={toggleMode} title={isDarkMode ? 'Light mode' : 'Dark mode'}>
+            <Icon name="settings" />
+            {!collapsed && <span>{isDarkMode ? 'Light' : 'Dark'}</span>}
+          </button>
           <button className="admin-logout" onClick={logout} title="Logout">
             <Icon name="logout" />
             {!collapsed && <span>Logout</span>}

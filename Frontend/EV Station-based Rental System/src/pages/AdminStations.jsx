@@ -364,7 +364,7 @@ export default function AdminStations() {
             )}
 
             {/* Search & Filters */}
-            <Card>
+            <Card className="admin-card">
               <CardContent>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="space-between">
                   <TextField

@@ -91,7 +91,7 @@ export default function AdminCreateStaff() {
               {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
               {success && <Alert severity="success" onClose={() => setSuccess('')}>{success}</Alert>}
 
-              <Card>
+              <Card className="admin-card">
                 <CardContent>
                   <Stack spacing={2}>
                     <TextField label="Username" value={form.userName} onChange={(e)=>updateField('userName', e.target.value)} fullWidth required />
