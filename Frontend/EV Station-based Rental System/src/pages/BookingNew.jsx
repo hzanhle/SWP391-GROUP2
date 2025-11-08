@@ -38,6 +38,33 @@ export default function BookingNew() {
   const [bookingLoading, setBookingLoading] = useState(false)
   const [bookingError, setBookingError] = useState(null)
 
+  function parseTimeString(str) {
+    if (!str || typeof str !== 'string') return null
+    const m = str.match(/^(\d{1,2})(?::(\d{2}))?/)
+    if (!m) return null
+    const hh = Math.max(0, Math.min(23, parseInt(m[1], 10)))
+    const mm = Math.max(0, Math.min(59, m[2] ? parseInt(m[2], 10) : 0))
+    return { hh, mm }
+  }
+  function getStationHoursFor(dateStr) {
+    const d = dateStr ? new Date(dateStr) : null
+    if (!d) return null
+    const openField = selectedStation?.OpenTime || selectedStation?.openTime || selectedStation?.OpeningTime || selectedStation?.openingTime || selectedStation?.OpenAt || selectedStation?.openAt
+    const closeField = selectedStation?.CloseTime || selectedStation?.closeTime || selectedStation?.ClosingTime || selectedStation?.closingTime || selectedStation?.CloseAt || selectedStation?.closeAt
+    const open = parseTimeString(openField) || { hh: 8, mm: 0 }
+    const close = parseTimeString(closeField) || { hh: 22, mm: 0 }
+    const start = new Date(d); start.setHours(open.hh, open.mm, 0, 0)
+    const end = new Date(d); end.setHours(close.hh, close.mm, 0, 0)
+    return { start, end }
+  }
+  function isWithinStationHours(dateStr) {
+    if (!dateStr) return false
+    const t = new Date(dateStr)
+    const hrs = getStationHoursFor(dateStr)
+    if (!hrs) return true
+    return t >= hrs.start && t <= hrs.end
+  }
+
   // Initialize user and fetch data
   useEffect(() => {
     async function init() {
@@ -233,6 +260,12 @@ export default function BookingNew() {
       return
     }
 
+    // Opening hours validation
+    if (!isWithinStationHours(pickupDate) || !isWithinStationHours(dropoffDate)) {
+      setPreviewError('Pickup and return times must be within station working hours')
+      return
+    }
+
     try {
       setPreviewLoading(true)
 
@@ -331,7 +364,13 @@ export default function BookingNew() {
       setBookingError('Time info missing. Please go back and re-enter.')
       return
     }
-    
+
+    // Opening hours validation
+    if (!isWithinStationHours(pickupDate) || !isWithinStationHours(dropoffDate)) {
+      setBookingError('Pickup and return times must be within station working hours')
+      return
+    }
+
     try {
       setBookingLoading(true)
       

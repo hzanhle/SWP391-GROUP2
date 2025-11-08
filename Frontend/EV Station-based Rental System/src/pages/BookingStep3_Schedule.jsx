@@ -26,6 +26,38 @@ export default function BookingStep3_Schedule({
   const hoursDiff = pickupTime && dropoffTime ? (dropoffTime - pickupTime) / (1000 * 60 * 60) : 0
   const isValidTimeRange = hoursDiff >= 3
 
+  function parseTimeString(str) {
+    if (!str || typeof str !== 'string') return null
+    const m = str.match(/^(\d{1,2})(?::(\d{2}))?/)
+    if (!m) return null
+    const hh = Math.max(0, Math.min(23, parseInt(m[1], 10)))
+    const mm = Math.max(0, Math.min(59, m[2] ? parseInt(m[2], 10) : 0))
+    return { hh, mm }
+  }
+  function getStationHoursFor(dateStr) {
+    const d = dateStr ? new Date(dateStr) : null
+    if (!d) return null
+    const openField = selectedStation?.OpenTime || selectedStation?.openTime || selectedStation?.OpeningTime || selectedStation?.openingTime || selectedStation?.OpenAt || selectedStation?.openAt
+    const closeField = selectedStation?.CloseTime || selectedStation?.closeTime || selectedStation?.ClosingTime || selectedStation?.closingTime || selectedStation?.CloseAt || selectedStation?.closeAt
+    const open = parseTimeString(openField) || { hh: 8, mm: 0 }
+    const close = parseTimeString(closeField) || { hh: 22, mm: 0 }
+    const start = new Date(d)
+    start.setHours(open.hh, open.mm, 0, 0)
+    const end = new Date(d)
+    end.setHours(close.hh, close.mm, 0, 0)
+    return { start, end }
+  }
+  function isWithinHours(dateStr) {
+    if (!dateStr) return false
+    const t = new Date(dateStr)
+    const hrs = getStationHoursFor(dateStr)
+    if (!hrs) return true
+    return t >= hrs.start && t <= hrs.end
+  }
+  const pickupWithinHours = isWithinHours(pickupDate)
+  const dropoffWithinHours = isWithinHours(dropoffDate)
+  const withinOpeningHours = (!pickupDate || pickupWithinHours) && (!dropoffDate || dropoffWithinHours)
+
   return (
     <div className="booking-grid" aria-busy={previewLoading || bookingLoading} aria-live="polite">
       <div className="booking-notes-container">
@@ -54,6 +86,11 @@ export default function BookingStep3_Schedule({
           value={pickupDate}
           onChange={(e) => onPickupDateChange(e.target.value)}
         />
+        {pickupDate && !pickupWithinHours && (
+          <div className="field-error-message">
+            <span className="error-icon">⚠️</span> Pickup time must be within station working hours
+          </div>
+        )}
       </div>
       <div className="field">
         <label htmlFor="dropoff-date" className="label">
@@ -71,6 +108,11 @@ export default function BookingStep3_Schedule({
             <span className="error-icon">⚠️</span> Return time must be at least 3 hours after pickup
           </div>
         )}
+        {dropoffDate && !dropoffWithinHours && (
+          <div className="field-error-message">
+            <span className="error-icon">⚠️</span> Return time must be within station working hours
+          </div>
+        )}
       </div>
 
       {previewError && (
@@ -84,7 +126,7 @@ export default function BookingStep3_Schedule({
           <CTA
             as="button"
             onClick={onPreview}
-            disabled={!selectedModel || !pickupDate || !dropoffDate || !isValidTimeRange}
+            disabled={!selectedModel || !pickupDate || !dropoffDate || !isValidTimeRange || !withinOpeningHours}
           >
             View Cost Estimate
           </CTA>
