@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getDashboardSummary, getRevenueByMonth, getTopUsedVehicles, getStationStats, getUserGrowth } from '../api/adminDashboard'
+import { getDashboardSummary, getRevenueByMonth, getTopUsedVehicles, getUserGrowth } from '../api/adminDashboard'
 import { getAllStations as fetchAllStations } from '../api/station'
 import { Card, CardContent, CardHeader, Typography } from '@mui/material'
 import { LineChart, BarChart, PieChart } from '@mui/x-charts'
@@ -40,12 +40,13 @@ export default function AdminDashboard() {
       try {
         setLoading(true)
         const [s, r, v, st, ug, sl] = await Promise.all([
-          getDashboardSummary(token).catch(e=>{throw e}),
-          getRevenueByMonth(new Date().getFullYear(), token),
-          getTopUsedVehicles(10, token),
-          getStationStats(token),
-          getUserGrowth(token),
-          fetchAllStations(token)
+          getDashboardSummary(token).catch(e => { throw e }), // summary is required
+          getRevenueByMonth(new Date().getFullYear(), token).catch(() => ({ data: [] })),
+          getTopUsedVehicles(10, token).catch(() => ({ data: [] })),
+          // Avoid calling stations stats endpoint (currently failing on server); rely on station list instead
+          Promise.resolve({ data: null }),
+          getUserGrowth(token).catch(() => ({ data: [] })),
+          fetchAllStations(token).catch(() => ({ data: [] }))
         ])
         if (!mounted) return
         setSummary(s.data || null)

@@ -85,6 +85,19 @@ export function registerUser(user) {
   } })
 }
 
+// Admin: create staff account
+export function addStaffAccount(staff, token) {
+  const body = {
+    UserName: staff.userName,
+    Password: staff.password,
+    FullName: staff.fullName,
+    Email: staff.email,
+    PhoneNumber: staff.phoneNumber,
+  }
+  if (staff.stationId != null && staff.stationId !== '') body.StationId = Number(staff.stationId)
+  return request('/api/User/AddStaffAccount', { method: 'POST', body, token })
+}
+
 export function login(credentials) {
   return request('/api/User/login', { method: 'POST', body: {
     userName: credentials.userName,
