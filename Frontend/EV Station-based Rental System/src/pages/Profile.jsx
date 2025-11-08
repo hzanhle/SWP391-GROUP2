@@ -13,8 +13,10 @@ export default function Profile() {
   // CCCD document states
   const [citizenFormData, setCitizenFormData] = useState({
     citizenId: '',
-    sex: 'Male',
+    fullName: '',
+    sex: 'Nam',
     dayOfBirth: '',
+    address: '',
     citiRegisDate: '',
     citiRegisOffice: '',
   })
@@ -30,13 +32,21 @@ export default function Profile() {
     licenseType: 'B1',
     registerDate: '',
     registerOffice: '',
-    sex: 'Male',
+    sex: 'Nam',
+    dayOfBirth: '',
+    fullName: '',
+    address: '',
   })
   const [idFront, setIdFront] = useState(null)
   const [idBack, setIdBack] = useState(null)
   const [submittingLicense, setSubmittingLicense] = useState(false)
   const [licenseSuccess, setLicenseSuccess] = useState(false)
   const [licenseError, setLicenseError] = useState('')
+
+  // Loaded document data
+  const [citizenInfo, setCitizenInfo] = useState(null)
+  const [driverLicense, setDriverLicense] = useState(null)
+  const [docsLoading, setDocsLoading] = useState(false)
 
   const authToken = typeof localStorage !== 'undefined' ? localStorage.getItem('auth.token') : null
   const authUser = typeof localStorage !== 'undefined' ? localStorage.getItem('auth.user') : null
@@ -62,6 +72,7 @@ export default function Profile() {
         const { data } = await clientApi.getUserDetail(userId, authToken)
         setUser(data)
         setError(null)
+        await loadDocuments()
       } catch (err) {
         console.error('Error fetching profile:', err)
         setError(err.message || 'Failed to load profile information')
@@ -87,6 +98,35 @@ export default function Profile() {
       ...prev,
       [name]: value
     }))
+  }
+
+  const formatDate = (val) => {
+    if (!val) return ''
+    try { return String(val).slice(0, 10) } catch { return String(val) }
+  }
+
+  const getStatusBadgeClass = (status) => {
+    const s = String(status ?? '').toLowerCase()
+    if (s.includes('approve')) return 'badge green'
+    if (s.includes('reject')) return 'badge red'
+    if (s.includes('pend')) return 'badge gray'
+    return 'badge gray'
+  }
+
+  const loadDocuments = async () => {
+    try {
+      setDocsLoading(true)
+      const [ciRes, dlRes] = await Promise.all([
+        clientApi.getCitizenInfo(authToken),
+        clientApi.getDriverLicense(authToken)
+      ])
+      setCitizenInfo(ciRes?.data ?? ciRes)
+      setDriverLicense(dlRes?.data ?? dlRes)
+    } catch (e) {
+      // ignore if not found or unauthorized
+    } finally {
+      setDocsLoading(false)
+    }
   }
 
 
@@ -143,10 +183,13 @@ export default function Profile() {
   console.groupEnd()
 
   setCitizenSuccess(true)
+  await loadDocuments()
   setCitizenFormData({
     citizenId: '',
-    sex: 'Male',
+    fullName: '',
+    sex: 'Nam',
     dayOfBirth: '',
+    address: '',
     citiRegisDate: '',
     citiRegisOffice: '',
   })
@@ -216,12 +259,13 @@ export default function Profile() {
   console.log('✅ API Response:', res);
 
   setLicenseSuccess(true);
+  await loadDocuments();
   setLicenseFormData({
   licenseId: '',
   licenseType: 'B1',
   registerDate: '',
   registerOffice: '',
-  sex: 'Male',           // ✅
+  sex: 'Nam',           // ✅
   dayOfBirth: '',       // ✅
   fullName: '',         // ✅
   address: '',          // ✅
@@ -338,6 +382,47 @@ export default function Profile() {
                     </div>
                   )}
 
+                  {citizenInfo && (
+                    <div className="doc-summary">
+                      <div style={{ marginBottom: '1rem' }}>
+                        <span className={getStatusBadgeClass(citizenInfo.Status || citizenInfo.status)}>
+                          Status: {String(citizenInfo.Status || citizenInfo.status || 'Unknown')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>ID Number</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{citizenInfo.CitizenId || citizenInfo.citizenId}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>Full Name</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{citizenInfo.FullName || citizenInfo.fullName}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>Gender</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{citizenInfo.Sex || citizenInfo.sex}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>Date of Birth</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{formatDate(citizenInfo.DayOfBirth || citizenInfo.dayOfBirth)}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>Address</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{citizenInfo.Address || citizenInfo.address}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>ID Registration Date</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{formatDate(citizenInfo.CitiRegisDate || citizenInfo.citiRegisDate)}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>ID Registration Office</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{citizenInfo.CitiRegisOffice || citizenInfo.citiRegisOffice}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!citizenInfo && (
                   <form onSubmit={handleCitizenInfoSubmit}>
                     <div style={{ marginBottom: '1.5rem' }}>
                       <label htmlFor="citizenId" className="label">ID Number</label>
@@ -376,9 +461,9 @@ export default function Profile() {
                         onChange={handleCitizenInputChange}
                         className="input"
                       >
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
                       </select>
                     </div>
 
@@ -400,7 +485,7 @@ export default function Profile() {
                         id="address"
                         type="text"
                         name="address"
-                        value={citizenFormData.Address}
+                        value={citizenFormData.address}
                         onChange={handleCitizenInputChange}
                         className="input"
                       />
@@ -460,6 +545,7 @@ export default function Profile() {
                       {submittingCitizen ? 'Submitting...' : 'Submit ID Card'}
                     </CTA>
                   </form>
+                  )}
                 </div>
               </div>
 
@@ -497,6 +583,51 @@ export default function Profile() {
 
                   
 
+                  {driverLicense && (
+                    <div className="doc-summary">
+                      <div style={{ marginBottom: '1rem' }}>
+                        <span className={getStatusBadgeClass(driverLicense.Status || driverLicense.status)}>
+                          Status: {String(driverLicense.Status || driverLicense.status || 'Unknown')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>License Number</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{driverLicense.LicenseId || driverLicense.licenseId}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>License Class</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{driverLicense.LicenseType || driverLicense.licenseType}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>Full Name</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{driverLicense.FullName || driverLicense.fullName}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>Gender</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{driverLicense.Sex || driverLicense.sex}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>Date of Birth</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{formatDate(driverLicense.DayOfBirth || driverLicense.dayOfBirth)}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>Address</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{driverLicense.Address || driverLicense.address}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>License Issue Date</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{formatDate(driverLicense.RegisterDate || driverLicense.registerDate)}</p>
+                        </div>
+                        <div>
+                          <p className="label" style={{ margin: 0 }}>License Issuing Office</p>
+                          <p style={{ margin: '0.25rem 0 0 0' }}>{driverLicense.RegisterOffice || driverLicense.registerOffice}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!driverLicense && (
                   <form onSubmit={handleDriverLicenseSubmit}>
 
                     <div style={{ marginBottom: '1.5rem' }}>
@@ -521,9 +652,9 @@ export default function Profile() {
                         onChange={handleLicenseInputChange}
                         className="input"
                       >
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
                       </select>
                     </div>
 
@@ -545,7 +676,7 @@ export default function Profile() {
                         id="address"
                         type="text"
                         name="address"
-                        value={licenseFormData.Address}
+                        value={licenseFormData.address}
                         onChange={handleLicenseInputChange}
                         className="input"
                       />
@@ -644,6 +775,7 @@ export default function Profile() {
                       {submittingLicense ? 'Submitting...' : 'Submit License'}
                     </CTA>
                   </form>
+                  )}
                 </div>
               </div>
             </div>

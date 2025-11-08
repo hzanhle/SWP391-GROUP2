@@ -7,7 +7,11 @@ import './styles/featured.css'
 import './styles/profile.css'
 import './styles/notification.css'
 import './styles/admin.css'
+import './styles/dark.css'
 import App from './App.jsx'
+import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material'
+import { ThemeModeProvider, useThemeMode } from './theme/ThemeContext.jsx'
+import { makeMuiTheme } from './theme/muiTheme.js'
 
 // Initialize theme early to avoid flash
 try {
@@ -17,8 +21,21 @@ try {
   }
 } catch {}
 
+function Root() {
+  const { mode } = useThemeMode()
+  const theme = makeMuiTheme(mode)
+  return (
+    <MuiThemeProvider theme={theme}>
+      <CssBaseline />
+      <App />
+    </MuiThemeProvider>
+  )
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <ThemeModeProvider>
+      <Root />
+    </ThemeModeProvider>
   </StrictMode>,
 )
