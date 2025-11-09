@@ -23,6 +23,7 @@ import AdminVehicles from './pages/AdminVehicles'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminStaffShift from './pages/AdminStaffShift'
 import AdminCreateStaff from './pages/AdminCreateStaff'
+import AdminTransfer from './pages/AdminTransfer'
 import StaffShift from './pages/StaffShift'
 import StaffVehicle from './pages/StaffVehicle'
 import Feedback from './pages/Feedback'
@@ -111,7 +112,7 @@ export default function App() {
   }, [])
 
   // Check if current route is admin route
-  const isAdminRoute = ['admin', 'admin-users', 'admin-models', 'admin-stations', 'admin-vehicles', 'admin-staffshift', 'admin-create-staff', 'staff-verify'].includes(routeData)
+  const isAdminRoute = ['admin', 'admin-users', 'admin-models', 'admin-stations', 'admin-vehicles', 'admin-staffshift', 'admin-create-staff', 'admin-transfer', 'staff-verify'].includes(routeData)
   // Check if current route is staff route
   const isStaffRoute = ['staff-shifts', 'staff-vehicles'].includes(routeData)
 
@@ -140,6 +141,7 @@ export default function App() {
       {routeData === 'admin-vehicles' && <AdminVehicles />}
       {routeData === 'admin-staffshift' && <AdminStaffShift />}
       {routeData === 'admin-create-staff' && <AdminCreateStaff />}
+      {routeData === 'admin-transfer' && <AdminTransfer />}
       {routeData === 'staff-verify' && <StaffVerification />}
       {routeData === 'staff-shifts' && <StaffShift />}
       {routeData === 'staff-vehicles' && <StaffVehicle />}
