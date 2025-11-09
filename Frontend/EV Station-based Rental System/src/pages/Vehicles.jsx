@@ -105,71 +105,89 @@ export default function Vehicles() {
             )}
 
             {!loading && !error && models.length > 0 && (
-              <div className="models-div">
-                {models
-                  .filter(model => model.isActive)
-                  .map((model) => (
-                    <div key={model.modelId} className="models-div__box">
-                      <div className="models-div__box__img">
-                        <img
-                          src={getImageUrl(model)}
-                          alt={`${model.manufacturer || model.Manufacturer || ''} ${model.modelName || model.ModelName || ''}`.trim()}
-                        />
-                        <div className="models-div__box__descr">
-                          <div className="models-div__box__descr__name-price">
-                            <div className="models-div__box__descr__name-price__name">
-                              <p>{(model.manufacturer || model.Manufacturer)} {(model.modelName || model.ModelName)}</p>
+              <>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '1rem 0' }}>
+                  <input
+                    type="search"
+                    placeholder="Search by manufacturer or model..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{ padding: '0.5rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '0.375rem', width: '100%', maxWidth: '320px' }}
+                    aria-label="Search vehicles"
+                  />
+                </div>
+                <div className="models-div">
+                  {models
+                    .filter(model => (model.isActive ?? model.IsActive ?? true))
+                    .filter(model => {
+                      const manu = (model.manufacturer || model.Manufacturer || '').toLowerCase()
+                      const name = (model.modelName || model.ModelName || '').toLowerCase()
+                      const q = search.toLowerCase()
+                      return !q || manu.includes(q) || name.includes(q)
+                    })
+                    .map((model) => (
+                      <div key={model.modelId || model.ModelId} className="models-div__box">
+                        <div className="models-div__box__img">
+                          <img
+                            src={getImageUrl(model)}
+                            alt={`${(model.manufacturer || model.Manufacturer || '')} ${(model.modelName || model.ModelName || '')}`.trim()}
+                          />
+                          <div className="models-div__box__descr">
+                            <div className="models-div__box__descr__name-price">
+                              <div className="models-div__box__descr__name-price__name">
+                                <p>{(model.manufacturer || model.Manufacturer)} {(model.modelName || model.ModelName)}</p>
+                                <span>
+                                  <i className="fa-solid fa-star"></i>
+                                  <i className="fa-solid fa-star"></i>
+                                  <i className="fa-solid fa-star"></i>
+                                  <i className="fa-solid fa-star"></i>
+                                  <i className="fa-solid fa-star"></i>
+                                </span>
+                              </div>
+                              <div className="models-div__box__descr__name-price__price">
+                                <h4>{formatVND(model.rentFeeForHour ?? model.RentFeeForHour ?? 0)}</h4>
+                                <p>per hour</p>
+                              </div>
+                            </div>
+                            <div className="models-div__box__descr__name-price__details">
                               <span>
-                                <i className="fa-solid fa-star"></i>
-                                <i className="fa-solid fa-star"></i>
-                                <i className="fa-solid fa-star"></i>
-                                <i className="fa-solid fa-star"></i>
-                                <i className="fa-solid fa-star"></i>
+                                <i className="fa-solid fa-car-side"></i> &nbsp; {(model.manufacturer || model.Manufacturer)}
+                              </span>
+                              <span style={{ textAlign: 'right' }}>
+                                {(model.vehicleCapacity ?? model.VehicleCapacity ?? '')} seats &nbsp; <i className="fa-solid fa-car-side"></i>
+                              </span>
+                              <span>
+                                <i className="fa-solid fa-car-side"></i> &nbsp; Automatic
+                              </span>
+                              <span style={{ textAlign: 'right' }}>
+                                Electric &nbsp; <i className="fa-solid fa-car-side"></i>
                               </span>
                             </div>
-                            <div className="models-div__box__descr__name-price__price">
-                              <h4>{formatVND(model.rentFeeForHour ?? model.RentFeeForHour ?? 0)}</h4>
-                              <p>per hour</p>
+                            <div className="models-div__box__descr__name-price__btn">
+                              <button
+                                onClick={() => setSelectedModel(model)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  color: 'inherit',
+                                }}
+                              >
+                                <a href="#" onClick={(e) => {
+                                  e.preventDefault()
+                                  setSelectedModel(model)
+                                }} style={{ textDecoration: 'none' }}>
+                                  View Details
+                                </a>
+                              </button>
                             </div>
-                          </div>
-                          <div className="models-div__box__descr__name-price__details">
-                            <span>
-                              <i className="fa-solid fa-car-side"></i> &nbsp; {model.manufacturer}
-                            </span>
-                            <span style={{ textAlign: "right" }}>
-                              {(model.vehicleCapacity ?? model.VehicleCapacity ?? '')} seats &nbsp; <i className="fa-solid fa-car-side"></i>
-                            </span>
-                            <span>
-                              <i className="fa-solid fa-car-side"></i> &nbsp; Automatic
-                            </span>
-                            <span style={{ textAlign: "right" }}>
-                              Electric &nbsp; <i className="fa-solid fa-car-side"></i>
-                            </span>
-                          </div>
-                          <div className="models-div__box__descr__name-price__btn">
-                            <button
-                              onClick={() => setSelectedModel(model)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                padding: 0,
-                                color: 'inherit',
-                              }}
-                            >
-                              <a href="#" onClick={(e) => {
-                                e.preventDefault()
-                                setSelectedModel(model)
-                              }} style={{ textDecoration: 'none' }}>
-                                View Details
-                              </a>
-                            </button>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                </div>
+              </>
             )}
           </div>
 
