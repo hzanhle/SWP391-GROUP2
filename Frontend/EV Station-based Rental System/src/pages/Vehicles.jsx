@@ -40,7 +40,7 @@ export default function Vehicles() {
   const getImageUrl = (model) => {
     const placeholderImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23ff4d30' width='400' height='300'/%3E%3C/svg%3E"
 
-    if (!model.imageUrls || model.imageUrls.length === 0) {
+    if (!Array.isArray(model.imageUrls || model.ImageUrls) || (model.imageUrls || model.ImageUrls).length === 0) {
       return placeholderImg
     }
 
@@ -113,12 +113,12 @@ export default function Vehicles() {
                       <div className="models-div__box__img">
                         <img
                           src={getImageUrl(model)}
-                          alt={`${model.manufacturer} ${model.modelName}`}
+                          alt={`${model.manufacturer || model.Manufacturer || ''} ${model.modelName || model.ModelName || ''}`.trim()}
                         />
                         <div className="models-div__box__descr">
                           <div className="models-div__box__descr__name-price">
                             <div className="models-div__box__descr__name-price__name">
-                              <p>{model.manufacturer} {model.modelName}</p>
+                              <p>{(model.manufacturer || model.Manufacturer)} {(model.modelName || model.ModelName)}</p>
                               <span>
                                 <i className="fa-solid fa-star"></i>
                                 <i className="fa-solid fa-star"></i>
@@ -128,7 +128,7 @@ export default function Vehicles() {
                               </span>
                             </div>
                             <div className="models-div__box__descr__name-price__price">
-                              <h4>{formatVND(model.rentFeeForHour)}</h4>
+                              <h4>{formatVND(model.rentFeeForHour ?? model.RentFeeForHour ?? 0)}</h4>
                               <p>per hour</p>
                             </div>
                           </div>
@@ -137,7 +137,7 @@ export default function Vehicles() {
                               <i className="fa-solid fa-car-side"></i> &nbsp; {model.manufacturer}
                             </span>
                             <span style={{ textAlign: "right" }}>
-                              {model.vehicleCapacity} seats &nbsp; <i className="fa-solid fa-car-side"></i>
+                              {(model.vehicleCapacity ?? model.VehicleCapacity ?? '')} seats &nbsp; <i className="fa-solid fa-car-side"></i>
                             </span>
                             <span>
                               <i className="fa-solid fa-car-side"></i> &nbsp; Automatic

@@ -43,7 +43,7 @@ function VehicleCard({ vehicle, onStatusChange, onViewHistory, getModelName }) {
             {vehicle.licensePlate || vehicle.LicensePlate || 'N/A'}
           </h3>
           <p className="muted mb-0">
-            {vehicle.licensePlate && vehicle.modelId ? getModelName(vehicle.modelId || vehicle.ModelId) : (vehicle.modelName || vehicle.ModelName || 'Unknown Model')}
+            {getModelName(vehicle.modelId || vehicle.ModelId)}
           </p>
         </div>
         <span
@@ -151,8 +151,11 @@ export default function StaffVehicle() {
   const [historyLoading, setHistoryLoading] = useState(false)
 
   const getModelName = (modelId) => {
-    const m = models.find(x => x.modelId === modelId || x.id === modelId)
-    return m ? `${m.manufacturer} ${m.modelName}` : 'Unknown Model'
+    const m = models.find(x => (x.modelId === modelId || x.id === modelId || x.ModelId === modelId || x.Id === modelId))
+    if (!m) return 'Unknown Model'
+    const manu = m.manufacturer || m.Manufacturer || ''
+    const name = m.modelName || m.ModelName || ''
+    return `${manu} ${name}`.trim() || (m.name || m.Name) || 'Unknown Model'
   }
 
   const rawUser = (typeof window !== 'undefined' && localStorage.getItem('auth.user')) || '{}'
