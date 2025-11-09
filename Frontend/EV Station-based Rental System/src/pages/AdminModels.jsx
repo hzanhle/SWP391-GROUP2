@@ -173,7 +173,7 @@ export default function AdminModels() {
             )}
 
             {/* Search Box */}
-            <Card>
+            <Card className="admin-card">
               <CardContent>
                 <TextField 
                   fullWidth

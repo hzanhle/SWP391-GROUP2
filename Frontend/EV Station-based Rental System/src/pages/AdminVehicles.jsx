@@ -196,7 +196,7 @@ export default function AdminVehicles() {
             )}
 
             {/* Search Box */}
-            <Card>
+            <Card className="admin-card">
               <CardContent>
                 <TextField 
                   fullWidth
