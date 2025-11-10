@@ -163,7 +163,7 @@ namespace TwoWheelVehicleService.Controllers
 
         // ============================ CREATE ============================
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPost]
         public async Task<IActionResult> CreateVehicle([FromBody] VehicleRequest request)
         {
@@ -192,7 +192,7 @@ namespace TwoWheelVehicleService.Controllers
 
         // ============================ UPDATE ============================
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateVehicle(int id, [FromBody] Vehicle vehicle)
         {
@@ -265,7 +265,7 @@ namespace TwoWheelVehicleService.Controllers
 
         // ============================ PATCH ============================
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin, Employee")]
         [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateVehicleStatus(int id, [FromBody] string status)
         {
@@ -304,7 +304,7 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin, Employee")]
         [HttpPatch("{id:int}/toggle")]
         public async Task<IActionResult> ToggleVehicleActiveStatus(int id)
         {
