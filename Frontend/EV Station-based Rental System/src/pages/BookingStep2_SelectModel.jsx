@@ -9,6 +9,19 @@ export default function BookingStep2_SelectModel({ models, vehicles, selectedMod
     selectedModel,
   })
 
+  const apiBaseUrl = (import.meta.env.VITE_VEHICLE_API_URL || import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+  const getImageUrl = (model) => {
+    const imgs = model.imageUrls || model.ImageUrls
+    if (!Array.isArray(imgs) || imgs.length === 0) return null
+    const imagePath = imgs[0]
+    return String(imagePath).startsWith('http') ? imagePath : `${apiBaseUrl}/api/Model/image/${imagePath}`
+  }
+  const modelsSorted = [...models].slice().sort((a, b) => {
+    const ap = a.RentFeeForHour ?? a.rentFeeForHour ?? 0
+    const bp = b.RentFeeForHour ?? b.rentFeeForHour ?? 0
+    return ap - bp
+  })
+
   return (
     <div className="model-selection-container">
       <label className="label booking-section-label">Select Vehicle Model</label>
@@ -19,7 +32,7 @@ export default function BookingStep2_SelectModel({ models, vehicles, selectedMod
         </div>
       ) : (
         <div className="models-grid">
-          {models.map(model => {
+          {modelsSorted.map(model => {
             const modelId = model.ModelId ?? model.modelId ?? model.id
             const selectedId = selectedModel?.ModelId ?? selectedModel?.modelId ?? selectedModel?.id
 
@@ -47,6 +60,7 @@ export default function BookingStep2_SelectModel({ models, vehicles, selectedMod
             const batteryRange = model.BatteryRange || model.batteryRange
             const vehicleCapacity = model.VehicleCapacity || model.vehicleCapacity
             const rentFee = model.RentFeeForHour || model.rentFeeForHour
+            const colors = Array.from(new Set(modelVehicles.map(v => v.Color || v.color))).filter(Boolean)
 
             return (
               <div
@@ -69,6 +83,17 @@ export default function BookingStep2_SelectModel({ models, vehicles, selectedMod
                 aria-disabled={!hasAvailableVehicles}
                 aria-label={`Select ${manufacturer} ${modelName}`}
               >
+                <div className="model-card-media">
+                  {getImageUrl(model) && (
+                    <img
+                      src={getImageUrl(model)}
+                      alt={`${(model.Manufacturer || model.manufacturer || '')} ${(model.ModelName || model.modelName || '')}`.trim()}
+                      className="model-card-image"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  )}
+                </div>
                 <div className="model-card-header">
                   <h4 className="model-card-name">{manufacturer} {modelName}</h4>
                   {!hasAvailableVehicles && vehicles.length > 0 && (
@@ -96,6 +121,13 @@ export default function BookingStep2_SelectModel({ models, vehicles, selectedMod
                     </div>
                   )}
                 </div>
+
+                {colors.length > 0 && (
+                  <div className="model-spec">
+                    <span className="spec-label">🎨 Colors:</span>
+                    <span className="spec-value">{colors.join(', ')}</span>
+                  </div>
+                )}
 
                 <div className="model-card-price">
                   <span className="price-label">Rental Price:</span>

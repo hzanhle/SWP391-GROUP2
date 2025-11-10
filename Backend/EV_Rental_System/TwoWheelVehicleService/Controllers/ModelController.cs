@@ -66,8 +66,6 @@ namespace TwoWheelVehicleService.Controllers
                     Message = "Lỗi hệ thống nội bộ",
                     Data = ex.Message
                 });
-<<<<<<< HEAD
-=======
             }
         }
 
@@ -93,7 +91,6 @@ namespace TwoWheelVehicleService.Controllers
                     Message = "Lỗi hệ thống nội bộ",
                     Data = ex.Message
                 });
->>>>>>> main
             }
         }
 

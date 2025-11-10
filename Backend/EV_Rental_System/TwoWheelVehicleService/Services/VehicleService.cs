@@ -446,12 +446,6 @@ namespace TwoWheelVehicleService.Services
                 LastUpdatedBy = vehicle.LastUpdatedBy.HasValue ? $"User #{vehicle.LastUpdatedBy}" : "N/A"
             };
         }
-<<<<<<< HEAD
-    }
-
-
-}
-=======
 
         public async Task<VehicleDTO?> GetAvailableVehicleForBooking(VehicleBookingRequest request)
         {
@@ -479,4 +473,3 @@ namespace TwoWheelVehicleService.Services
 
     }
 }
->>>>>>> main

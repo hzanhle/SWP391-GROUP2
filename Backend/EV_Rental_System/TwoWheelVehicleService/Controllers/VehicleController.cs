@@ -36,21 +36,6 @@ namespace TwoWheelVehicleService.Controllers
             });
         }
 
-        private IActionResult HandleInvalidModel()
-        {
-            var errors = ModelState
-                .Where(x => x.Value.Errors.Any())
-                .Select(x => new { Field = x.Key, Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray() })
-                .ToList();
-
-            return BadRequest(new ResponseDTO
-            {
-                IsSuccess = false,
-                Message = "Dữ liệu không hợp lệ",
-                Data = errors
-            });
-        }
-
         // ============================ GET ============================
 
         [AllowAnonymous]

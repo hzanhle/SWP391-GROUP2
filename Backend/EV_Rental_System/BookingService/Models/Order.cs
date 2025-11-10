@@ -25,7 +25,6 @@ namespace BookingService.Models
 
         // One Order can have multiple Payments (deposit + additional charges)
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
-
         public Feedback? Feedback { get; set; }
         public decimal HourlyRate { get; set; }
         public decimal TotalCost { get; set; }
