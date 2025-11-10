@@ -8,6 +8,7 @@ export default function Vehicles() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedModel, setSelectedModel] = useState(null)
+  const [search, setSearch] = useState('') 
   const apiBaseUrl = (import.meta.env.VITE_VEHICLE_API_URL || import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
   useEffect(() => {
