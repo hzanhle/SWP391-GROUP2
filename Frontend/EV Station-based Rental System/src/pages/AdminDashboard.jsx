@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getDashboardSummary, getRevenueByMonth, getTopUsedVehicles, getStationStats, getUserGrowth } from '../api/adminDashboard'
+import { getDashboardSummary, getRevenueByMonth, getTopUsedVehicles, getUserGrowth } from '../api/adminDashboard'
+import { getAllStations as fetchAllStations } from '../api/station'
+import { getAllModels, getVehicleById } from '../api/vehicle'
 import { Card, CardContent, CardHeader, Typography } from '@mui/material'
 import { LineChart, BarChart, PieChart } from '@mui/x-charts'
 import AdminLayout from '../components/admin/AdminLayout'
@@ -22,7 +24,8 @@ export default function AdminDashboard() {
   const [summary, setSummary] = useState(null)
   const [revenue, setRevenue] = useState([])
   const [topVehicles, setTopVehicles] = useState([])
-  const [stations, setStations] = useState([])
+  const [stationStats, setStationStatsState] = useState(null)
+  const [stationList, setStationList] = useState([])
   const [userGrowth, setUserGrowth] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -37,22 +40,46 @@ export default function AdminDashboard() {
     ;(async () => {
       try {
         setLoading(true)
-        const [s, r, v, st, ug] = await Promise.all([
-          getDashboardSummary(token).catch(e=>{throw e}),
-          getRevenueByMonth(new Date().getFullYear(), token),
-          getTopUsedVehicles(10, token),
-          getStationStats(token),
-          getUserGrowth(token),
+        const [s, r, v, st, ug, sl, ml] = await Promise.all([
+          getDashboardSummary(token).catch(e => { throw e }), // summary is required
+          getRevenueByMonth(new Date().getFullYear(), token).catch(() => ({ data: [] })),
+          getTopUsedVehicles(10, token).catch(() => ({ data: [] })),
+          // Avoid calling stations stats endpoint (currently failing on server); rely on station list instead
+          Promise.resolve({ data: null }),
+          getUserGrowth(token).catch(() => ({ data: [] })),
+          fetchAllStations(token).catch(() => ({ data: [] })),
+          getAllModels(token).catch(() => ({ data: [] }))
         ])
         if (!mounted) return
         setSummary(s.data || null)
         setRevenue(Array.isArray(r.data) ? r.data : [])
-        setTopVehicles(Array.isArray(v.data) ? v.data : [])
-        setStations(Array.isArray(st.data) ? st.data : [])
+        const topRaw = Array.isArray(v.data) ? v.data : []
+        const modelList = Array.isArray(ml.data) ? ml.data : (Array.isArray(ml.data?.data) ? ml.data.data : [])
+        const modelNameById = new Map(modelList.map(m => [Number(m.modelId || m.ModelId), `${m.manufacturer || m.Manufacturer || ''} ${m.modelName || m.ModelName || ''}`.trim()]))
+        const vehicleIds = Array.from(new Set(topRaw.map(x => Number(x.vehicleId || x.VehicleId)).filter(id => Number.isFinite(id))))
+        const vehicleMap = {}
+        await Promise.all(vehicleIds.map(async (vid) => {
+          try {
+            const res = await getVehicleById(vid, token)
+            const vdata = res?.data || res?.data?.data
+            if (vdata) vehicleMap[vid] = vdata
+          } catch {}
+        }))
+        const enriched = topRaw.map(item => {
+          const vid = Number(item.vehicleId || item.VehicleId)
+          const veh = vehicleMap[vid]
+          const mid = Number(veh?.modelId || veh?.ModelId)
+          const name = modelNameById.get(mid) || (veh?.name || veh?.Name) || `Vehicle ${vid}`
+          const count = Number(item.totalBookings ?? item.TotalBookings ?? item.count ?? item.Count ?? 0)
+          return { ...item, vehicleId: vid, name, count }
+        })
+        setTopVehicles(enriched)
+        setStationStatsState(st.data ?? null)
+        setStationList(Array.isArray(sl.data) ? sl.data : [])
         setUserGrowth(Array.isArray(ug.data) ? ug.data : [])
         setError('')
       } catch (e) {
-        setError(e.message || 'Không tải được dữ liệu dashboard')
+        setError(e.message || 'Unable to load dashboard data')
       } finally {
         setLoading(false)
       }
@@ -77,8 +104,8 @@ export default function AdminDashboard() {
           <div className="container">
             <div className="card card-body">
               <h1 className="section-title">Unauthorized</h1>
-              <p className="section-subtitle">Bạn không có quyền truy cập Dashboard Admin.</p>
-              <a className="btn" href="#">Về trang chủ</a>
+              <p className="section-subtitle">You do not have permission to access the Admin Dashboard.</p>
+              <a className="btn" href="#">Go to Home</a>
             </div>
           </div>
         </section>
@@ -91,8 +118,8 @@ export default function AdminDashboard() {
       <section className="section">
         <div className="container">
           <div className="section-header">
-            <h1 className="section-title">Bảng điều khiển</h1>
-            <p className="section-subtitle">Tổng quan hệ thống và các chỉ số chính</p>
+            <h1 className="section-title">Dashboard</h1>
+            <p className="section-subtitle">System overview and key metrics</p>
           </div>
 
           {error ? (
@@ -100,26 +127,26 @@ export default function AdminDashboard() {
           ) : null}
 
           {loading ? (
-            <div className="card card-body">Đang tải...</div>
+            <div className="card card-body">Loading...</div>
           ) : (
             <div className="admin-grid">
-              <div className="col-12 lg-3"><StatCard title="Tổng người dùng" value={summary?.totalUsers ?? summary?.TotalUsers ?? 0} caption="Active/Total" /></div>
-              <div className="col-12 lg-3"><StatCard title="Đơn thuê" value={summary?.totalBookings ?? summary?.TotalBookings ?? 0} /></div>
-              <div className="col-12 lg-3"><StatCard title="Doanh thu (năm)" value={(summary?.yearlyRevenue ?? summary?.YearlyRevenue ?? 0).toLocaleString()} /></div>
-              <div className="col-12 lg-3"><StatCard title="Số trạm" value={summary?.totalStations ?? summary?.TotalStations ?? 0} /></div>
+              <div className="col-12 lg-3"><StatCard title="Total Users" value={summary?.totalUsers ?? summary?.TotalUsers ?? 0} caption="Active/Total" /></div>
+              <div className="col-12 lg-3"><StatCard title="Bookings" value={summary?.totalBookings ?? summary?.TotalBookings ?? 0} /></div>
+              <div className="col-12 lg-3"><StatCard title="Revenue (Year)" value={(summary?.yearlyRevenue ?? summary?.YearlyRevenue ?? 0).toLocaleString()} /></div>
+              <div className="col-12 lg-3"><StatCard title="Total Stations" value={summary?.totalStations ?? summary?.TotalStations ?? 0} /></div>
 
               <div className="col-12 lg-8">
                 <Card className="admin-card">
-                  <CardHeader title="Doanh thu theo tháng" />
+                  <CardHeader title="Revenue by Month" />
                   <CardContent>
                     {revenueSeries && revenueSeries.values.length > 0 ? (
                       <LineChart
                         height={280}
-                        series={[{ data: revenueSeries.values.filter(v => v !== null && v !== undefined), label: 'Doanh thu' }]}
+                        series={[{ data: revenueSeries.values.filter(v => v !== null && v !== undefined), label: 'Revenue' }]}
                         xAxis={[{ scaleType: 'point', data: revenueSeries.months.map((m, idx) => `T${m}`).filter(label => label !== null && label !== undefined) }]}
                       />
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
+                      <div className="empty-placeholder">No data</div>
                     )}
                   </CardContent>
                 </Card>
@@ -127,17 +154,17 @@ export default function AdminDashboard() {
 
               <div className="col-12 lg-4">
                 <Card className="admin-card">
-                  <CardHeader title="Top xe sử dụng" />
+                  <CardHeader title="Top Vehicles" />
                   <CardContent>
                     {topVehicles && topVehicles.length > 0 ? (
                       <BarChart
                         height={280}
-                        yAxis={[{ scaleType: 'band', data: (topVehicles || []).map((v, idx) => (v.modelName || v.ModelName || v.name || v.Name || `Vehicle ${idx + 1}`)).filter(name => name !== null && name !== undefined) }]}
-                        series={[{ data: (topVehicles || []).map(v => Number(v.usageCount ?? v.UsageCount ?? v.count ?? 0)), label: 'Lượt thuê' }]}
+                        yAxis={[{ scaleType: 'band', data: (topVehicles || []).map((v, idx) => (v.name || v.Name || v.modelName || v.ModelName || `Vehicle ${idx + 1}`)).filter(name => name !== null && name !== undefined) }]}
+                        series={[{ data: (topVehicles || []).map(v => Number(v.count ?? v.usageCount ?? v.TotalBookings ?? 0)), label: 'Rentals' }]}
                         layout="horizontal"
                       />
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
+                      <div className="empty-placeholder">No data</div>
                     )}
                   </CardContent>
                 </Card>
@@ -145,7 +172,7 @@ export default function AdminDashboard() {
 
               <div className="col-12 lg-6">
                 <Card className="admin-card">
-                  <CardHeader title="Tăng trưởng người dùng" />
+                  <CardHeader title="User Growth" />
                   <CardContent>
                     {userGrowth && userGrowth.length > 0 ? (
                       <LineChart
@@ -154,7 +181,7 @@ export default function AdminDashboard() {
                         xAxis={[{ scaleType: 'point', data: (userGrowth || []).map((u, idx) => String(u.label || u.Label || u.month || u.Month || `Month ${idx + 1}`)).filter(label => label !== null && label !== undefined) }]}
                       />
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
+                      <div className="empty-placeholder">No data</div>
                     )}
                   </CardContent>
                 </Card>
@@ -162,26 +189,46 @@ export default function AdminDashboard() {
 
               <div className="col-12 lg-6">
                 <Card className="admin-card">
-                  <CardHeader title="Trạng thái trạm" />
+                  <CardHeader title="Station Status" />
                   <CardContent>
-                    {stations && stations.length > 0 ? (
-                      <PieChart
-                        height={260}
-                        series={[{
-                          data: ((() => {
-                            const items = Array.isArray(stations) ? stations : [];
-                            const on = items.filter(s => s.isOperational ?? s.IsOperational).length;
-                            const off = items.length - on;
-                            return [
-                              { id: 0, value: on, label: 'Hoạt động' },
-                              { id: 1, value: off, label: 'Bảo trì' },
-                            ];
-                          })()).filter(item => item && item.value !== null && item.value !== undefined)
-                        }]}
-                      />
-                    ) : (
-                      <div style={{ textAlign: 'center', padding: '20px', color: '#706f7b' }}>Không có dữ liệu</div>
-                    )}
+                    {(() => {
+                      // Prefer live station list for accurate status; fallback to admin aggregate
+                      let on = 0, off = 0
+                      const toBool = (v) => {
+                        if (typeof v === 'boolean') return v
+                        if (typeof v === 'number') return v === 1
+                        if (typeof v === 'string') { const t = v.toLowerCase(); return t === 'true' || t === 'active' || t === 'operational' || t === 'online' || v === '1' }
+                        return false
+                      }
+                      if (Array.isArray(stationList) && stationList.length > 0) {
+                        const items = stationList
+                        on = items.filter(s => toBool(
+                          s.isOperational ?? s.IsOperational ?? s.isActive ?? s.IsActive ?? s.active ?? s.Active ?? s.status ?? s.Status
+                        )).length
+                        off = items.length - on
+                      } else if (stationStats && typeof stationStats === 'object') {
+                        const obj = stationStats
+                        const getNum = (v) => Number(v ?? 0)
+                        const onKeys = ['operational','Operational','active','Active','on','On','online','Online','operationalStations','OperationalStations','activeStations','ActiveStations','totalActive','TotalActive']
+                        const offKeys = ['maintenance','Maintenance','inactive','Inactive','off','Off','offline','Offline','maintenanceStations','MaintenanceStations','inactiveStations','InactiveStations','notOperational','NotOperational','totalInactive','TotalInactive']
+                        on = onKeys.reduce((acc, k) => acc + getNum(obj[k]), 0)
+                        off = offKeys.reduce((acc, k) => acc + getNum(obj[k]), 0)
+                        if (on === 0 && off === 0 && typeof obj.total === 'number') {
+                          on = getNum(obj.total)
+                        }
+                      }
+                      const hasData = (on + off) > 0
+                      return hasData ? (
+                        <PieChart
+                          height={260}
+                          series={[{ data: [
+                            { id: 0, value: on, label: 'Operating' },
+                            { id: 1, value: off, label: 'Maintenance' },
+                          ] }]} />
+                      ) : (
+                        <div className="empty-placeholder">No data</div>
+                      )
+                    })()}
                   </CardContent>
                 </Card>
               </div>

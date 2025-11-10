@@ -1,89 +1,137 @@
-﻿using System.Text.Json;
+﻿
+using System.Text.Json;
 
 namespace StationService.Services
 {
     public class UserIntegrationService : IUserIntegrationService
     {
-        private readonly IHttpClientFactory _httpClientFactory; //LỖI CHƯA LẤY TÊN NHÂN VIÊN - CẦN FIX  
+        private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
         private readonly ILogger<UserIntegrationService> _logger;
+        private readonly string _userServiceUrl;
 
         public UserIntegrationService(
-            IHttpClientFactory httpClientFactory,
+            HttpClient httpClient,
             IConfiguration configuration,
             ILogger<UserIntegrationService> logger)
         {
-            _httpClientFactory = httpClientFactory;
+            _httpClient = httpClient;
             _configuration = configuration;
             _logger = logger;
-        }
 
-        public async Task<string?> GetUserNameAsync(int userId)
+            // Lấy URL từ appsettings.json
+            _userServiceUrl = configuration["ServiceUrls:UserService"]
+                ?? "http://localhost:5000"; // Default
+        }
+        
+        /// Lấy tên user từ UserService
+        public async Task<string?> GetUserNameByIdAsync(int userId)
         {
             try
             {
-                var client = _httpClientFactory.CreateClient("UserService");
-                var response = await client.GetAsync($"/api/users/{userId}");
+                var userInfo = await GetUserInfoByIdAsync(userId);
+                return userInfo?.UserName;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"Failed to get username for user {userId}");
+                return null; // Fallback gracefully
+            }
+        }
+
+        /// Lấy thông tin user chi tiết
+        public async Task<UserInfoDTO?> GetUserInfoByIdAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync(
+                    $"{_userServiceUrl}/api/users/{userId}");
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("Failed to get user {UserId} from UserService. Status: {Status}",
-                        userId, response.StatusCode);
+                    _logger.LogWarning(
+                        $"UserService returned {response.StatusCode} for user {userId}");
                     return null;
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
-                var userResponse = JsonSerializer.Deserialize<UserApiResponse>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
 
-                return userResponse?.Data?.FullName ?? userResponse?.Data?.UserName;
+                // Phân tích phản hồi
+                var userResponse = JsonSerializer.Deserialize<UserServiceResponse>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userResponse?.Data == null)
+                {
+                    return null;
+                }
+
+                return new UserInfoDTO
+                {
+                    UserId = userResponse.Data.UserId,
+                    UserName = userResponse.Data.UserName,
+                    Email = userResponse.Data.Email
+                };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calling UserService for userId {UserId}", userId);
-                return null;
+                _logger.LogError(ex, $"Error fetching user info for user {userId}");
+                return null; // Fail gracefully
             }
         }
 
-        public async Task<Dictionary<int, string>> GetUserNamesBatchAsync(List<int> userIds)
+        /// Lấy nhiều users cùng lúc
+        public async Task<Dictionary<int, string>> GetUserNamesByIdsAsync(
+            IEnumerable<int> userIds)
         {
             var result = new Dictionary<int, string>();
 
-            // Call API for each user (trong production có thể tối ưu bằng batch API)
-            var tasks = userIds.Distinct().Select(async userId =>
+            if (!userIds.Any())
             {
-                var name = await GetUserNameAsync(userId);
-                return new { UserId = userId, Name = name };
-            });
-
-            var names = await Task.WhenAll(tasks);
-
-            foreach (var item in names)
-            {
-                if (item.Name != null)
-                {
-                    result[item.UserId] = item.Name;
-                }
+                return result;
             }
 
-            return result;
+            try
+            {
+                var tasks = userIds.Select(async userId =>
+                {
+                    var userName = await GetUserNameByIdAsync(userId);
+                    return new { UserId = userId, UserName = userName };
+                });
+
+                var users = await Task.WhenAll(tasks);
+
+                foreach (var user in users)
+                {
+                    if (user.UserName != null)
+                    {
+                        result[user.UserId] = user.UserName;
+                    }
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching batch user names");
+                return result;
+            }
         }
 
-        private class UserApiResponse
+        // ==================== HELPER CLASSES ====================
+
+        private class UserServiceResponse
         {
             public bool Success { get; set; }
+            public string? Message { get; set; }
             public UserData? Data { get; set; }
         }
 
         private class UserData
         {
-            public int Id { get; set; }
-            public string? UserName { get; set; }
-            public string? FullName { get; set; }
-            public string? Email { get; set; }
+            public int UserId { get; set; }
+            public string UserName { get; set; } = string.Empty;
+            public string Email { get; set; } = string.Empty;
+            public string? RoleName { get; set; }
         }
-
     }
 }

@@ -100,6 +100,7 @@ namespace TwoWheelVehicleService.Services
             }
         }
 
+
         public async Task<VehicleDTO> GetVehicleByIdAsync(int vehicleId)
         {
             try
@@ -445,7 +446,37 @@ namespace TwoWheelVehicleService.Services
                 LastUpdatedBy = vehicle.LastUpdatedBy.HasValue ? $"User #{vehicle.LastUpdatedBy}" : "N/A"
             };
         }
+<<<<<<< HEAD
     }
 
 
 }
+=======
+
+        public async Task<VehicleDTO?> GetAvailableVehicleForBooking(VehicleBookingRequest request)
+        {
+            var vehicle = await _vehicleRepository.GetAvailableVehicleAsync(
+                request.ModelId,
+                request.Color,
+                request.StationId
+            );
+
+            return vehicle;
+        }
+
+        public async Task UpdateVehicleStationId(int vehicleId, int stationId)
+        {
+            var vehicle = await _vehicleRepository.GetVehicleById(vehicleId);
+            if (vehicle == null)
+            {
+                _logger.LogWarning("⚠ Cannot update station — Vehicle not found ID={VehicleId}", vehicleId);
+                return;
+            }
+            vehicle.StationId = stationId;
+            await _vehicleRepository.UpdateVehicle(vehicle);
+            _logger.LogInformation("✅ Vehicle station updated: ID={VehicleId}, StationId={StationId}", vehicleId, stationId);
+        }
+
+    }
+}
+>>>>>>> main

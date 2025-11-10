@@ -13,6 +13,8 @@ namespace BookingService
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Feedback> Feedbacks { get; set; }
         public DbSet<Settlement> Settlements { get; set; }
+        public DbSet<VehicleCheckIn> VehicleCheckIns { get; set; }
+        public DbSet<VehicleReturn> VehicleReturns { get; set; }
 
         public MyDbContext(DbContextOptions<MyDbContext> options) : base(options) { }
 
@@ -58,13 +60,13 @@ namespace BookingService
                       .HasConversion<string>()
                       .HasMaxLength(50);
 
-                // 1-1 với Order
+                // 1-Many với Order
                 entity.HasOne(p => p.Order)
-                      .WithOne(o => o.Payment)
-                      .HasForeignKey<Payment>(p => p.OrderId)
+                      .WithMany(o => o.Payments)
+                      .HasForeignKey(p => p.OrderId)
                       .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasIndex(p => p.OrderId).IsUnique();
+                entity.HasIndex(p => p.OrderId);
                 entity.HasIndex(p => p.Status);
                 entity.HasIndex(p => p.TransactionId);
             });
@@ -201,6 +203,38 @@ namespace BookingService
 
                 entity.HasIndex(f => f.Rating)
                     .HasDatabaseName("IX_Feedbacks_Rating");
+            });
+
+            // =========================
+            // VEHICLE CHECK-IN
+            // =========================
+            modelBuilder.Entity<VehicleCheckIn>(entity =>
+            {
+                entity.HasKey(v => v.CheckInId);
+
+                entity.HasOne(v => v.Order)
+                      .WithOne()
+                      .HasForeignKey<VehicleCheckIn>(v => v.OrderId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(v => v.OrderId);
+            });
+
+            // =========================
+            // VEHICLE RETURN
+            // =========================
+            modelBuilder.Entity<VehicleReturn>(entity =>
+            {
+                entity.HasKey(v => v.ReturnId);
+
+                entity.Property(v => v.DamageCharge).HasColumnType("decimal(18,2)");
+
+                entity.HasOne(v => v.Order)
+                      .WithOne()
+                      .HasForeignKey<VehicleReturn>(v => v.OrderId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(v => v.OrderId);
             });
         }
     }

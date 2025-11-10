@@ -52,14 +52,14 @@ export default function DocumentUploader({ label, hint, accept = 'image/*,applic
         ) : (
           <div className="uploader-placeholder">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round"/></svg>
-            <span>Chọn tệp để tải lên</span>
+            <span>Click to select file</span>
           </div>
         )}
       </div>
       {hint ? <p id={`${inputId}-hint`} className="uploader-hint">{hint}</p> : null}
       <div className="uploader-actions">
-        <button type="button" className="btn btn-secondary" onClick={handlePick}>Chọn tệp</button>
-        {file ? <button type="button" className="btn btn-ghost" onClick={clearFile}>Xoá</button> : null}
+        <button type="button" className="btn btn-secondary" onClick={handlePick}>Select File</button>
+        {file ? <button type="button" className="btn btn-ghost" onClick={clearFile}>Delete</button> : null}
       </div>
     </div>
   )

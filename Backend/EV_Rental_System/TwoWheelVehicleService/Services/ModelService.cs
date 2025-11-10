@@ -274,5 +274,46 @@ namespace TwoWheelVehicleService.Services
                 throw;
             }
         }
+
+        public async Task<List<ModelDTO>> SearchModelsAsync(string searchValue)
+        {
+            try
+            {
+                var models = await _modelRepository.SearchModelsAsync(searchValue);
+                if (models == null)
+                {
+                    _logger.LogWarning("No models found for search value: {SearchValue}", searchValue);
+                    return new List<ModelDTO>();
+                }
+
+                var list = new List<ModelDTO>();
+                foreach (var item in models)
+                {
+                    var model = new ModelDTO
+                    {
+                        ModelId = item.ModelId,
+                        ModelName = item.ModelName,
+                        Manufacturer = item.Manufacturer,
+                        Year = item.Year,
+                        MaxSpeed = item.MaxSpeed,
+                        BatteryCapacity = item.BatteryCapacity,
+                        ChargingTime = item.ChargingTime,
+                        BatteryRange = item.BatteryRange,
+                        VehicleCapacity = item.VehicleCapacity,
+                        IsActive = item.IsActive,
+                        ModelCost = item.ModelCost,
+                        RentFeeForHour = item.RentFeeForHour
+                    };
+                    list.Add(model);
+                }
+
+                return list;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching models with value: {SearchValue}", searchValue);
+                throw;
+            }
+        }
     }
 }

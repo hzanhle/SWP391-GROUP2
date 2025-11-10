@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using TwoWheelVehicleService.DTOs;
 using TwoWheelVehicleService.Models;
 using TwoWheelVehicleService.Services;
@@ -12,10 +13,27 @@ namespace TwoWheelVehicleService.Controllers
     public class VehicleController : ControllerBase
     {
         private readonly IVehicleService _vehicleService;
+        private readonly ILogger<VehicleService> _logger;
 
-        public VehicleController(IVehicleService vehicleService)
+        public VehicleController(IVehicleService vehicleService, ILogger<VehicleService> logger)
         {
             _vehicleService = vehicleService;
+            _logger = logger;
+        }
+
+        private IActionResult HandleInvalidModel()
+        {
+            var errors = ModelState
+                .Where(x => x.Value.Errors.Any())
+                .Select(x => new { Field = x.Key, Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToArray() })
+                .ToList();
+
+            return BadRequest(new ResponseDTO
+            {
+                IsSuccess = false,
+                Message = "Dữ liệu không hợp lệ",
+                Data = errors
+            });
         }
 
         private IActionResult HandleInvalidModel()
@@ -116,9 +134,51 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
+        [AllowAnonymous]
+        [HttpGet("find-available")]
+        public async Task<IActionResult> FindAvailableVehicle([FromQuery] VehicleBookingRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("=== [FindAvailableVehicle] ===");
+                _logger.LogInformation("ModelId: {ModelId}", request.ModelId);
+                _logger.LogInformation("Color: {Color}", request.Color);
+                _logger.LogInformation("StationId: {StationId}", request.StationId);
+
+                var vehicle = await _vehicleService.GetAvailableVehicleForBooking(request);
+                if (vehicle == null)
+                {
+                    return NotFound(new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Không tìm thấy xe phù hợp với yêu cầu"
+                    });
+                }
+
+                _logger.LogInformation("Found vehicle: {LicensePlate}", vehicle.LicensePlate);
+
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Tìm thấy xe khả dụng",
+                    Data = vehicle
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error finding available vehicle");
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống nội bộ",
+                    Data = ex.Message
+                });
+            }
+        }
+
         // ============================ CREATE ============================
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPost]
         public async Task<IActionResult> CreateVehicle([FromBody] VehicleRequest request)
         {
@@ -147,7 +207,7 @@ namespace TwoWheelVehicleService.Controllers
 
         // ============================ UPDATE ============================
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateVehicle(int id, [FromBody] Vehicle vehicle)
         {
@@ -220,7 +280,7 @@ namespace TwoWheelVehicleService.Controllers
 
         // ============================ PATCH ============================
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin, Employee")]
         [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateVehicleStatus(int id, [FromBody] string status)
         {
@@ -259,7 +319,7 @@ namespace TwoWheelVehicleService.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin, Employee")]
         [HttpPatch("{id:int}/toggle")]
         public async Task<IActionResult> ToggleVehicleActiveStatus(int id)
         {

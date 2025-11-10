@@ -57,7 +57,7 @@ namespace UserService.Controllers
                 return StatusCode(500, new ResponseDTO { IsSuccess = false, Message = ex.Message, Data = ex });
             }
         }
-
+        [Authorize(Roles = "Member")]
         [HttpGet("UserDetail/{userId}")]
         public async Task<IActionResult> GetUserDetail(int userId)
         {

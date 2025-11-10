@@ -54,20 +54,21 @@ export function sendRegistrationOtp(user) {
   return request('/api/User/register/send-otp', {
     method: 'POST',
     body: {
-      userName: user.userName,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      password: user.password,
+      UserName: user.userName,
+      Email: user.email,
+      PhoneNumber: user.phoneNumber,
+      Password: user.password
     },
   })
 }
 
 export function verifyRegistrationOtp(email, otp) {
-  const q = new URLSearchParams({ otp: String(otp) }).toString()
-  // Controller expects email in body (as raw string) and otp from query
-  return request(`/api/User/register/verify-otp?${q}`, {
+  return request('/api/User/register/verify-otp', {
     method: 'POST',
-    body: String(email),
+    body: {
+      email: String(email),
+      otp: String(otp),
+    },
   })
 }
 
@@ -84,6 +85,19 @@ export function registerUser(user) {
   } })
 }
 
+// Admin: create staff account
+export function addStaffAccount(staff, token) {
+  const body = {
+    UserName: staff.userName,
+    Password: staff.password,
+    FullName: staff.fullName,
+    Email: staff.email,
+    PhoneNumber: staff.phoneNumber,
+  }
+  if (staff.stationId != null && staff.stationId !== '') body.StationId = Number(staff.stationId)
+  return request('/api/User/AddStaffAccount', { method: 'POST', body, token })
+}
+
 export function login(credentials) {
   return request('/api/User/login', { method: 'POST', body: {
     userName: credentials.userName,
@@ -93,6 +107,10 @@ export function login(credentials) {
 
 export function getUserById(userId, token) {
   return request(`/api/User/${userId}`, { method: 'GET', token })
+}
+
+export function getUserDetail(userId, token) {
+  return request(`/api/User/UserDetail/${userId}`, { method: 'GET', token })
 }
 
 export function getAllUsers(token) {
@@ -143,20 +161,27 @@ export function updateCitizenInfo(payload, token) {
   return request('/api/CitizenInfo', { method: 'PUT', body: fd, token })
 }
 
-export function getCitizenInfo(userId, token) {
-  return request(`/api/CitizenInfo/${userId}`, { method: 'GET', token })
+export function getCitizenInfo(token) {
+  return request(`/api/CitizenInfo`, { method: 'GET', token })
 }
 
 // DriverLicense APIs (multipart/form-data)
 export function createDriverLicense(payload, token) {
   const fd = new FormData()
+  
   if (payload.UserId != null) fd.append('UserId', String(payload.UserId))
   if (payload.LicenseId) fd.append('LicenseId', payload.LicenseId)
   if (payload.LicenseType) fd.append('LicenseType', payload.LicenseType)
   if (payload.RegisterDate) fd.append('RegisterDate', payload.RegisterDate)
   if (payload.RegisterOffice) fd.append('RegisterOffice', payload.RegisterOffice)
+  if (payload.DayOfBirth) fd.append('DayOfBirth', payload.DayOfBirth)
+  if (payload.FullName) fd.append('FullName', payload.FullName)
+  if (payload.Sex) fd.append('Sex', payload.Sex)
+  if (payload.Address) fd.append('Address', payload.Address)
+  
   const files = payload.Files || []
   for (const f of files) if (f) fd.append('Files', f)
+  
   return request('/api/DriverLicense', { method: 'POST', body: fd, token })
 }
 
@@ -167,26 +192,30 @@ export function updateDriverLicense(payload, token) {
   if (payload.LicenseType) fd.append('LicenseType', payload.LicenseType)
   if (payload.RegisterDate) fd.append('RegisterDate', payload.RegisterDate)
   if (payload.RegisterOffice) fd.append('RegisterOffice', payload.RegisterOffice)
+  if (payload.DayOfBirth) fd.append('DayOfBirth', payload.DayOfBirth)
+  if (payload.FullName) fd.append('FullName', payload.FullName)
+  if (payload.Sex) fd.append('Sex', payload.Sex)
+  if (payload.Address) fd.append('Address', payload.Address)
   const files = payload.Files || []
   for (const f of files) if (f) fd.append('Files', f)
   return request('/api/DriverLicense', { method: 'PUT', body: fd, token })
 }
 
-export function getDriverLicense(userId, token) {
-  return request(`/api/DriverLicense/${userId}`, { method: 'GET', token })
+export function getDriverLicense(token) {
+  return request(`/api/DriverLicense`, { method: 'GET', token })
 }
 
-export function getNotifications(userId, token) {
-  return request(`/api/Notification/${userId}`, { method: 'GET', token })
+export function getNotifications(token) {
+  return request('/api/Notification', { method: 'GET', token })
 }
 
-export function clearNotifications(userId, token) {
-  return request(`/api/Notification/${userId}`, { method: 'DELETE', token })
+export function clearNotifications(token) {
+  return request('/api/Notification', { method: 'DELETE', token })
 }
 
-// Staff verification actions
+// Staff verification actions (Admin/Employee only - not for regular staff)
 export function setCitizenInfoStatus(userId, isApproved, token) {
-  return request(`/api/CitizenInfo/set-status/${userId}&${isApproved}`, { method: 'POST', token })
+  return request(`/api/CitizenInfo/status/${userId}/${isApproved}`, { method: 'POST', token })
 }
 
 export function setDriverLicenseStatus(userId, isApproved, token) {
@@ -202,14 +231,45 @@ export function listVerificationUsers({ status, query, page = 1, pageSize = 10 }
   return request(`/api/Verification/users?${q.toString()}`, { token })
 }
 
+// Staff verification - get documents by userId for verification (Admin/Employee only)
+export function getCitizenInfoByUserIdForStaff(userId, token) {
+  return request(`/api/CitizenInfo/${userId}`, { method: 'GET', token })
+}
+
+export function getDriverLicenseByUserIdForStaff(userId, token) {
+  return request(`/api/DriverLicense/${userId}`, { method: 'GET', token })
+}
+
+// Staff verification - approve/reject documents
+export function approveCitizenInfo(userId, token) {
+  return setCitizenInfoStatus(userId, true, token)
+}
+
+export function rejectCitizenInfo(userId, token) {
+  return setCitizenInfoStatus(userId, false, token)
+}
+
+export function approveDriverLicense(userId, token) {
+  return setDriverLicenseStatus(userId, true, token)
+}
+
+export function rejectDriverLicense(userId, token) {
+  return setDriverLicenseStatus(userId, false, token)
+}
+
 // Password reset via OTP
 export function sendPasswordResetOtp(email) {
   return request('/api/User/forgot-password', { method: 'POST', body: String(email) })
 }
 
 export function verifyPasswordResetOtp(email, otp) {
-  const q = new URLSearchParams({ email: String(email) }).toString()
-  return request(`/api/User/verify-reset-otp?${q}`, { method: 'POST', body: String(otp) })
+  return request('/api/User/verify-reset-otp', {
+    method: 'POST',
+    body: {
+      email: String(email),
+      otp: String(otp),
+    },
+  })
 }
 
 export function resetPassword(payload) {
@@ -224,4 +284,4 @@ export function resetPassword(payload) {
   })
 }
 
-export default { request, sendRegistrationOtp, verifyRegistrationOtp, registerUser, login, getUserById, getAllUsers, deleteUser, toggleUserActive, toggleStaffAdmin, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense, getNotifications, clearNotifications, setCitizenInfoStatus, setDriverLicenseStatus, listVerificationUsers, sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword }
+export default { request, sendRegistrationOtp, verifyRegistrationOtp, registerUser, login, getUserById, getUserDetail, getAllUsers, deleteUser, toggleUserActive, toggleStaffAdmin, createCitizenInfo, updateCitizenInfo, getCitizenInfo, createDriverLicense, updateDriverLicense, getDriverLicense, getNotifications, clearNotifications, setCitizenInfoStatus, setDriverLicenseStatus, listVerificationUsers, getCitizenInfoByUserIdForStaff, getDriverLicenseByUserIdForStaff, approveCitizenInfo, rejectCitizenInfo, approveDriverLicense, rejectDriverLicense, sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword }

@@ -1,4 +1,5 @@
-﻿using TwoWheelVehicleService.Models;
+﻿using TwoWheelVehicleService.DTOs;
+using TwoWheelVehicleService.Models;
 
 namespace TwoWheelVehicleService.Repositories
 {
@@ -10,6 +11,8 @@ namespace TwoWheelVehicleService.Repositories
         Task<List<Model>> GetActiveModels();
         Task UpdateModel(Model model);
         Task DeleteModel(int modelId);
-        
+        Task<List<Model>?> SearchModelsAsync(string searchValue);
+
+
     }
 }

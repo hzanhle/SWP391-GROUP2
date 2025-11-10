@@ -34,8 +34,8 @@ export async function validateUserDocuments(userId, token) {
   }
   try {
     const [citizenRes, licenseRes] = await Promise.all([
-      userApi.getCitizenInfo(numUserId, token),
-      userApi.getDriverLicense(numUserId, token),
+      userApi.getCitizenInfo(token),
+      userApi.getDriverLicense(token),
     ])
 
     const citizenInfo = citizenRes.data

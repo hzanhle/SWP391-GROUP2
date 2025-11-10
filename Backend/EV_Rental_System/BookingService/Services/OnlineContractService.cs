@@ -150,24 +150,56 @@ namespace BookingService.Services
 
             var errors = new List<string>();
 
-            if (data.OrderId <= 0) errors.Add("OrderId phải > 0");
-            if (string.IsNullOrWhiteSpace(data.CustomerName)) errors.Add("Tên khách hàng trống");
-            if (string.IsNullOrWhiteSpace(data.CustomerEmail)) errors.Add("Email trống");
-            if (string.IsNullOrWhiteSpace(data.CustomerPhone)) errors.Add("SĐT trống");
-            if (string.IsNullOrWhiteSpace(data.CustomerIdCard)) errors.Add("CMND/CCCD trống");
-            if (string.IsNullOrWhiteSpace(data.VehicleModel)) errors.Add("Model xe trống");
-            if (string.IsNullOrWhiteSpace(data.LicensePlate)) errors.Add("Biển số trống");
-            if (data.FromDate >= data.ToDate) errors.Add("Ngày bắt đầu >= ngày kết thúc");
-            if (data.TotalRentalCost <= 0) errors.Add("Chi phí thuê <= 0");
-            if (data.TotalPaymentAmount <= 0) errors.Add("Tổng thanh toán <= 0");
-            if (string.IsNullOrWhiteSpace(data.TransactionId)) errors.Add("Mã giao dịch trống");
+            // Order info validation
+            if (data.OrderId <= 0)
+                errors.Add("OrderId phải > 0");
+
+            // Customer info validation
+            if (string.IsNullOrWhiteSpace(data.CustomerName))
+                errors.Add("Tên khách hàng không được để trống");
+            if (string.IsNullOrWhiteSpace(data.CustomerEmail))
+                errors.Add("Email không được để trống");
+            if (string.IsNullOrWhiteSpace(data.CustomerPhone))
+                errors.Add("Số điện thoại không được để trống");
+            // ✅ CustomerAddress and CustomerDateOfBirth are optional - user may not provide them
+            // These will use N/A in the contract if not provided
+
+            // Vehicle info validation
+            if (string.IsNullOrWhiteSpace(data.VehicleModel))
+                errors.Add("Model xe không được để trống");
+            if (string.IsNullOrWhiteSpace(data.LicensePlate))
+                errors.Add("Biển số xe không được để trống");
+            if (string.IsNullOrWhiteSpace(data.VehicleColor))
+                errors.Add("Màu sắc xe không được để trống");
+            if (string.IsNullOrWhiteSpace(data.VehicleType))
+                errors.Add("Loại xe không được để trống");
+
+            // Rental period validation
+            if (data.FromDate >= data.ToDate)
+                errors.Add("Ngày bắt đầu phải trước ngày kết thúc");
+
+            // Financial validation
+            if (data.TotalRentalCost <= 0)
+                errors.Add("Chi phí thuê xe phải > 0");
+            if (data.DepositAmount < 0)
+                errors.Add("Tiền đặt cọc không được âm");
+            if (data.ServiceFee < 0)
+                errors.Add("Phí dịch vụ không được âm");
+            if (data.TotalPaymentAmount <= 0)
+                errors.Add("Tổng thanh toán phải > 0");
+
+            // Payment info validation
+            if (string.IsNullOrWhiteSpace(data.PaymentMethod))
+                errors.Add("Phương thức thanh toán không được để trống");
+            // ✅ CustomerIdCard is optional - can be empty (user may not want to share)
+            // ✅ TransactionId is optional - can be empty (VNPay callback may not always provide it)
 
             if (errors.Any())
             {
                 var errorMessage = string.Join("; ", errors);
                 _logger.LogWarning("⚠️ Validation failed for Order {OrderId}: {Errors}",
                     data.OrderId, errorMessage);
-                throw new InvalidOperationException($"Dữ liệu không hợp lệ: {errorMessage}");
+                throw new InvalidOperationException($"Dữ liệu không hợp lệ:\n• {string.Join("\n• ", errors)}");
             }
 
             _logger.LogInformation("✅ Validation passed for Order {OrderId}", data.OrderId);
@@ -358,7 +390,7 @@ namespace BookingService.Services
                 ContractNumber = data.ContractNumber,
                 ContractFilePath = s3Url, // ✅ S3 URL thay vì local path
                 SignedAt = data.PaidAt ?? data.PaymentDate,
-                SignatureData = data.TransactionId,
+                SignatureData = data.TransactionId ?? string.Empty, // ✅ Default to empty string if null
                 TemplateVersion = 1,
                 CreatedAt = DateTime.UtcNow
             };
@@ -460,14 +492,18 @@ namespace BookingService.Services
 
         private void AppendCustomerInfo(StringBuilder sb, ContractDataDto data)
         {
+            var dateOfBirth = string.IsNullOrWhiteSpace(data.CustomerDateOfBirth) ? "N/A" : data.CustomerDateOfBirth;
+            var address = string.IsNullOrWhiteSpace(data.CustomerAddress) ? "N/A" : data.CustomerAddress;
+            var idCard = string.IsNullOrWhiteSpace(data.CustomerIdCard) ? "N/A" : data.CustomerIdCard;
+
             sb.AppendLine($@"
             <div class='section'>
             <h2>BÊN THUÊ (BÊN B)</h2>
             <table>
             <tr class='info-row'><td>Họ và tên:</td><td>{data.CustomerName}</td></tr>
-            <tr class='info-row'><td>Ngày sinh:</td><td>{data.CustomerDateOfBirth}</td></tr>
-            <tr class='info-row'><td>CMND/CCCD:</td><td>{data.CustomerIdCard}</td></tr>
-            <tr class='info-row'><td>Địa chỉ:</td><td>{data.CustomerAddress}</td></tr>
+            <tr class='info-row'><td>Ngày sinh:</td><td>{dateOfBirth}</td></tr>
+            <tr class='info-row'><td>CMND/CCCD:</td><td>{idCard}</td></tr>
+            <tr class='info-row'><td>Địa chỉ:</td><td>{address}</td></tr>
             <tr class='info-row'><td>Điện thoại:</td><td>{data.CustomerPhone}</td></tr>
             <tr class='info-row'><td>Email:</td><td>{data.CustomerEmail}</td></tr>
             </table>

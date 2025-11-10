@@ -26,7 +26,6 @@ namespace StationService.Services
             {
                 Name = stationRequest.Name,
                 Location = stationRequest.Location,
-                ManagerId = stationRequest.ManagerId,
                 IsActive = true, // Mặc định là active khi tạo mới
                 Lat = stationRequest.Lat,
                 Lng = stationRequest.Lng
@@ -66,14 +65,12 @@ namespace StationService.Services
                 Id = station.Id,
                 Name = station.Name,
                 Location = station.Location,
-                ManagerId = station.ManagerId,
                 IsActive = station.IsActive,
 
                 Feedbacks = station.Feedbacks.Select(f => new FeedbackDTO
                 {
                     FeedbackId =f.FeedbackId,
                     StationId = f.StationId,
-                    OrderId = f.OrderId,
                     Rate = f.Rate,
                     Description = f.Description,
                     CreatedDate = f.CreatedDate
@@ -90,7 +87,6 @@ namespace StationService.Services
                 // Cập nhật thông tin từ object station được truyền vào
                 existingStation.Name = stationRequest.Name;
                 existingStation.Location = stationRequest.Location;
-                existingStation.ManagerId = stationRequest.ManagerId;
                 existingStation.IsActive = stationRequest.IsActive;
 
                 await _stationRepository.UpdateStation(existingStation);
@@ -121,7 +117,7 @@ namespace StationService.Services
 
                 // ---- Map helpers ----
         private static StationDTO ToDto(Station s) => new StationDTO(
-s.Id, s.Name, s.Location, s.ManagerId, s.IsActive, s.Lat, s.Lng);
+                                                                s.Id, s.Name, s.Location, s.IsActive, s.Lat, s.Lng);
 
         private static void ValidateLatLng(double lat, double lng)
         {

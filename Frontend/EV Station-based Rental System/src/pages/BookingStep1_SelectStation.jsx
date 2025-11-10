@@ -6,7 +6,7 @@ export default function BookingStep1_SelectStation({ stations, selectedStation, 
     <div className="station-selection-container">
       <div className="station-selection-map-section">
         <label className="label booking-section-label">Chọn điểm thuê xe trên bản đồ</label>
-        <StationMap stations={stations} />
+        <StationMap stations={stations} selectedStation={selectedStation} />
       </div>
 
       <div className="station-selection-grid-section">

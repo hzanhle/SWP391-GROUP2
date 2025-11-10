@@ -7,6 +7,7 @@ export default function FeaturedStations() {
   const [stations, setStations] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [selectedStation, setSelectedStation] = useState(null)
 
   useEffect(() => {
     let mounted = true
@@ -19,12 +20,14 @@ export default function FeaturedStations() {
           id: s.stationId ?? s.id ?? s.Id,
           name: s.name ?? s.Name,
           address: s.location ?? s.Location,
+          lat: s.lat ?? s.Lat ?? s.latitude ?? s.Latitude,
+          lng: s.lng ?? s.Lng ?? s.longitude ?? s.Longitude,
         })) : []
         setStations(mapped)
         setError(null)
       } catch (e) {
         if (mounted) {
-          setError(e.message)
+          setError('Failed to load stations. Please try again later.')
         }
       } finally {
         if (mounted) {
@@ -46,15 +49,19 @@ export default function FeaturedStations() {
       </div>
 
       {loading && (
-        <div className="container text-center py-8">
-          <p className="text-lg text-gray-600">Loading stations...</p>
+        <div className="container">
+          <div className="carousel-track" aria-hidden="true">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="skeleton skeleton-card" aria-hidden="true"></div>
+            ))}
+          </div>
         </div>
       )}
 
       {error && (
         <div className="container">
-          <div role="alert" className="card card-body">
-            <p className="card-subtext">Error: {error}</p>
+          <div role="alert" className="error-card">
+            <p className="card-subtext">{error}</p>
           </div>
         </div>
       )}
@@ -64,22 +71,27 @@ export default function FeaturedStations() {
           <div className="container carousel">
             <div className="carousel-track" role="list">
               {stations.map((s) => (
-                <div role="listitem" key={s.id || `${s.name}-${s.address}`}>
-                  <StationCard {...s} />
+                <div
+                  role="listitem"
+                  key={s.id || `${s.name}-${s.address}`}
+                  className="clickable-card"
+                  onClick={() => setSelectedStation(s)}
+                >
+                  <StationCard {...s} isSelected={selectedStation?.id === s.id} />
                 </div>
               ))}
             </div>
           </div>
 
           <div className="container map-section">
-            <StationMap stations={stations} />
+            <StationMap stations={stations} selectedStation={selectedStation} />
           </div>
         </>
       )}
 
       {!loading && !error && stations.length === 0 && (
-        <div className="container text-center py-8">
-          <p className="text-lg text-gray-600">No stations available.</p>
+        <div className="container">
+          <div className="state-wrapper"><p className="state-message">No stations available.</p></div>
         </div>
       )}
     </section>

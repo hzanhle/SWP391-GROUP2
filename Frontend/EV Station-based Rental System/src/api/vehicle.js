@@ -51,6 +51,28 @@ async function request(path, { method = 'GET', body, token, headers = {} } = {})
   return { status: res.status, data }
 }
 
+// API Service
+export const findAvailableVehicle = async (modelId, color, stationId) => {
+  try {
+    const response = await fetch(`/api/vehicle/find-available?modelId=${modelId}&color=${color}&stationId=${stationId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Có lỗi xảy ra');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error finding available vehicle:', error);
+    throw error;
+  }
+};
 
 // Vehicle API Service Methods
 
@@ -83,9 +105,11 @@ export function createVehicle(vehicle, token) {
     method: 'POST',
     body: {
       modelId: vehicle.modelId,
+      stationId: vehicle.stationId,
       color: vehicle.color,
       status: vehicle.status ?? 'Available',
       isActive: vehicle.isActive ?? true,
+      licensePlate: vehicle.licensePlate || '',
     },
     token
   })
@@ -99,9 +123,11 @@ export function updateVehicle(id, vehicle, token) {
     method: 'PUT',
     body: {
       modelId: vehicle.modelId,
+      stationId: vehicle.stationId,
       color: vehicle.color,
       status: vehicle.status,
       isActive: vehicle.isActive,
+      licensePlate: vehicle.licensePlate || '',
     },
     token
   })

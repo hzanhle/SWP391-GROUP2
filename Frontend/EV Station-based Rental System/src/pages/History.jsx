@@ -3,11 +3,13 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import * as bookingApi from '../api/booking'
+import { getVehicleById, getAllModels } from '../api/vehicle'
 
 export default function History() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [vehicleModelMap, setVehicleModelMap] = useState({})
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -17,7 +19,7 @@ export default function History() {
         const authToken = localStorage.getItem('auth.token')
 
         if (!authUser || !authToken) {
-          setError('Vui lòng đăng nhập để xem lịch sử')
+          setError('Please log in to view history')
           return
         }
 
@@ -25,17 +27,38 @@ export default function History() {
         const userId = Number(user?.userId || user?.UserId || user?.id || user?.Id)
 
         if (!userId || isNaN(userId)) {
-          setError('Không thể xác định ID người dùng')
+          setError('Unable to determine user ID')
           return
         }
 
         const { data } = await bookingApi.getOrdersByUserId(userId, authToken)
         const ordersList = Array.isArray(data) ? data : []
         setOrders(ordersList)
+
+        // Build vehicle -> model name mapping
+        const vehicleIds = Array.from(new Set(ordersList.map(o => Number(o.vehicleId || o.VehicleId)).filter(id => Number.isFinite(id))))
+        let modelList = []
+        try {
+          const modelsRes = await getAllModels(authToken)
+          modelList = Array.isArray(modelsRes.data) ? modelsRes.data : (Array.isArray(modelsRes.data?.data) ? modelsRes.data.data : [])
+        } catch {}
+        const modelNameById = new Map(modelList.map(m => [Number(m.modelId || m.ModelId), `${m.manufacturer || m.Manufacturer || ''} ${m.modelName || m.ModelName || ''}`.trim()]))
+        const vehicleToModel = {}
+        await Promise.all(vehicleIds.map(async (vid) => {
+          try {
+            const res = await getVehicleById(vid, authToken)
+            const v = res?.data || res?.data?.data
+            const mid = Number(v?.modelId || v?.ModelId)
+            if (Number.isFinite(mid)) {
+              vehicleToModel[vid] = modelNameById.get(mid) || String(mid)
+            }
+          } catch {}
+        }))
+        setVehicleModelMap(vehicleToModel)
         setError(null)
       } catch (err) {
         console.error('Error fetching booking history:', err)
-        setError(err.message || 'Không tải được lịch sử thuê')
+        setError(err.message || 'Unable to load rental history')
       } finally {
         setLoading(false)
       }
@@ -64,13 +87,13 @@ export default function History() {
         <CTA
           as="button"
           onClick={() => {
-            localStorage.removeItem('InProgressOrder')
+            localStorage.removeItem('activeOrder')
             localStorage.setItem('pending_booking', JSON.stringify(order))
             window.location.hash = 'payment'
           }}
           variant="primary"
         >
-          Thanh toán
+          Pay Now
         </CTA>
       )
     }
@@ -94,7 +117,7 @@ export default function History() {
           href={`#return?orderId=${orderId}`}
           variant="primary"
         >
-          Trả xe
+          Return Vehicle
         </CTA>
       )
     }
@@ -106,7 +129,7 @@ export default function History() {
           href="#feedback"
           variant="primary"
         >
-          Đánh giá
+          Rate
         </CTA>
       )
     }
@@ -117,13 +140,13 @@ export default function History() {
         onClick={() => {
           const orderId = order.orderId || order.OrderId
           console.log('[History] Viewing order:', orderId)
-          localStorage.removeItem('InProgressOrder')
+          localStorage.removeItem('activeOrder')
           localStorage.setItem('pending_booking', JSON.stringify(order))
           window.location.hash = `booking?orderId=${orderId}`
         }}
         variant="secondary"
       >
-        Xem
+        View
       </CTA>
     )
   }
@@ -135,14 +158,14 @@ export default function History() {
         <section id="history" className="section page-offset" aria-labelledby="history-title">
           <div className="container">
             <div className="section-header">
-              <h1 id="history-title" className="section-title">Lịch sử thuê</h1>
-              <p className="section-subtitle">Xem lại chuyến thuê và chi phí.</p>
+              <h1 id="history-title" className="section-title">Rental History</h1>
+              <p className="section-subtitle">Review your rentals and expenses.</p>
             </div>
 
             {loading && (
               <div className="card">
                 <div className="card-body text-center">
-                  <p>Đang tải lịch sử...</p>
+                  <p>Loading history...</p>
                 </div>
               </div>
             )}
@@ -150,7 +173,7 @@ export default function History() {
             {error && (
               <div className="card">
                 <div className="card-body">
-                  <div className="error-message" style={{ marginBottom: 0 }}>
+                  <div className="error-message no-margin">
                     <span>{error}</span>
                   </div>
                 </div>
@@ -160,8 +183,8 @@ export default function History() {
             {!loading && !error && orders.length === 0 && (
               <div className="card">
                 <div className="card-body text-center">
-                  <p className="card-subtext">Bạn chưa có lịch sử thuê xe nào.</p>
-                  <CTA as="a" href="#booking-new" style={{ marginTop: '1rem' }}>Đặt xe ngay</CTA>
+                  <p className="card-subtext">You have no rental history yet.</p>
+                  <CTA as="a" href="#booking-new" className="mt-4">Book Now</CTA>
                 </div>
               </div>
             )}
@@ -177,7 +200,7 @@ export default function History() {
                             <h3 className="card-title">#{order.orderId || order.OrderId}</h3>
                             <p className="card-subtext">
                               {new Date(order.fromDate || order.FromDate).toLocaleDateString('vi-VN')} •
-                              {order.vehicle?.model || order.Vehicle?.Model || 'N/A'} •
+                              {vehicleModelMap[Number(order.vehicleId || order.VehicleId)] || order.vehicle?.model || order.Vehicle?.Model || 'Unknown Model'} •
                               ${Number(order.totalCost || order.TotalCost || 0).toFixed(2)}
                             </p>
                           </div>

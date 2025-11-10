@@ -54,8 +54,6 @@ namespace UserService.Services
 
                 // Get user by username only (fixed - only pass username)
                 var user = await _userRepository.GetUserAsync(loginRequest.UserName);
-                var role = await _roleRepository.GetRoleByIdAsync(user.RoleId);
-
                 if (user == null)
                 {
                     _logger.LogWarning("Login failed - user not found: {Username}", loginRequest.UserName);
@@ -65,7 +63,7 @@ namespace UserService.Services
                         Message = "Tên đăng nhập hoặc mật khẩu không đúng"
                     };
                 }
-
+                var role = await _roleRepository.GetRoleByIdAsync(user.RoleId);
                 // Verify password using BCrypt
                 if (!BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.Password))
                 {
@@ -130,6 +128,22 @@ namespace UserService.Services
         {
             try
             {
+                // Tạo tài khoản Admin mặc định nếu chưa có
+                var adminUser = await _userRepository.GetUserAsync("Admin");
+                if (adminUser == null)
+                {
+                    var admin = new User
+                    {
+                        UserName = "Admin",
+                        Email = "admin@gmail.com",
+                        PhoneNumber = "0123456789",
+                        Password = BCrypt.Net.BCrypt.HashPassword("Admin@123"), // Hash password
+                        CreatedAt = DateTime.UtcNow,
+                        IsActive = true,
+                        RoleId = 3 // Admin role
+                    };
+                    await _userRepository.AddUserAsync(admin);
+                }
                 // Kiểm tra lại username (double check)
                 var existingUser = await _userRepository.GetUserAsync(registerData.UserName);
                 if (existingUser != null)

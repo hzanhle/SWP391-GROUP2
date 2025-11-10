@@ -18,11 +18,17 @@ import History from './pages/History'
 import AdminUsers from './pages/AdminUsers'
 import StaffVerification from './pages/StaffVerification'
 import AdminModels from './pages/AdminModels'
+import AdminStations from './pages/AdminStations'
+import AdminVehicles from './pages/AdminVehicles'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminStaffShift from './pages/AdminStaffShift'
+import AdminCreateStaff from './pages/AdminCreateStaff'
+import AdminTransfer from './pages/AdminTransfer'
 import StaffShift from './pages/StaffShift'
 import StaffVehicle from './pages/StaffVehicle'
 import Feedback from './pages/Feedback'
+import AdminOngoingTransfers from './pages/AdminOngoingTransfers'
+import AdminTransferHistory from './pages/AdminTransferHistory'
 
 function getRoleId() {
   try {
@@ -87,9 +93,14 @@ function resolveRoute() {
     case 'admin-users': return 'admin-users'
     case 'staff-verify': return 'staff-verify'
     case 'admin-models': return 'admin-models'
+    case 'admin-stations': return 'admin-stations'
+    case 'admin-vehicles': return 'admin-vehicles'
     case 'admin-staffshift': return 'admin-staffshift'
+    case 'admin-create-staff': return 'admin-create-staff'
     case 'staff-shifts': return 'staff-shifts'
     case 'staff-vehicles': return 'staff-vehicles'
+    case 'admin-transfer-ongoing': return 'admin-transfer-ongoing'
+    case 'admin-transfer-history': return 'admin-transfer-history'
     case 'admin': return 'admin'
     default: return 'home'
   }
@@ -105,7 +116,7 @@ export default function App() {
   }, [])
 
   // Check if current route is admin route
-  const isAdminRoute = ['admin', 'admin-users', 'admin-models', 'admin-staffshift', 'staff-verify'].includes(routeData)
+  const isAdminRoute = ['admin', 'admin-users', 'admin-models', 'admin-stations', 'admin-vehicles', 'admin-staffshift', 'admin-create-staff', 'admin-transfer', 'admin-transfer-ongoing', 'admin-transfer-history', 'staff-verify'].includes(routeData)
   // Check if current route is staff route
   const isStaffRoute = ['staff-shifts', 'staff-vehicles'].includes(routeData)
 
@@ -130,7 +141,13 @@ export default function App() {
       {routeData === 'admin' && <AdminDashboard />}
       {routeData === 'admin-users' && <AdminUsers />}
       {routeData === 'admin-models' && <AdminModels />}
+      {routeData === 'admin-stations' && <AdminStations />}
+      {routeData === 'admin-vehicles' && <AdminVehicles />}
       {routeData === 'admin-staffshift' && <AdminStaffShift />}
+      {routeData === 'admin-create-staff' && <AdminCreateStaff />}
+      {routeData === 'admin-transfer' && <AdminTransfer />}
+      {routeData === 'admin-transfer-ongoing' && <AdminOngoingTransfers />}
+      {routeData === 'admin-transfer-history' && <AdminTransferHistory />}
       {routeData === 'staff-verify' && <StaffVerification />}
       {routeData === 'staff-shifts' && <StaffShift />}
       {routeData === 'staff-vehicles' && <StaffVehicle />}

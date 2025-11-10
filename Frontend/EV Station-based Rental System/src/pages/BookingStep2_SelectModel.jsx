@@ -11,11 +11,11 @@ export default function BookingStep2_SelectModel({ models, vehicles, selectedMod
 
   return (
     <div className="model-selection-container">
-      <label className="label booking-section-label">Chọn mẫu xe</label>
+      <label className="label booking-section-label">Select Vehicle Model</label>
       
       {models.length === 0 ? (
         <div className="error-message error-visible warning" role="alert">
-          <span>Không tìm thấy mẫu xe nào.</span>
+          <span>No models found.</span>
         </div>
       ) : (
         <div className="models-grid">
@@ -72,34 +72,34 @@ export default function BookingStep2_SelectModel({ models, vehicles, selectedMod
                 <div className="model-card-header">
                   <h4 className="model-card-name">{manufacturer} {modelName}</h4>
                   {!hasAvailableVehicles && vehicles.length > 0 && (
-                    <span className="model-card-status unavailable">Hết xe</span>
+                    <span className="model-card-status unavailable">Out of Stock</span>
                   )}
                 </div>
 
                 <div className="model-card-specs">
                   {batteryCapacity && (
                     <div className="model-spec">
-                      <span className="spec-label">🔋 Pin:</span>
+                      <span className="spec-label">🔋 Battery:</span>
                       <span className="spec-value">{batteryCapacity} kWh</span>
                     </div>
                   )}
                   {batteryRange && (
                     <div className="model-spec">
-                      <span className="spec-label">📏 Quãng đường:</span>
+                      <span className="spec-label">📏 Range:</span>
                       <span className="spec-value">{batteryRange} km</span>
                     </div>
                   )}
                   {vehicleCapacity && (
                     <div className="model-spec">
-                      <span className="spec-label">👥 Chỗ ngồi:</span>
+                      <span className="spec-label">👥 Seats:</span>
                       <span className="spec-value">{vehicleCapacity}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="model-card-price">
-                  <span className="price-label">Giá thuê:</span>
-                  <span className="price-value">${rentFee}/giờ</span>
+                  <span className="price-label">Rental Price:</span>
+                  <span className="price-value">${rentFee}/hour</span>
                 </div>
 
                 {isThisSelected && (

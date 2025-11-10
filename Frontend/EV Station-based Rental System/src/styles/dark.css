@@ -1,0 +1,118 @@
+/* Dark mode overrides using tokens; preserves original brand styles */
+
+:root[data-theme='dark'] body { background-color: var(--color-background); color: var(--color-text); }
+
+/* Navbar */
+:root[data-theme='dark'] .navbar__links a,
+:root[data-theme='dark'] .navbar__greeting,
+:root[data-theme='dark'] .navbar__profile-btn,
+:root[data-theme='dark'] .navbar-link { color: var(--color-text); }
+:root[data-theme='dark'] .mobile-navbar { background-color: var(--color-surface); }
+:root[data-theme='dark'] .navbar__theme-toggle { border-color: var(--color-border); color: var(--color-text); }
+
+/* Hero */
+:root[data-theme='dark'] .hero-section { background-color: var(--color-background); }
+:root[data-theme='dark'] .hero-content__text h1,
+:root[data-theme='dark'] .hero-content__text h4,
+:root[data-theme='dark'] .hero-content__text p { color: var(--color-text); }
+
+/* Generic cards and surfaces */
+:root[data-theme='dark'] .card,
+:root[data-theme='dark'] .station-card,
+:root[data-theme='dark'] .admin-card,
+:root[data-theme='dark'] .stat-card,
+:root[data-theme='dark'] .map-card,
+:root[data-theme='dark'] .book-content__box,
+:root[data-theme='dark'] .booking-modal { background-color: var(--color-surface); color: var(--color-text); }
+:root[data-theme='dark'] .booking-modal { border-color: var(--color-border); }
+
+/* Featured sections */
+:root[data-theme='dark'] .section-title { color: var(--color-text); }
+:root[data-theme='dark'] .section-subtitle,
+:root[data-theme='dark'] .card-subtext,
+:root[data-theme='dark'] .state-message { color: var(--color-muted); }
+:root[data-theme='dark'] .station-card h3,
+:root[data-theme='dark'] .station-card-name,
+:root[data-theme='dark'] .model-card-name,
+:root[data-theme='dark'] .spec-label { color: var(--color-text); }
+:root[data-theme='dark'] .station-card p,
+:root[data-theme='dark'] .model-spec,
+:root[data-theme='dark'] .price-label { color: var(--color-muted); }
+:root[data-theme='dark'] .station-card-item,
+:root[data-theme='dark'] .model-card-item,
+:root[data-theme='dark'] .model-card-price { background-color: var(--color-surface); border-color: var(--color-border); }
+:root[data-theme='dark'] .featured-stations-section { background: var(--color-background); }
+:root[data-theme='dark'] .featured-stations-section .section-header h2 { color: var(--color-text); }
+:root[data-theme='dark'] .featured-stations-section .section-header p { color: var(--color-muted); }
+:root[data-theme='dark'] .carousel-track .skeleton { background: linear-gradient(90deg, #1f2937 25%, #0b1220 37%, #1f2937 63%); }
+:root[data-theme='dark'] .station-card-item:hover { background-color: rgba(255,255,255,0.03); border-color: var(--color-border); }
+:root[data-theme='dark'] .pick-container__title { color: var(--color-text); }
+:root[data-theme='dark'] .pick-container__title p { color: var(--color-muted); }
+
+/* Error card */
+:root[data-theme='dark'] .error-card { background: rgba(255, 77, 48, 0.12); border: 1px solid #3a2a28; color: #ffd6cc; }
+
+/* Footer */
+:root[data-theme='dark'] footer { background-color: var(--color-surface); }
+:root[data-theme='dark'] .footer-content,
+:root[data-theme='dark'] .footer-content__1 li a,
+:root[data-theme='dark'] .footer-content__2 a { color: var(--color-text); }
+:root[data-theme='dark'] .footer-content__2 input {
+  background-color: var(--color-background);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+/* How it works */
+:root[data-theme='dark'] .plan-section { background-color: var(--color-background); }
+:root[data-theme='dark'] .plan-container__title { color: var(--color-text); }
+:root[data-theme='dark'] .plan-container__boxes__box h3 { color: var(--color-text); }
+:root[data-theme='dark'] .plan-container__boxes__box p { color: var(--color-muted); }
+
+/* Why choose us */
+:root[data-theme='dark'] .choose-section { background-color: var(--color-surface); }
+:root[data-theme='dark'] .text-container__left { color: var(--color-text); }
+:root[data-theme='dark'] .text-container__left p { color: var(--color-muted); }
+:root[data-theme='dark'] .text-container__right__box__text h4 { color: var(--color-text); }
+:root[data-theme='dark'] .text-container__right__box__text p { color: var(--color-muted); }
+
+/* Testimonials */
+:root[data-theme='dark'] .testimonials-section { background-color: var(--color-background); color: var(--color-text); }
+:root[data-theme='dark'] .all-testimonials__box { background-color: var(--color-surface); }
+
+/* FAQ */
+:root[data-theme='dark'] .faq-content { color: var(--color-text); }
+:root[data-theme='dark'] .faq-box { background-color: var(--color-surface); color: var(--color-text); }
+:root[data-theme='dark'] .faq-box__answer { color: var(--color-muted); }
+
+/* Download section */
+:root[data-theme='dark'] .download-section { background-color: var(--color-background); }
+:root[data-theme='dark'] .download-text h2 { color: var(--color-text); }
+:root[data-theme='dark'] .download-text p { color: var(--color-muted); }
+
+/* Auth pages */
+:root[data-theme='dark'] .auth-section { background: var(--color-background); }
+:root[data-theme='dark'] .auth-form-card { background: var(--color-surface); color: var(--color-text); }
+:root[data-theme='dark'] .auth-form-card h2 { color: var(--color-text); }
+:root[data-theme='dark'] .auth-form-subtitle { color: var(--color-muted); }
+:root[data-theme='dark'] .form-group label { color: var(--color-text); }
+:root[data-theme='dark'] .form-group input { background-color: var(--color-background); border-color: var(--color-border); color: var(--color-text); }
+:root[data-theme='dark'] .form-group input::placeholder { color: var(--color-muted); }
+:root[data-theme='dark'] .auth-divider { color: var(--color-border); }
+:root[data-theme='dark'] .auth-divider span { color: var(--color-muted); }
+:root[data-theme='dark'] .auth-footer-text { color: var(--color-muted); }
+:root[data-theme='dark'] .auth-page-hero__overlay { background: rgba(0,0,0,0.35); }
+:root[data-theme='dark'] .auth-error-message { background-color: rgba(127,29,29,0.25); color: #fecaca; border-left-color: #ff4d30; }
+
+/* Mobile menu links */
+:root[data-theme='dark'] .mobile-navbar__links li a { color: var(--color-text); }
+
+/* Admin shell */
+:root[data-theme='dark'] .admin-shell { background-color: var(--color-background); }
+:root[data-theme='dark'] .admin-sidebar { background: var(--color-surface); border-right: 1px solid var(--color-border); }
+:root[data-theme='dark'] .admin-brand-text,
+:root[data-theme='dark'] .admin-user-name { color: var(--color-text); }
+:root[data-theme='dark'] .admin-user-role,
+:root[data-theme='dark'] .admin-nav-link { color: var(--color-muted); }
+:root[data-theme='dark'] .admin-nav-link:hover { color: var(--color-text); background-color: rgba(255,255,255,0.05); }
+:root[data-theme='dark'] .admin-main { background: var(--color-background); }

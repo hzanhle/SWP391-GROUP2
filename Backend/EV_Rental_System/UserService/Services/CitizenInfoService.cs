@@ -2,7 +2,6 @@
 using UserService.DTOs;
 using UserService.Models;
 using UserService.Models.Enums;
-using UserService.Models.UserService.Models;
 using UserService.Repositories;
 
 namespace UserService.Services
@@ -59,6 +58,7 @@ namespace UserService.Services
 
                 return new ResponseDTO
                 {
+                    IsSuccess = true,
                     Message = "Yêu cầu tạo Căn cước công dân đã được gửi. Vui lòng chờ xác thực",
                     Data = entity
                 };

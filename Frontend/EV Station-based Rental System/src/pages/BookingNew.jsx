@@ -13,7 +13,7 @@ import { validateUserDocuments } from '/utils/documentValidation'
 
 export default function BookingNew() {
   const [step, setStep] = useState(0)
-  const steps = ['Chọn điểm thuê', 'Chọn xe', 'Lịch & xác nhận']
+  const steps = ['Select Station', 'Select Vehicle', 'Schedule & Confirm']
   
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
@@ -38,6 +38,33 @@ export default function BookingNew() {
   const [bookingLoading, setBookingLoading] = useState(false)
   const [bookingError, setBookingError] = useState(null)
 
+  function parseTimeString(str) {
+    if (!str || typeof str !== 'string') return null
+    const m = str.match(/^(\d{1,2})(?::(\d{2}))?/)
+    if (!m) return null
+    const hh = Math.max(0, Math.min(23, parseInt(m[1], 10)))
+    const mm = Math.max(0, Math.min(59, m[2] ? parseInt(m[2], 10) : 0))
+    return { hh, mm }
+  }
+  function getStationHoursFor(dateStr) {
+    const d = dateStr ? new Date(dateStr) : null
+    if (!d) return null
+    const openField = selectedStation?.OpenTime || selectedStation?.openTime || selectedStation?.OpeningTime || selectedStation?.openingTime || selectedStation?.OpenAt || selectedStation?.openAt
+    const closeField = selectedStation?.CloseTime || selectedStation?.closeTime || selectedStation?.ClosingTime || selectedStation?.closingTime || selectedStation?.CloseAt || selectedStation?.closeAt
+    const open = parseTimeString(openField) || { hh: 8, mm: 0 }
+    const close = parseTimeString(closeField) || { hh: 22, mm: 0 }
+    const start = new Date(d); start.setHours(open.hh, open.mm, 0, 0)
+    const end = new Date(d); end.setHours(close.hh, close.mm, 0, 0)
+    return { start, end }
+  }
+  function isWithinStationHours(dateStr) {
+    if (!dateStr) return false
+    const t = new Date(dateStr)
+    const hrs = getStationHoursFor(dateStr)
+    if (!hrs) return true
+    return t >= hrs.start && t <= hrs.end
+  }
+
   // Initialize user and fetch data
   useEffect(() => {
     async function init() {
@@ -49,7 +76,7 @@ export default function BookingNew() {
         console.log('[BookingNew] LocalStorage values:', { authUser, authToken, storedId })
 
         if (!authUser || !authToken) {
-          setError('Vui lòng đăng nhập để đặt xe')
+          setError('Please log in to book a vehicle')
           window.location.hash = 'login'
           return
         }
@@ -77,7 +104,7 @@ export default function BookingNew() {
             idField: userData?.id,
             IdField: userData?.Id
           })
-          setError('Không thể xác định ID người dùng. Vui lòng đăng nhập lại.')
+          setError('Cannot determine user ID. Please log in again.')
           window.location.hash = 'login'
           return
         }
@@ -87,7 +114,7 @@ export default function BookingNew() {
 
         if (!docValidation.hasAllDocuments) {
           setDocumentError({
-            message: `Vui lòng cập nhật đầy đủ tài liệu trước khi đặt xe: ${docValidation.missingDocs.join(', ')}`,
+            message: `Please complete all documents before booking: ${docValidation.missingDocs.join(', ')}`,
             missingDocs: docValidation.missingDocs,
           })
         }
@@ -174,7 +201,7 @@ export default function BookingNew() {
         setError(null)
       } catch (err) {
         console.error('Error initializing booking:', err)
-        setError(err.message || 'Lỗi khi tải trang đặt xe')
+        setError(err.message || 'Error loading booking page')
       } finally {
         setLoading(false)
       }
@@ -213,60 +240,51 @@ export default function BookingNew() {
     setPreviewError(null)
 
     if (!selectedStation) {
-      setPreviewError('Vui lòng chọn điểm thuê xe')
+      setPreviewError('Please select a pickup station')
       return
     }
     if (!selectedModel) {
-      setPreviewError('Vui lòng chọn mẫu xe')
+      setPreviewError('Please select a model')
       return
     }
     if (!pickupDate) {
-      setPreviewError('Vui lòng nhập thời gian nhận xe')
+      setPreviewError('Please enter pickup time')
       return
     }
     if (!dropoffDate) {
-      setPreviewError('Vui lòng nhập thời gian trả xe')
+      setPreviewError('Please enter dropoff time')
       return
     }
     if (new Date(pickupDate) >= new Date(dropoffDate)) {
-      setPreviewError('Thời gian trả xe phải sau thời gian nhận xe')
+      setPreviewError('Dropoff time must be after pickup time')
+      return
+    }
+
+    // Opening hours validation
+    if (!isWithinStationHours(pickupDate) || !isWithinStationHours(dropoffDate)) {
+      setPreviewError('Pickup and return times must be within station working hours')
       return
     }
 
     try {
       setPreviewLoading(true)
 
-      // 1) Lấy xe khả dụng đầu tiên theo model đã chọn
+      // 1) L��y xe khả dụng đầu tiên theo model đã chọn
       const chosenVehicle = getFirstAvailableVehicle()
       if (!chosenVehicle) {
-        setPreviewError('Không có xe khả dụng cho mẫu này. Vui lòng chọn mẫu khác.')
+        setPreviewError('No vehicles available for this model. Please choose another model.')
         return
       }
 
       const vehicleId = Number(chosenVehicle.VehicleId || chosenVehicle.vehicleId || chosenVehicle.id)
       if (!vehicleId || Number.isNaN(vehicleId)) {
-        setPreviewError('Thông tin xe không hợp lệ. Vui lòng thử lại.')
+        setPreviewError('Vehicle information is invalid. Please try again.')
         return
       }
 
-      // 2) Check availability (nếu API lỗi vẫn cho xem preview)
+      // 2) Convert dates to ISO format
       const fromISO = new Date(pickupDate).toISOString()
       const toISO = new Date(dropoffDate).toISOString()
-
-      try {
-        const availabilityRes = await vehicleApi.checkVehicleAvailability({
-          vehicleId,
-          fromDate: fromISO,
-          toDate: toISO,
-        }, token)
-
-        if (availabilityRes?.data && availabilityRes.data.isAvailable === false) {
-          setPreviewError(`Xe không khả dụng trong khoảng thời gian này. ${availabilityRes.data?.reason || 'Vui lòng chọn thời gian khác.'}`)
-          return
-        }
-      } catch (availErr) {
-        console.warn('[BookingNew] Availability check failed, continue preview:', availErr)
-      }
 
       // 3) Lấy userId an toàn
       const previewUserId =
@@ -274,7 +292,7 @@ export default function BookingNew() {
         Number(user?.userId || user?.UserId || user?.id || user?.Id)
 
       if (!previewUserId || Number.isNaN(previewUserId)) {
-        setPreviewError('Không thể xác định ID người dùng. Vui lòng đăng nhập lại.')
+        setPreviewError('Cannot determine user ID. Please log in again.')
         return
       }
 
@@ -282,11 +300,11 @@ export default function BookingNew() {
       const rentFee = Number(selectedModel.RentFeeForHour || selectedModel.rentFeeForHour || 0)
       const modelCost = Number(selectedModel.ModelCost || selectedModel.modelCost || 0)
       if (!(rentFee > 0)) {
-        setPreviewError('Giá thuê không hợp lệ. Vui lòng thử lại hoặc chọn mẫu khác.')
+        setPreviewError('Rent price invalid. Please try again or choose another model.')
         return
       }
       if (!(modelCost > 0)) {
-        setPreviewError('Giá xe không hợp lệ. Vui lòng thử lại hoặc chọn mẫu khác.')
+        setPreviewError('Model price invalid. Please try again or choose another model.')
         return
       }
 
@@ -302,14 +320,23 @@ export default function BookingNew() {
       }, token)
 
       if (!previewRes?.data) {
-        setPreviewError('Không thể tính toán chi phí. Vui lòng thử lại.')
+        setPreviewError('Unable to calculate cost. Please try again.')
         return
       }
 
-      setPreview(previewRes.data)
+      // Map backend field names to frontend expected names (PascalCase → camelCase)
+      const mappedPreview = {
+        ...previewRes.data,
+        totalRentalCost: previewRes.data.TotalRentalCost,
+        depositCost: previewRes.data.DepositAmount,
+        serviceFee: previewRes.data.ServiceFee,
+        totalPaymentCost: previewRes.data.TotalPaymentAmount,
+      }
+
+      setPreview(mappedPreview)
     } catch (err) {
       console.error('Error getting preview:', err)
-      setPreviewError(err?.message || 'Lỗi khi tính toán chi phí. Vui lòng thử lại.')
+      setPreviewError(err?.message || 'Error calculating cost. Please try again.')
     } finally {
       setPreviewLoading(false)
     }
@@ -319,43 +346,49 @@ export default function BookingNew() {
     setBookingError(null)
 
     if (!preview) {
-      setBookingError('Vui lòng xem trước đơn hàng trước khi xác nhận')
+      setBookingError('Please preview the order before confirming')
       return
     }
 
     if (!selectedStation) {
-      setBookingError('Thông tin điểm thuê bị mất. Vui lòng quay lại và chọn lại.')
+      setBookingError('Pickup station info missing. Please go back and choose again.')
       return
     }
 
     if (!selectedModel) {
-      setBookingError('Thông tin mẫu xe bị mất. Vui lòng quay lại và chọn lại.')
+      setBookingError('Model info missing. Please go back and choose again.')
       return
     }
 
     if (!pickupDate || !dropoffDate) {
-      setBookingError('Thông tin thời gian bị mất. Vui lòng quay lại và nhập lại.')
+      setBookingError('Time info missing. Please go back and re-enter.')
       return
     }
-    
+
+    // Opening hours validation
+    if (!isWithinStationHours(pickupDate) || !isWithinStationHours(dropoffDate)) {
+      setBookingError('Pickup and return times must be within station working hours')
+      return
+    }
+
     try {
       setBookingLoading(true)
       
       const bookingUserId = Number(localStorage.getItem('auth.userId')) || Number(user?.userId || user?.UserId || user?.id || user?.Id)
       if (!bookingUserId || isNaN(bookingUserId)) {
-        setBookingError('Không thể xác định ID người dùng. Vui lòng đăng nhập lại.')
+        setBookingError('Cannot determine user ID. Please log in again.')
         return
       }
 
       const vehicleToUse = getFirstAvailableVehicle()
       if (!vehicleToUse) {
-        setBookingError('Không thể tìm xe. Vui lòng quay lại và thử lại.')
+        setBookingError('Cannot find a vehicle. Please go back and try again.')
         return
       }
 
       const vehicleId = vehicleToUse.VehicleId || vehicleToUse.vehicleId || vehicleToUse.id
       if (!vehicleId || isNaN(Number(vehicleId))) {
-        setBookingError('Thông tin xe không hợp lệ. Vui lòng thử lại.')
+        setBookingError('Vehicle information is invalid. Please try again.')
         return
       }
 
@@ -363,7 +396,7 @@ export default function BookingNew() {
       const modelCost = Number(selectedModel.ModelCost || selectedModel.modelCost || 0)
 
       if (rentFee <= 0 || modelCost <= 0) {
-        setBookingError('Thông tin giá xe không hợp lệ. Vui lòng thử lại.')
+        setBookingError('Vehicle price information is invalid. Please try again.')
         return
       }
 
@@ -378,7 +411,7 @@ export default function BookingNew() {
       }, token)
       
       if (!orderRes.data || !orderRes.data.OrderId) {
-        setBookingError('Không thể tạo đơn hàng. Vui lòng thử lại.')
+        setBookingError('Unable to create order. Please try again.')
         return
       }
 
@@ -397,9 +430,10 @@ export default function BookingNew() {
 
       const bookingDataToStore = {
         orderId,
-        totalCost: orderRes.data.TotalCost,
-        depositCost: orderRes.data.DepositCost || 0,
-        serviceFee: orderRes.data.ServiceFee || 0,
+        totalCost: preview?.totalPaymentCost || 0,
+        totalRentalCost: preview?.totalRentalCost || 0,
+        depositCost: preview?.depositCost || 0,
+        serviceFee: preview?.serviceFee || 0,
         expiresAt: orderRes.data.ExpiresAt,
         vehicleInfo: {
           vehicleId: Number(vehicleId),
@@ -427,7 +461,7 @@ export default function BookingNew() {
       window.location.hash = 'payment'
     } catch (err) {
       console.error('Error creating booking:', err)
-      setBookingError(err.message || 'Lỗi khi tạo đơn hàng. Vui lòng thử lại.')
+      setBookingError(err.message || 'Error creating order. Please try again.')
     } finally {
       setBookingLoading(false)
     }
@@ -435,11 +469,11 @@ export default function BookingNew() {
 
   const handleNext = () => {
     if (step === 0 && !selectedStation) {
-      setPreviewError('Vui lòng chọn điểm thuê xe')
+      setPreviewError('Please select a pickup station')
       return
     }
     if (step === 1 && !selectedModel) {
-      setPreviewError('Vui lòng chọn mẫu xe')
+      setPreviewError('Please select a model')
       return
     }
     setStep((s) => Math.min(s + 1, steps.length - 1))
@@ -461,9 +495,16 @@ export default function BookingNew() {
         <Navbar />
         <main>
           <section className="section page-offset">
-            <div className="container">
-              <div className="text-center py-12">
-                <p>Đang tải...</p>
+            <div className="container" role="status" aria-busy="true">
+              <div className="card">
+                <div className="card-body">
+                  <div className="skeleton skeleton-line"></div>
+                  <div className="skeleton skeleton-pill"></div>
+                  <div className="two-col-grid">
+                    <div className="skeleton skeleton-card"></div>
+                    <div className="skeleton skeleton-card"></div>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -480,8 +521,8 @@ export default function BookingNew() {
         <section className="section page-offset">
           <div className="container">
             <div className="section-header">
-              <h1 className="section-title">Đặt xe mới</h1>
-              <p className="section-subtitle">Hoàn thành 3 bước đơn giản để đặt xe.</p>
+              <h1 className="section-title">New Booking</h1>
+              <p className="section-subtitle">Complete 3 simple steps to book a vehicle.</p>
             </div>
 
             {error && (
@@ -492,11 +533,11 @@ export default function BookingNew() {
 
             {documentError && (
               <div className="error-message error-visible warning">
-                <span style={{ color: '#856404' }}>
+                <span className="warning-text">
                   ⚠️ {documentError.message}
                   <br />
-                  <a href="#profile-docs" style={{ color: '#0066cc', textDecoration: 'underline', marginTop: '0.5rem', display: 'inline-block' }}>
-                    Cập nhật tài liệu →
+                  <a href="#profile-docs" className="link-underline">
+                    Update documents →
                   </a>
                 </span>
               </div>
@@ -546,13 +587,13 @@ export default function BookingNew() {
                   />
                 )}
 
-                <div className="row-between" style={{ marginTop: '2rem' }}>
-                  <CTA as="button" variant="ghost" onClick={handleBack}>Quay lại</CTA>
+                <div className="row-between mt-8">
+                  <CTA as="button" variant="ghost" onClick={handleBack}>Back</CTA>
                   {step < steps.length - 1 ? (
-                    <CTA as="button" onClick={handleNext}>Tiếp tục</CTA>
+                    <CTA as="button" onClick={handleNext}>Continue</CTA>
                   ) : (
                     <CTA as="button" onClick={handleConfirmBooking} disabled={!preview || bookingLoading || !termsAccepted}>
-                      {bookingLoading ? 'Đang xử lý...' : 'Xác nhận & Thanh toán'}
+                      {bookingLoading ? 'Processing...' : 'Confirm & Pay'}
                     </CTA>
                   )}
                 </div>

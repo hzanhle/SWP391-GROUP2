@@ -50,7 +50,7 @@ export default function AdminUsers() {
         setUsers(Array.isArray(data) ? data : [])
         setError('')
       } catch (e) {
-        setError(e.message || 'Không tải được danh sách người dùng')
+        setError(e.message || 'Failed to load users')
       } finally {
         setLoading(false)
       }
@@ -59,7 +59,7 @@ export default function AdminUsers() {
   }, [token])
 
   async function onDelete(id) {
-    if (!confirm('Xóa người dùng này?')) return
+    if (!confirm('Delete this user?')) return
     try {
       setBusyId(id)
       await deleteUser(id, token)
@@ -121,7 +121,7 @@ export default function AdminUsers() {
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <Alert severity="error">
             <Typography variant="h6">Unauthorized</Typography>
-            <Typography>Bạn không có quyền truy cập trang Admin.</Typography>
+            <Typography>You do not have permission to access the Admin page.</Typography>
           </Alert>
         </Container>
       </AdminLayout>
@@ -136,10 +136,10 @@ export default function AdminUsers() {
             {/* Header */}
             <Box>
               <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
-                Quản lý người dùng
+                User Management
               </Typography>
               <Typography variant="body1" color="text.secondary">
-  Xóa, chuyển role Staff ⇄ Admin, đánh dấu cảnh báo.
+  Delete, switch roles between Staff and Admin, mark warnings.
 </Typography>
 
             </Box>
@@ -161,12 +161,12 @@ export default function AdminUsers() {
                 <Table>
                   <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>Tên người dùng</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Username</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Điện thoại</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Phone</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Trạng thái</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="center">Hành động</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -220,7 +220,7 @@ export default function AdminUsers() {
                     {users.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-  Không tìm thấy người dùng nào
+  No users found
 </TableCell>
                       </TableRow>
                     )}
@@ -231,12 +231,12 @@ export default function AdminUsers() {
 
             {/* User Details Dialog */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-              <DialogTitle>Chi tiết người dùng</DialogTitle>
+              <DialogTitle>User Details</DialogTitle>
               <DialogContent sx={{ pt: 2 }}>
                 {selectedUser && (
                   <Stack spacing={2}>
                     <Box>
-                      <Typography variant="body2" color="textSecondary">Tên người dùng:</Typography>
+                      <Typography variant="body2" color="textSecondary">Username:</Typography>
                       <Typography variant="body1" sx={{ fontWeight: 500 }}>
                         {selectedUser.userName ?? selectedUser.UserName}
                       </Typography>
@@ -246,7 +246,7 @@ export default function AdminUsers() {
                       <Typography variant="body1">{selectedUser.email ?? selectedUser.Email}</Typography>
                     </Box>
                     <Box>
-                      <Typography variant="body2" color="textSecondary">Điện thoại:</Typography>
+                      <Typography variant="body2" color="textSecondary">Phone:</Typography>
                       <Typography variant="body1">{selectedUser.phoneNumber ?? selectedUser.PhoneNumber}</Typography>
                     </Box>
                     <Box>
@@ -287,13 +287,13 @@ export default function AdminUsers() {
                           onChange={(e) => onWarnChange(selectedUser.id ?? selectedUser.Id, e.target.checked)}
                         />
                       }
-                      label="Cảnh báo người dùng"
+                      label="User Warning"
                     />
                   </Stack>
                 )}
               </DialogContent>
               <DialogActions>
-                <Button onClick={() => setOpenDialog(false)}>Đóng</Button>
+                <Button onClick={() => setOpenDialog(false)}>Close</Button>
               </DialogActions>
             </Dialog>
           </Stack>

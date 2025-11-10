@@ -556,6 +556,11 @@ namespace BookingService.Services
             return await _orderRepo.GetByIdAsync(orderId);
         }
 
+        public async Task<Order?> GetOrderByIdWithDetailsAsync(int orderId)
+        {
+            return await _orderRepo.GetByIdWithDetailsAsync(orderId);
+        }
+
         public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(int userId)
         {
             return await _orderRepo.GetByUserIdAsync(userId);

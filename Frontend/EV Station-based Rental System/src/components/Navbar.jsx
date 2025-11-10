@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import NotificationBell from "./NotificationBell";
+import { useThemeMode } from "../theme/ThemeContext";
 
 function Navbar() {
   const [nav, setNav] = useState(false);
@@ -28,12 +29,20 @@ function Navbar() {
       }
     };
 
+    function onKey(e) {
+      if (e.key === 'Escape') setNav(false);
+    }
+
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('keydown', onKey);
+    };
   }, []);
 
-  const openNav = () => {
-    setNav(!nav);
+  const toggleNav = () => {
+    setNav((v) => !v);
   };
 
   const handleLogout = () => {
@@ -48,45 +57,62 @@ function Navbar() {
   const isStaff = roleId === 2;
   const isAdmin = roleId === 3;
   const isMember = roleId === 1 || (roleId === 0 && user);
+  const { mode, toggleMode } = useThemeMode();
+  const isDark = mode === 'dark';
 
   return (
     <>
-      <nav>
-        {/* mobile */}
-        <div className={`mobile-navbar ${nav ? "open-nav" : ""}`}>
-          <div onClick={openNav} className="mobile-navbar__close">
-            <i className="fa-solid fa-xmark"></i>
-          </div>
-          <ul className="mobile-navbar__links">
+      <nav role="navigation" aria-label="Primary">
+        {/* mobile drawer */}
+        <div
+          id="mobile-menu"
+          className={`mobile-navbar ${nav ? "open-nav" : ""}`}
+          aria-hidden={!nav}
+        >
+          <button
+            type="button"
+            onClick={toggleNav}
+            className="mobile-navbar__close"
+            aria-label="Close menu"
+          >
+            <i className="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+          <ul className="mobile-navbar__links" role="menu">
+            <li role="none">
+              <button type="button" className="navbar__theme-toggle" onClick={() => { toggleMode(); toggleNav(); }}>
+                <i className={isDark ? "fa-solid fa-sun" : "fa-solid fa-moon"} aria-hidden="true"></i>
+                <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+              </button>
+            </li>
             {!isStaff && (
               <>
-                <li>
-                  <a onClick={openNav} href="#" style={{color: "inherit"}}>
+                <li role="none">
+                  <a onClick={toggleNav} href="#" role="menuitem">
                     Home
                   </a>
                 </li>
-                <li>
-                  <a onClick={openNav} href="#about" style={{color: "inherit"}}>
+                <li role="none">
+                  <a onClick={toggleNav} href="#about" role="menuitem">
                     About
                   </a>
                 </li>
-                <li>
-                  <a onClick={openNav} href="#vehicles" style={{color: "inherit"}}>
+                <li role="none">
+                  <a onClick={toggleNav} href="#vehicles" role="menuitem">
                     Vehicles
                   </a>
                 </li>
-                <li>
-                  <a onClick={openNav} href="#testimonials" style={{color: "inherit"}}>
+                <li role="none">
+                  <a onClick={toggleNav} href="#testimonials" role="menuitem">
                     Testimonials
                   </a>
                 </li>
-                <li>
-                  <a onClick={openNav} href="#stations" style={{color: "inherit"}}>
+                <li role="none">
+                  <a onClick={toggleNav} href="#stations" role="menuitem">
                     Stations
                   </a>
                 </li>
-                <li>
-                  <a onClick={openNav} href="#contact" style={{color: "inherit"}}>
+                <li role="none">
+                  <a onClick={toggleNav} href="#contact" role="menuitem">
                     Contact
                   </a>
                 </li>
@@ -94,18 +120,18 @@ function Navbar() {
             )}
             {isStaff && (
               <>
-                <li>
-                  <a onClick={openNav} href="#staff-shifts" style={{color: "inherit"}}>
+                <li role="none">
+                  <a onClick={toggleNav} href="#staff-shifts" role="menuitem">
                     My Shifts
                   </a>
                 </li>
-                <li>
-                  <a onClick={openNav} href="#staff-vehicles" style={{color: "inherit"}}>
+                <li role="none">
+                  <a onClick={toggleNav} href="#staff-vehicles" role="menuitem">
                     Vehicle Management
                   </a>
                 </li>
-                <li>
-                  <a onClick={openNav} href="#staff-verify" style={{color: "inherit"}}>
+                <li role="none">
+                  <a onClick={toggleNav} href="#staff-verify" role="menuitem">
                     Verification
                   </a>
                 </li>
@@ -113,13 +139,20 @@ function Navbar() {
             )}
             {user && (
               <>
-                <li>
-                  <a onClick={openNav} href={isStaff ? "#profile" : "#profile"} style={{color: "inherit"}}>
+                <li role="none">
+                  <a onClick={toggleNav} href="#profile" role="menuitem">
                     My Account
                   </a>
                 </li>
-                <li>
-                  <a onClick={() => { handleLogout(); openNav(); }} href="#" style={{color: "inherit"}}>
+                <li role="none">
+                  <a
+                    onClick={() => {
+                      handleLogout();
+                      toggleNav();
+                    }}
+                    href="#"
+                    role="menuitem"
+                  >
                     Logout
                   </a>
                 </li>
@@ -129,48 +162,42 @@ function Navbar() {
         </div>
 
         {/* desktop */}
-
         <div className="navbar">
           <div className="navbar__img">
-            <a href="#" onClick={() => window.scrollTo(0, 0)} style={{fontSize: "1.8rem", fontWeight: "bold", color: "#ff4d30", textDecoration: "none"}}>
+            <a href="#" onClick={() => window.scrollTo(0, 0)} className="navbar__brand">
               EV
             </a>
           </div>
-          <ul className="navbar__links">
+          <ul className="navbar__links" role="menubar">
             {!isStaff && (
               <>
-                <li>
-                  <a className="home-link" href="#" onClick={() => window.location.hash = ""}>
+                <li role="none">
+                  <a className="home-link" href="#" onClick={() => (window.location.hash = "")} role="menuitem">
                     Home
                   </a>
                 </li>
-                <li>
-                  {" "}
-                  <a className="about-link" href="#about">
+                <li role="none">
+                  <a className="about-link" href="#about" role="menuitem">
                     About
                   </a>
                 </li>
-                <li>
-                  {" "}
-                  <a className="models-link" href="#vehicles">
+                <li role="none">
+                  <a className="models-link" href="#vehicles" role="menuitem">
                     Vehicles
                   </a>
                 </li>
-                <li>
-                  {" "}
-                  <a className="testi-link" href="#testimonials">
+                <li role="none">
+                  <a className="testi-link" href="#testimonials" role="menuitem">
                     Testimonials
                   </a>
                 </li>
-                <li>
-                  {" "}
-                  <a className="stations-link" href="#stations">
+                <li role="none">
+                  <a className="stations-link" href="#stations" role="menuitem">
                     Stations
                   </a>
                 </li>
-                <li>
-                  {" "}
-                  <a className="contact-link" href="#contact">
+                <li role="none">
+                  <a className="contact-link" href="#contact" role="menuitem">
                     Contact
                   </a>
                 </li>
@@ -178,18 +205,18 @@ function Navbar() {
             )}
             {isStaff && (
               <>
-                <li>
-                  <a className="shifts-link" href="#staff-shifts">
+                <li role="none">
+                  <a className="shifts-link" href="#staff-shifts" role="menuitem">
                     My Shifts
                   </a>
                 </li>
-                <li>
-                  <a className="vehicles-link" href="#staff-vehicles">
+                <li role="none">
+                  <a className="vehicles-link" href="#staff-vehicles" role="menuitem">
                     Vehicles
                   </a>
                 </li>
-                <li>
-                  <a className="verification-link" href="#staff-verify">
+                <li role="none">
+                  <a className="verification-link" href="#staff-verify" role="menuitem">
                     Verification
                   </a>
                 </li>
@@ -198,38 +225,34 @@ function Navbar() {
           </ul>
 
           <div className="navbar__right">
+            <button type="button" className="navbar__theme-toggle" onClick={toggleMode} title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
+              <i className={isDark ? "fa-solid fa-sun" : "fa-solid fa-moon"} aria-hidden="true"></i>
+              <span className="visually-hidden">Toggle theme</span>
+            </button>
             {user ? (
               <div className="navbar__user">
-                <span className="navbar__greeting">Xin chào, {userName}</span>
+                <span className="navbar__greeting">Hello, {userName}</span>
                 <div className="navbar__notifications">
                   <NotificationBell />
                 </div>
                 {isMember && (
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <a href="#booking" className="navbar-link" title="Đơn hàng">
-                      <i className="fa-solid fa-file-invoice"></i>
-                      <span>Đơn hàng</span>
+                  <div className="navbar__quick-links">
+                    <a href="#history" className="navbar-link" title="History">
+                      <i className="fa-solid fa-history" aria-hidden="true"></i>
+                      <span>History</span>
                     </a>
-                    <a href="#history" className="navbar-link" title="Lịch sử">
-                      <i className="fa-solid fa-history"></i>
-                      <span>Lịch sử</span>
-                    </a>
-                    <a href="#check-in" className="navbar-link" title="Check-in">
-                      <i className="fa-solid fa-sign-in-alt"></i>
-                      <span>Check-in</span>
-                    </a>
-                    <a href="#feedback" className="navbar-link" title="Phản hồi">
-                      <i className="fa-solid fa-comment"></i>
-                      <span>Phản hồi</span>
+                    <a href="#feedback" className="navbar-link" title="Feedback">
+                      <i className="fa-solid fa-comment" aria-hidden="true"></i>
+                      <span>Feedback</span>
                     </a>
                   </div>
                 )}
                 <a href="#profile" className="navbar__profile-btn">
-                  <i className="fa-solid fa-user"></i>
+                  <i className="fa-solid fa-user" aria-hidden="true"></i>
                   <span>Profile</span>
                 </a>
-                <button className="navbar__logout-btn" onClick={handleLogout}>
-                  <i className="fa-solid fa-sign-out-alt"></i>
+                <button className="navbar__logout-btn" onClick={handleLogout} type="button">
+                  <i className="fa-solid fa-sign-out-alt" aria-hidden="true"></i>
                   <span>Logout</span>
                 </button>
               </div>
@@ -245,10 +268,17 @@ function Navbar() {
             )}
           </div>
 
-          {/* mobile */}
-          <div className="mobile-hamb" onClick={openNav}>
-            <i className="fa-solid fa-bars"></i>
-          </div>
+          {/* mobile trigger */}
+          <button
+            type="button"
+            className="mobile-hamb"
+            onClick={toggleNav}
+            aria-controls="mobile-menu"
+            aria-expanded={nav}
+            aria-label="Open menu"
+          >
+            <i className="fa-solid fa-bars" aria-hidden="true"></i>
+          </button>
         </div>
       </nav>
     </>

@@ -31,8 +31,8 @@ namespace BookingService.Repositories
         public async Task<Order?> GetByIdWithDetailsAsync(int orderId)
         {
             return await _context.Orders
-                .Include(o => o.Payments)
                 .Include(o => o.OnlineContract)
+                .Include(o => o.Payments)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
         }

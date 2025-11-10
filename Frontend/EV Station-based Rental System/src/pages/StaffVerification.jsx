@@ -52,17 +52,17 @@ export default function StaffVerification() {
     setLicense(null)
     try {
       const [cRes, lRes] = await Promise.allSettled([
-        api.getCitizenInfo(userId, token),
-        api.getDriverLicense(userId, token),
+        api.getCitizenInfoByUserIdForStaff(userId, token),
+        api.getDriverLicenseByUserIdForStaff(userId, token),
       ])
       if (cRes.status === 'fulfilled') setCitizen(cRes.value.data)
       if (lRes.status === 'fulfilled') setLicense(lRes.value.data)
       if (cRes.status === 'rejected' && lRes.status === 'rejected') {
-        const msg = (cRes.reason && (cRes.reason.message || cRes.reason.Message)) || 'Không tìm thấy giấy tờ cho người dùng này'
+        const msg = (cRes.reason && (cRes.reason.message || cRes.reason.Message)) || 'No documents found for this user'
         setError(msg)
       }
     } catch (e) {
-      setError(e?.message || 'Lỗi tải dữ liệu')
+      setError(e?.message || 'Error loading data')
     } finally {
       setLoading(false)
     }
@@ -72,7 +72,7 @@ export default function StaffVerification() {
     e.preventDefault()
     const id = Number(userIdInput)
     if (!id || id <= 0) {
-      setError('Vui lòng nhập User ID hợp lệ')
+      setError('Please enter a valid User ID')
       return
     }
     loadUserData(id)
@@ -89,16 +89,24 @@ export default function StaffVerification() {
       setLoading(true)
       setError('')
       const uid = Number((citizen?.userId) || (license?.userId))
-      if (!uid) throw new Error('Thiếu UserId')
+      if (!uid) throw new Error('Missing UserId')
       if (type === 'citizen') {
-        await api.setCitizenInfoStatus(uid, approve, token)
+        if (approve) {
+          await api.approveCitizenInfo(uid, token)
+        } else {
+          await api.rejectCitizenInfo(uid, token)
+        }
       } else {
-        await api.setDriverLicenseStatus(uid, approve, token)
+        if (approve) {
+          await api.approveDriverLicense(uid, token)
+        } else {
+          await api.rejectDriverLicense(uid, token)
+        }
       }
       await loadUserData(uid)
-      window.alert(approve ? 'Đã xác nhận' : 'Đã từ chối')
+      window.alert(approve ? 'Approved' : 'Rejected')
     } catch (e) {
-      setError(e?.message || 'Lỗi cập nhật trạng thái')
+      setError(e?.message || 'Error updating status')
     } finally {
       setLoading(false)
     }
@@ -132,8 +140,8 @@ export default function StaffVerification() {
         <section id="staff-verify" className="section" aria-labelledby="staff-title">
           <div className="container">
             <div className="section-header">
-              <h1 id="staff-title" className="section-title">Xác thực giấy tờ ng��ời dùng</h1>
-              <p className="section-subtitle">Nhập User ID để xem Căn cước công dân và Giấy phép lái xe, đối chiếu và xác thực.</p>
+              <h1 id="staff-title" className="section-title">User Document Verification</h1>
+              <p className="section-subtitle">Enter User ID to view ID card and driver's license, verify and authenticate.</p>
             </div>
 
             <div className="card">
@@ -143,9 +151,9 @@ export default function StaffVerification() {
                   <div className="field">
                     <label htmlFor="userId" className="label">User ID</label>
                     <input id="userId" name="userId" className="input" type="number" min={1} value={userIdInput}
-                           onChange={e=>setUserIdInput(e.target.value)} placeholder="VD: 101" required />
+                           onChange={e=>setUserIdInput(e.target.value)} placeholder="E.g.: 101" required />
                   </div>
-                  <CTA as="button" type="submit" disabled={loading} aria-busy={loading}>Tìm</CTA>
+                  <CTA as="button" type="submit" disabled={loading} aria-busy={loading}>Search</CTA>
                 </div>
               </form>
             </div>
@@ -155,16 +163,16 @@ export default function StaffVerification() {
                 <div className="card-body">
                   <div className="row-between">
                     <div className="row">
-                      <button className="btn" onClick={() => setTab('none')} aria-pressed={tab==='none'}>Chưa nộp</button>
-                      <button className="btn" onClick={() => setTab('submitted')} aria-pressed={tab==='submitted'}>Đã nộp</button>
-                      <button className="btn" onClick={() => setTab('approved')} aria-pressed={tab==='approved'}>Đã xác thực</button>
+                      <button className="btn" onClick={() => setTab('none')} aria-pressed={tab==='none'}>Not Submitted</button>
+                      <button className="btn" onClick={() => setTab('submitted')} aria-pressed={tab==='submitted'}>Submitted</button>
+                      <button className="btn" onClick={() => setTab('approved')} aria-pressed={tab==='approved'}>Verified</button>
                     </div>
                     <div className="field" style={{minWidth: '220px'}}>
                       <label htmlFor="search" className="label">Tìm kiếm</label>
-                      <input id="search" className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tên, email, SĐT..." />
+                      <input id="search" className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Name, email, phone..." />
                     </div>
                   </div>
-                  <div className="card-subtext">Tổng: {total}</div>
+                  <div className="card-subtext">Total: {total}</div>
                   <div className="docs-grid">
                     {items.map((it) => (
                       <div key={it.userId} className="card">
@@ -174,43 +182,43 @@ export default function StaffVerification() {
                               <div className="card-title">{it.fullName || it.userName}</div>
                               <div className="card-subtext">{it.email} • {it.phoneNumber || ''}</div>
                             </div>
-                            <CTA as="button" onClick={() => { setUserIdInput(String(it.userId)); loadUserData(it.userId) }}>Xem</CTA>
+                            <CTA as="button" onClick={() => { setUserIdInput(String(it.userId)); loadUserData(it.userId) }}>View</CTA>
                           </div>
                           <div className="row-between">
-                            <span className="badge gray">CCCD: {it.citizen?.status || 'Chưa có'}</span>
-                            <span className="badge gray">GPLX: {it.driver?.status || 'Chưa có'}</span>
+                            <span className="badge gray">ID: {it.citizen?.status || 'Not submitted'}</span>
+                            <span className="badge gray">License: {it.driver?.status || 'Not submitted'}</span>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                   <div className="row-between">
-                    <button className="btn" disabled={page<=1 || loading} onClick={()=>loadList(page-1)}>Trước</button>
-                    <div className="card-subtext">Trang {page} / {Math.max(1, Math.ceil(total / pageSize))}</div>
-                    <button className="btn" disabled={page>=Math.ceil(total / pageSize) || loading} onClick={()=>loadList(page+1)}>Sau</button>
+                    <button className="btn" disabled={page<=1 || loading} onClick={()=>loadList(page-1)}>Previous</button>
+                    <div className="card-subtext">Page {page} / {Math.max(1, Math.ceil(total / pageSize))}</div>
+                    <button className="btn" disabled={page>=Math.ceil(total / pageSize) || loading} onClick={()=>loadList(page+1)}>Next</button>
                   </div>
                 </div>
               </div>
               <div className="card">
                 <div className="card-header">
-                  <h2 className="card-title">Căn cước công dân</h2>
+                  <h2 className="card-title">ID Card</h2>
                 </div>
                 <div className="card-body">
-                  {!citizen && <p className="muted">Chưa có dữ liệu</p>}
+                  {!citizen && <p className="muted">No data</p>}
                   {citizen && (
                     <>
-                      <InfoRow label="Trạng thái" value={citizen.status} />
-                      <InfoRow label="Họ tên" value={citizen.fullName} />
-                      <InfoRow label="Số CCCD" value={citizen.citizenId} />
-                      <InfoRow label="Giới tính" value={citizen.sex} />
-                      <InfoRow label="Ngày sinh" value={citizen.dayOfBirth} />
-                      <InfoRow label="Ngày cấp" value={citizen.citiRegisDate} />
-                      <InfoRow label="Nơi cấp" value={citizen.citiRegisOffice} />
-                      <InfoRow label="Địa chỉ" value={citizen.address} />
+                      <InfoRow label="Status" value={citizen.status} />
+                      <InfoRow label="Full Name" value={citizen.fullName} />
+                      <InfoRow label="ID Number" value={citizen.citizenId} />
+                      <InfoRow label="Gender" value={citizen.sex} />
+                      <InfoRow label="Date of Birth" value={citizen.dayOfBirth} />
+                      <InfoRow label="Issue Date" value={citizen.citiRegisDate} />
+                      <InfoRow label="Issued By" value={citizen.citiRegisOffice} />
+                      <InfoRow label="Address" value={citizen.address} />
                       <Images list={citizen.images} />
                       <div className="row">
-                        <CTA as="button" onClick={() => handleApprove('citizen', true)} disabled={loading}>Xác nhận</CTA>
-                        <button className="btn" onClick={() => handleApprove('citizen', false)} disabled={loading}>Từ chối</button>
+                        <CTA as="button" onClick={() => handleApprove('citizen', true)} disabled={loading}>Approve</CTA>
+                        <button className="btn" onClick={() => handleApprove('citizen', false)} disabled={loading}>Reject</button>
                       </div>
                     </>
                   )}
@@ -219,22 +227,22 @@ export default function StaffVerification() {
 
               <div className="card">
                 <div className="card-header">
-                  <h2 className="card-title">Giấy phép lái xe</h2>
+                  <h2 className="card-title">Driver's License</h2>
                 </div>
                 <div className="card-body">
-                  {!license && <p className="muted">Chưa có dữ liệu</p>}
+                  {!license && <p className="muted">No data</p>}
                   {license && (
                     <>
-                      <InfoRow label="Trạng thái" value={license.status} />
-                      <InfoRow label="Họ tên" value={license.fullName} />
-                      <InfoRow label="Số GPLX" value={license.licenseId} />
-                      <InfoRow label="Hạng" value={license.licenseType} />
-                      <InfoRow label="Ngày cấp" value={license.registerDate} />
-                      <InfoRow label="Nơi cấp" value={license.registerOffice} />
+                      <InfoRow label="Status" value={license.status} />
+                      <InfoRow label="Full Name" value={license.fullName} />
+                      <InfoRow label="License Number" value={license.licenseId} />
+                      <InfoRow label="Type" value={license.licenseType} />
+                      <InfoRow label="Issue Date" value={license.registerDate} />
+                      <InfoRow label="Issued By" value={license.registerOffice} />
                       <Images list={license.images} />
                       <div className="row">
-                        <CTA as="button" onClick={() => handleApprove('license', true)} disabled={loading}>Xác nhận</CTA>
-                        <button className="btn" onClick={() => handleApprove('license', false)} disabled={loading}>Từ chối</button>
+                        <CTA as="button" onClick={() => handleApprove('license', true)} disabled={loading}>Approve</CTA>
+                        <button className="btn" onClick={() => handleApprove('license', false)} disabled={loading}>Reject</button>
                       </div>
                     </>
                   )}

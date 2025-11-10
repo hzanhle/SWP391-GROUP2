@@ -38,34 +38,34 @@ function ModelForm({ initial, onSubmit, onCancel }) {
     <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Grid container spacing={2} sx={{ width: '100%' }}>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth label="Tên mẫu" value={form.modelName} onChange={e=>updateField('modelName', e.target.value)} required />
+          <TextField fullWidth label="Model Name" value={form.modelName} onChange={e=>updateField('modelName', e.target.value)} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth label="Hãng" value={form.manufacturer} onChange={e=>updateField('manufacturer', e.target.value)} required />
+          <TextField fullWidth label="Brand" value={form.manufacturer} onChange={e=>updateField('manufacturer', e.target.value)} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Năm" value={form.year} onChange={e=>updateField('year', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Year" value={form.year} onChange={e=>updateField('year', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Tốc độ tối đa (km/h)" value={form.maxSpeed} onChange={e=>updateField('maxSpeed', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Max speed (km/h)" value={form.maxSpeed} onChange={e=>updateField('maxSpeed', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Dung lượng pin (mAh)" value={form.batteryCapacity} onChange={e=>updateField('batteryCapacity', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Battery capacity (mAh)" value={form.batteryCapacity} onChange={e=>updateField('batteryCapacity', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Thời gian sạc (phút)" value={form.chargingTime} onChange={e=>updateField('chargingTime', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Charging time (min)" value={form.chargingTime} onChange={e=>updateField('chargingTime', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Quãng đường (km)" value={form.batteryRange} onChange={e=>updateField('batteryRange', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Range (km)" value={form.batteryRange} onChange={e=>updateField('batteryRange', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Số chỗ" value={form.vehicleCapacity} onChange={e=>updateField('vehicleCapacity', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Seats" value={form.vehicleCapacity} onChange={e=>updateField('vehicleCapacity', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Giá mẫu (VNĐ)" value={form.modelCost} onChange={e=>updateField('modelCost', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Model price (VND)" value={form.modelCost} onChange={e=>updateField('modelCost', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Giá thuê/giờ (VNĐ)" value={form.rentFeeForHour} onChange={e=>updateField('rentFeeForHour', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Rent per hour (VND)" value={form.rentFeeForHour} onChange={e=>updateField('rentFeeForHour', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12 }}>
           <TextField fullWidth type="file" onChange={handleFiles} slotProps={{
@@ -74,8 +74,8 @@ function ModelForm({ initial, onSubmit, onCancel }) {
         </Grid>
       </Grid>
       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-        <Button variant="outlined" onClick={onCancel}>Hủy</Button>
-        <Button variant="contained" type="submit">Lưu</Button>
+        <Button variant="outlined" onClick={onCancel}>Cancel</Button>
+        <Button variant="contained" type="submit">Save</Button>
       </Box>
     </Box>
   );
@@ -102,7 +102,7 @@ export default function AdminModels() {
       const { data } = await getAllModels(token)
       setModels(Array.isArray(data) ? data : [])
     } catch (e) {
-      setError(e?.message || 'Không tải được danh sách mẫu')
+      setError(e?.message || 'Failed to load models')
     } finally {
       setLoading(false)
     }
@@ -111,13 +111,13 @@ export default function AdminModels() {
   useEffect(() => { load() }, [])
 
   async function handleDelete(m) {
-    if (!confirm('Xóa mẫu này?')) return
+    if (!confirm('Delete this model?')) return
     try {
       setLoading(true)
       await deleteModel(m.modelId, token)
       await load()
     } catch (e) {
-      alert(e?.message || 'Xóa thất bại')
+      alert(e?.message || 'Delete failed')
     } finally {
       setLoading(false)
     }
@@ -135,7 +135,7 @@ export default function AdminModels() {
       setOpenDialog(false)
       await load()
     } catch (e) {
-      alert(e?.message || 'Lưu thất bại')
+      alert(e?.message || 'Save failed')
     } finally {
       setLoading(false)
     }
@@ -143,17 +143,17 @@ export default function AdminModels() {
 
   return (
     <AdminLayout active="models">
-      <Box sx={{ py: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <Box className="admin-page">
         <Container maxWidth="lg">
-          <Stack spacing={3}>
+          <Stack className="admin-stack" spacing={3}>
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box className="admin-header">
               <Box>
-                <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
-                  Quản lý mẫu xe
+                <Typography variant="h4" component="h1" gutterBottom className="font-600">
+                  Model Management
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Thêm, sửa, xóa mẫu xe hai bánh.
+                  Add, edit, delete two-wheel vehicle models.
                 </Typography>
               </Box>
               <Button 
@@ -161,7 +161,7 @@ export default function AdminModels() {
                 startIcon={<AddIcon />}
                 onClick={() => { setEditing({}); setOpenDialog(true) }}
               >
-                Thêm mẫu
+                Add Model
               </Button>
             </Box>
 
@@ -173,11 +173,11 @@ export default function AdminModels() {
             )}
 
             {/* Search Box */}
-            <Card>
+            <Card className="admin-card">
               <CardContent>
                 <TextField 
                   fullWidth
-                  placeholder="Tìm kiếm theo tên mẫu hoặc hãng..."
+                  placeholder="Search by model name or brand..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   variant="outlined"
@@ -188,21 +188,27 @@ export default function AdminModels() {
 
             {/* Models Table */}
             {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress />
-              </Box>
+              <Card className="admin-card">
+                <CardContent>
+                  <div className="skeleton skeleton-bar"></div>
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="skeleton skeleton-line"></div>
+                  ))}
+                </CardContent>
+              </Card>
             ) : (
               <TableContainer component={Paper}>
+
                 <Table>
-                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableHead className="thead-muted">
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>Tên mẫu</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Hãng</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="right">Năm</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="right">Tốc độ (km/h)</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="right">Pin (mAh)</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="right">Giá (VNĐ)</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="center">Hành động</TableCell>
+                      <TableCell className="font-600">Model Name</TableCell>
+                      <TableCell className="font-600">Brand</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Year</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Speed (km/h)</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Battery (mAh)</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Price (VND)</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -235,7 +241,7 @@ export default function AdminModels() {
                     {filtered.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                          Không tìm thấy mẫu nào
+                          No models found
                         </TableCell>
                       </TableRow>
                     )}
@@ -247,9 +253,9 @@ export default function AdminModels() {
             {/* Form Dialog */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
               <DialogTitle>
-                {editing?.modelId ? 'Sửa mẫu xe' : 'Thêm mẫu xe mới'}
+                {editing?.modelId ? 'Edit model' : 'Add new model'}
               </DialogTitle>
-              <DialogContent sx={{ pt: 2 }}>
+              <DialogContent className="pt-2">
                 <ModelForm 
                   initial={editing} 
                   onSubmit={handleSubmit} 

@@ -2,13 +2,12 @@
 
 namespace StationService.DTOs
 {
-    public class UpdateFeedbackRequest
+    public class UpdateFeedbackDTO
     {
-        [Required(ErrorMessage = "Đánh giá không được để trống.")]
-        [Range(1, 5, ErrorMessage = "Đánh giá phải từ 1 đến 5 sao.")]
-        public int Rate { get; set; }
+        [Range(1, 5, ErrorMessage = "Rating phải từ 1-5 sao")]
+        public int? Rate { get; set; }
 
-        [StringLength(1000, ErrorMessage = "Mô tả không được vượt quá 1000 ký tự.")]
+        [MaxLength(1000, ErrorMessage = "Mô tả không quá 1000 ký tự")]
         public string? Description { get; set; }
     }
 }

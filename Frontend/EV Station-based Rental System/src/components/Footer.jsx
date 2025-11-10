@@ -1,4 +1,22 @@
+import { useState } from 'react'
+
 function Footer() {
+  const [email, setEmail] = useState('')
+  const [msg, setMsg] = useState('')
+  const [status, setStatus] = useState('idle') // idle | error | success
+
+  function onSubmit(e) {
+    e.preventDefault()
+    const ok = /.+@.+\..+/.test(email)
+    if (!ok) {
+      setStatus('error')
+      setMsg('Please enter a valid email address.')
+      return
+    }
+    setStatus('success')
+    setMsg('Thanks for subscribing!')
+  }
+
   return (
     <>
       <footer>
@@ -13,7 +31,7 @@ function Footer() {
               </li>
               <li>
                 <a href="tel:123456789">
-                  <i className="fa-solid fa-phone"></i> &nbsp; (123) -456-789
+                  <i className="fa-solid fa-phone" aria-hidden="true"></i> &nbsp; (123) -456-789
                 </a>
               </li>
 
@@ -21,14 +39,14 @@ function Footer() {
                 <a
                   href="mailto:evstation@example.com"
                 >
-                  <i className="fa-solid fa-envelope"></i>
+                  <i className="fa-solid fa-envelope" aria-hidden="true"></i>
                   &nbsp; evstation@example.com
                 </a>
               </li>
 
               <li>
                 <a
-                  style={{ fontSize: "14px" }}
+                  className="footer-credits"
                   target="_blank"
                   rel="noreferrer"
                   href="https://evstation.com"
@@ -70,10 +88,22 @@ function Footer() {
                 <p>Subscribe to get special offers and the latest news.</p>
               </li>
               <li>
-                <input type="email" placeholder="Enter Email Address"></input>
-              </li>
-              <li>
-                <button className="submit-email">Submit</button>
+                <form onSubmit={onSubmit} noValidate>
+                  <label htmlFor="subscribe-email" className="visually-hidden">Email address</label>
+                  <input
+                    id="subscribe-email"
+                    type="email"
+                    placeholder="Enter Email Address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    aria-invalid={status === 'error'}
+                    required
+                  />
+                  <button className="submit-email" type="submit">Submit</button>
+                  <div role="status" aria-live="polite" className={`form-hint ${status}`}>
+                    {msg}
+                  </div>
+                </form>
               </li>
             </ul>
           </div>

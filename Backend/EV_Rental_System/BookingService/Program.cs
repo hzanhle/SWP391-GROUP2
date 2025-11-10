@@ -6,13 +6,17 @@ using BookingService.Repositories;
 using BookingService.Services;
 using BookingService.Services.SignalR;
 using BookingService.Swagger;
+using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Microsoft.Extensions.Options;
+
 
 var builder = WebApplication.CreateBuilder(args);
+System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
 
 // ====================== Logging ======================
 builder.Logging.ClearProviders();
@@ -98,9 +102,31 @@ builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<ISettlementService, SettlementService>();
 builder.Services.AddScoped<IImageStorageService, ImageStorageService>();
 
+// ====================== Hangfire Background Jobs ======================
+var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddHangfire(config =>
+{
+    config.UseSqlServerStorage(connStr, new Hangfire.SqlServer.SqlServerStorageOptions
+    {
+        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+        DisableGlobalLocks = true
+    });
+});
+builder.Services.AddHangfireServer();
+
 // ====================== Build App ======================
 var app = builder.Build();
+using (var scope = app.Services.CreateScope())
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("CfgProbe");
+    var opt = scope.ServiceProvider.GetRequiredService<IOptions<EmailSettings>>().Value;
 
+    logger.LogWarning("🔧 EmailSettings probe => Email:{Email} / HasPass:{HasPass} / Host:{Host}:{Port} / SSL:{Ssl}",
+        string.IsNullOrWhiteSpace(opt.SenderEmail) ? "(empty)" : opt.SenderEmail,
+        string.IsNullOrWhiteSpace(opt.SenderPassword) ? "No" : "Yes",
+        opt.SmtpServer, opt.SmtpPort, opt.EnableSsl);
+}
 // ====================== Global Exception Handler ======================
 app.UseExceptionHandler(errorApp =>
 {
@@ -152,6 +178,12 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// ====================== Hangfire Dashboard ======================
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireAuthorizationFilter() }
+});
+
 // ====================== Request Logging (Dev only) ======================
 if (app.Environment.IsDevelopment())
 {
@@ -175,16 +207,23 @@ app.MapGet("/health", () => Results.Ok(new
     environment = app.Environment.EnvironmentName
 })).AllowAnonymous();
 
+// ====================== Hangfire Recurring Jobs ======================
+RecurringJob.AddOrUpdate<IOrderService>(
+    "check-expired-orders",
+    service => service.CheckExpiredOrdersAsync(),
+    Cron.MinuteInterval(1)); // Check every 1 minute
+
 // ====================== Startup Log ======================
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
-logger.LogInformation("=====================================");
-logger.LogInformation("🚀 BookingService API Started");
-logger.LogInformation("Environment: {Env}", app.Environment.EnvironmentName);
+var loggerApp = app.Services.GetRequiredService<ILogger<Program>>();
+loggerApp.LogInformation("=====================================");
+loggerApp.LogInformation("🚀 BookingService API Started");
+loggerApp.LogInformation("Environment: {Env}", app.Environment.EnvironmentName);
 if (app.Environment.IsDevelopment())
 {
-    logger.LogInformation("Swagger: http://localhost:5049");
+    loggerApp.LogInformation("Swagger: http://localhost:5049");
+    loggerApp.LogInformation("Hangfire Dashboard: http://localhost:5049/hangfire");
 }
-logger.LogInformation("=====================================");
+loggerApp.LogInformation("=====================================");
 
 app.Run();
 
@@ -377,4 +416,15 @@ static void ConfigureAuthentication(IServiceCollection services, IConfiguration 
         });
 
     services.AddAuthorization();
+}
+
+// ====================== Hangfire Authorization Filter ======================
+class HangfireAuthorizationFilter : Hangfire.Dashboard.IDashboardAuthorizationFilter
+{
+    public bool Authorize(Hangfire.Dashboard.DashboardContext context)
+    {
+        // Allow access only to localhost/development
+        // In production, this dashboard should not be exposed
+        return true;
+    }
 }

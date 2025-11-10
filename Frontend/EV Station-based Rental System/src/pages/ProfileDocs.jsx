@@ -13,7 +13,7 @@ export default function ProfileDocs() {
   function handleSubmit(e) {
     e.preventDefault()
     setSubmitted(true)
-    alert('Đã gửi hồ sơ để xác minh')
+    alert('Profile submitted for verification')
   }
 
   return (
@@ -24,8 +24,8 @@ export default function ProfileDocs() {
             <div className="profile-hero__overlay"></div>
             <div className="container">
               <div className="profile-hero__content">
-                <h1 className="profile-hero__title">Hồ sơ giấy tờ</h1>
-                <p className="profile-hero__subtitle">Tải lên và quản lý giấy phép lái xe, CCCD/CMND để xác minh danh tính.</p>
+                <h1 className="profile-hero__title">Document Profile</h1>
+                <p className="profile-hero__subtitle">Upload and manage your driver's license and ID card for identity verification.</p>
               </div>
             </div>
           </div>
@@ -35,37 +35,37 @@ export default function ProfileDocs() {
               <form className="card-body" onSubmit={handleSubmit}>
                 <div className="docs-grid">
                   <div className="doc-card">
-                    <h3 className="card-title">Giấy phép lái xe</h3>
-                    <p className="card-subtext">Mặt trước và mặt sau GPLX còn hiệu lực</p>
+                    <h3 className="card-title">Driver's License</h3>
+                    <p className="card-subtext">Front and back of valid driver's license</p>
                     <div className="doc-uploaders">
-                      <DocumentUploader label="GPLX - Mặt trước" hint="JPG, PNG hoặc PDF" value={licenseFront} onChange={setLicenseFront} />
-                      <DocumentUploader label="GPLX - Mặt sau" hint="JPG, PNG hoặc PDF" value={licenseBack} onChange={setLicenseBack} />
+                      <DocumentUploader label="License - Front" hint="JPG, PNG or PDF" value={licenseFront} onChange={setLicenseFront} />
+                      <DocumentUploader label="License - Back" hint="JPG, PNG or PDF" value={licenseBack} onChange={setLicenseBack} />
                     </div>
                     <div className="row">
                       <span className={submitted ? 'badge gray' : (licenseFront && licenseBack ? 'badge green' : 'badge gray')}>
-                        {submitted ? 'Đang chờ xác minh' : (licenseFront && licenseBack ? 'Đã tải đủ' : 'Chưa đủ tài liệu')}
+                        {submitted ? 'Pending verification' : (licenseFront && licenseBack ? 'Uploaded complete' : 'Incomplete documents')}
                       </span>
                     </div>
                   </div>
 
                   <div className="doc-card">
-                    <h3 className="card-title">CCCD / CMND</h3>
-                    <p className="card-subtext">Ảnh rõ nét, không che mờ thông tin</p>
+                    <h3 className="card-title">ID Card</h3>
+                    <p className="card-subtext">Clear photos, no information obscured</p>
                     <div className="doc-uploaders">
-                      <DocumentUploader label="CCCD - Mặt trước" hint="JPG, PNG hoặc PDF" value={idFront} onChange={setIdFront} />
-                      <DocumentUploader label="CCCD - Mặt sau" hint="JPG, PNG hoặc PDF" value={idBack} onChange={setIdBack} />
+                      <DocumentUploader label="ID - Front" hint="JPG, PNG or PDF" value={idFront} onChange={setIdFront} />
+                      <DocumentUploader label="ID - Back" hint="JPG, PNG or PDF" value={idBack} onChange={setIdBack} />
                     </div>
                     <div className="row">
                       <span className={submitted ? 'badge gray' : (idFront && idBack ? 'badge green' : 'badge gray')}>
-                        {submitted ? 'Đang chờ xác minh' : (idFront && idBack ? 'Đã tải đủ' : 'Chưa đủ tài liệu')}
+                        {submitted ? 'Pending verification' : (idFront && idBack ? 'Uploaded complete' : 'Incomplete documents')}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="row-between">
-                  <a className="nav-link" href="#profile">Quay lại hồ sơ</a>
-                  <CTA as="button" type="submit">Gửi xác minh</CTA>
+                  <a className="nav-link" href="#profile">Back to Profile</a>
+                  <CTA as="button" type="submit">Submit Verification</CTA>
                 </div>
               </form>
             </div>

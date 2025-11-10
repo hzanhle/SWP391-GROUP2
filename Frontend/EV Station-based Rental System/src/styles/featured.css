@@ -56,6 +56,36 @@
   min-width: 300px;
 }
 
+/* Clickable wrapper */
+.clickable-card { cursor: pointer; }
+
+/* Error & empty states */
+.state-wrapper { text-align: center; padding: 2rem 0; }
+.state-message { font-size: 1.6rem; color: #706f7b; }
+.error-card { background: #fff7f3; border: 1px solid #ffd5ca; color: #7a1d12; padding: 1.4rem; border-radius: 0.8rem; }
+
+/* Skeleton loading */
+@keyframes skeleton-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.skeleton {
+  background: linear-gradient(90deg, #eeeeee 25%, #f5f5f5 37%, #eeeeee 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+.skeleton-card { width: 100%; height: 220px; }
+.skeleton-line { height: 16px; width: 100%; margin: 8px 0; }
+.skeleton-pill { height: 48px; width: 260px; border-radius: 999px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+
+/* Station card selected state */
+.station-card.selected { border: 2px solid #ff4d30; box-shadow: 0 4px 12px rgba(255, 77, 48, 0.3); }
+
+/* Hide images while loading */
+.hidden-img { display: none; }
+
 /* Station Card styles */
 .station-card {
   background-color: white;
@@ -312,12 +342,13 @@
   border-radius: 0.8rem;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  height: 500px;
 }
 
 .map-canvas {
   width: 100%;
-  height: 400px;
-  min-height: 400px;
+  height: 100%;
+  min-height: 500px;
 }
 
 /* Responsive adjustments */
@@ -344,8 +375,12 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .map-card {
+    height: 400px;
+  }
+
   .map-canvas {
-    height: 300px;
+    min-height: 400px;
   }
 }
 
@@ -368,7 +403,11 @@
     font-size: 1.6rem;
   }
 
+  .map-card {
+    height: 350px;
+  }
+
   .map-canvas {
-    height: 250px;
+    min-height: 350px;
   }
 }

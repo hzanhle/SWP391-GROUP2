@@ -1,139 +1,235 @@
-﻿using Microsoft.Extensions.Logging;
+﻿// Services/FeedbackService.cs - Core methods
+
 using StationService.DTOs;
 using StationService.Models;
 using StationService.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace StationService.Services
 {
     public class FeedbackService : IFeedbackService
     {
-        private readonly IFeedbackRepository _feedbackRepository;
+        private readonly IFeedbackRepository _repository;
         private readonly ILogger<FeedbackService> _logger;
 
-        public FeedbackService(IFeedbackRepository feedbackRepository, ILogger<FeedbackService> logger)
+        public FeedbackService(
+            IFeedbackRepository repository,
+            ILogger<FeedbackService> logger)
         {
-            _feedbackRepository = feedbackRepository;
+            _repository = repository;
             _logger = logger;
         }
 
-        public async Task<FeedbackDTO> CreateAsync(int stationId, CreateFeedbackRequest request)
+        /// Tạo feedback cho station     
+        public async Task<FeedbackDTO> CreateFeedbackAsync(CreateFeedbackDTO dto, int userId, string? userName)
         {
-            try
+            _logger.LogInformation($"User {userId} creating feedback for station {dto.StationId}");
+
+            // 1. Kiểm tra user đã feedback cho station này chưa
+            var existingFeedback = await _repository.GetByUserAndStationAsync(userId, dto.StationId);
+            if (existingFeedback != null)
             {
-                _logger.LogInformation("Đang tạo feedback mới cho OrderId: {OrderId}", request.OrderId);
-
-                // Ánh xạ (map) từ DTO sang Model
-                var feedback = new Feedback
-                {
-                    StationId = stationId,
-                    OrderId = request.OrderId,
-                    Rate = request.Rate,
-                    Description = request.Description
-                };
-
-                var createdFeedback = await _feedbackRepository.AddAsync(feedback);
-                _logger.LogInformation("Đã tạo thành công FeedbackId: {FeedbackId}", createdFeedback.FeedbackId);
-
-                // Ánh xạ ngược lại từ Model sang DTO để trả về
-                return MapToDto(createdFeedback);
+                throw new InvalidOperationException(
+                    "Bạn đã đánh giá trạm này rồi. Vui lòng cập nhật feedback hiện tại thay vì tạo mới.");
             }
-            catch (Exception ex)
+
+            // 2. Tạo feedback mới
+            var feedback = new Feedback
             {
-                _logger.LogError(ex, "Lỗi khi tạo feedback cho OrderId: {OrderId}", request.OrderId);
-                throw; // Ném lại lỗi để Controller xử lý
-            }
+                UserId = userId,
+                UserName = userName ?? $"User #{userId}",
+                StationId = dto.StationId,
+                Rate = dto.Rate,
+                Description = dto.Description,
+                CreatedDate = DateTime.UtcNow,
+                IsPublished = true,
+                IsVerified = false
+            };
+
+            var created = await _repository.CreateAsync(feedback);
+
+            _logger.LogInformation($"Feedback {created.FeedbackId} created successfully");
+
+            return MapToDto(created);
         }
 
-        public async Task DeleteAsync(int id)
+        /// Cập nhật feedback
+        public async Task<FeedbackDTO> UpdateFeedbackAsync(int feedbackId, UpdateFeedbackDTO dto, int userId)
         {
-            try
-            {
-                _logger.LogInformation("Đang xóa FeedbackId: {FeedbackId}", id);
+            _logger.LogInformation($"User {userId} updating feedback {feedbackId}");
 
-                // Kiểm tra xem feedback có tồn tại không trước khi xóa
-                var existingFeedback = await _feedbackRepository.GetByIdAsync(id);
-                if (existingFeedback == null)
-                {
-                    throw new KeyNotFoundException($"Không tìm thấy feedback với ID: {id}");
-                }
-
-                await _feedbackRepository.DeleteAsync(id);
-                _logger.LogInformation("Đã xóa thành công FeedbackId: {FeedbackId}", id);
-            }
-            catch (Exception ex)
+            var feedback = await _repository.GetByIdAsync(feedbackId);
+            if (feedback == null)
             {
-                _logger.LogError(ex, "Lỗi khi xóa FeedbackId: {FeedbackId}", id);
-                throw;
+                throw new KeyNotFoundException($"Feedback {feedbackId} not found");
             }
+
+            // Kiểm tra ownership
+            if (feedback.UserId != userId)
+            {
+                throw new UnauthorizedAccessException("Bạn không có quyền sửa feedback này");
+            }
+
+            // Cập nhật
+            if (dto.Rate.HasValue)
+            {
+                feedback.Rate = dto.Rate.Value;
+            }
+
+            if (dto.Description != null)
+            {
+                feedback.Description = dto.Description;
+            }
+
+            feedback.UpdatedDate = DateTime.UtcNow;
+
+            var updated = await _repository.UpdateAsync(feedback);
+
+            _logger.LogInformation($"Feedback {feedbackId} updated successfully");
+
+            return MapToDto(updated);
         }
 
-        public async Task<IEnumerable<FeedbackDTO>> GetByStationIdAsync(int stationId)
+        /// Xóa feedback (chỉ owner hoặc admin)
+        public async Task<bool> DeleteFeedbackAsync(int feedbackId, int userId, bool isAdmin = false)
         {
-            try
-            {
-                _logger.LogInformation("Đang lấy danh sách feedback cho StationId: {StationId}", stationId);
-                var feedbacks = await _feedbackRepository.GetByStationIdAsync(stationId);
+            _logger.LogInformation($"User {userId} deleting feedback {feedbackId}");
 
-                // Dùng LINQ để chuyển đổi danh sách Model sang danh sách DTO
-                return feedbacks.Select(f => MapToDto(f));
-            }
-            catch (Exception ex)
+            var feedback = await _repository.GetByIdAsync(feedbackId);
+            if (feedback == null)
             {
-                _logger.LogError(ex, "Lỗi khi lấy danh sách feedback cho StationId: {StationId}", stationId);
-                throw;
+                throw new KeyNotFoundException($"Feedback {feedbackId} not found");
             }
+
+            // Kiểm tra quyền: Owner hoặc Admin
+            if (!isAdmin && feedback.UserId != userId)
+            {
+                throw new UnauthorizedAccessException("Bạn không có quyền xóa feedback này");
+            }
+
+            var result = await _repository.DeleteAsync(feedbackId);
+
+            _logger.LogInformation($"Feedback {feedbackId} deleted successfully");
+
+            return result;
         }
 
-        public async Task<FeedbackDTO?> GetByIdAsync(int id)
+        /// Lấy tất cả feedback của một station (public API)
+        public async Task<List<FeedbackDTO>> GetFeedbacksByStationAsync(int stationId, bool onlyPublished = true)
         {
-            try
-            {
-                _logger.LogInformation("Đang tìm FeedbackId: {FeedbackId}", id);
-                var feedback = await _feedbackRepository.GetByIdAsync(id);
+            _logger.LogInformation($"Getting feedbacks for station {stationId}");
 
-                if (feedback == null)
-                {
-                    return null; // Trả về null nếu không tìm thấy
-                }
+            var feedbacks = await _repository.GetByStationIdAsync(stationId, onlyPublished);
 
-                return MapToDto(feedback);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lỗi khi tìm FeedbackId: {FeedbackId}", id);
-                throw;
-            }
+            return feedbacks.Select(MapToDto).ToList();
+        }
+        /// Lấy feedback của user cho một station
+        public async Task<FeedbackDTO?> GetMyFeedbackForStationAsync(int userId, int stationId)
+        {
+            _logger.LogInformation($"Getting feedback by user {userId} for station {stationId}");
+
+            var feedback = await _repository.GetByUserAndStationAsync(userId, stationId);
+
+            return feedback == null ? null : MapToDto(feedback);
         }
 
-        public async Task UpdateAsync(int id, UpdateFeedbackRequest request)
+        /// Lấy tất cả feedback của user
+        public async Task<List<FeedbackDTO>> GetFeedbacksByUserAsync(int userId)
         {
-            try
-            {
-                _logger.LogInformation("Đang cập nhật FeedbackId: {FeedbackId}", id);
-                var existingFeedback = await _feedbackRepository.GetByIdAsync(id);
+            _logger.LogInformation($"Getting all feedbacks by user {userId}");
 
-                if (existingFeedback == null)
-                {
-                    throw new KeyNotFoundException($"Không tìm thấy feedback với ID: {id} để cập nhật.");
-                }
+            var feedbacks = await _repository.GetByUserIdAsync(userId);
 
-                // Cập nhật các thuộc tính
-                existingFeedback.Rate = request.Rate;
-                existingFeedback.Description = request.Description;
-
-                await _feedbackRepository.UpdateAsync(existingFeedback);
-                _logger.LogInformation("Đã cập nhật thành công FeedbackId: {FeedbackId}", id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lỗi khi cập nhật FeedbackId: {FeedbackId}", id);
-                throw;
-            }
+            return feedbacks.Select(MapToDto).ToList();
         }
+
+        /// Lấy tất cả feedback (Admin only)
+        public async Task<List<FeedbackDTO>> GetAllFeedbacksAsync()
+        {
+            _logger.LogInformation("Getting all feedbacks (Admin)");
+
+            var feedbacks = await _repository.GetAllAsync();
+
+            return feedbacks.Select(MapToDto).ToList();
+        }
+
+        /// Lấy thống kê feedback của station
+        public async Task<StationFeedbackStatsDTO> GetStationStatsAsync(int stationId)
+        {
+            _logger.LogInformation($"Getting stats for station {stationId}");
+
+            var feedbacks = await _repository.GetByStationIdAsync(stationId, onlyPublished: true);
+
+            var stats = new StationFeedbackStatsDTO
+            {
+                StationId = stationId,
+                TotalFeedbacks = feedbacks.Count,
+                AverageRating = feedbacks.Any() ? feedbacks.Average(f => f.Rate) : 0,
+                FiveStar = feedbacks.Count(f => f.Rate == 5),
+                FourStar = feedbacks.Count(f => f.Rate == 4),
+                ThreeStar = feedbacks.Count(f => f.Rate == 3),
+                TwoStar = feedbacks.Count(f => f.Rate == 2),
+                OneStar = feedbacks.Count(f => f.Rate == 1)
+            };
+
+            return stats;
+        }
+
+        /// [Admin] Verify feedback
+        public async Task<FeedbackDTO> VerifyFeedbackAsync(int feedbackId, bool isVerified)
+        {
+            var feedback = await _repository.GetByIdAsync(feedbackId);
+            if (feedback == null)
+            {
+                throw new KeyNotFoundException($"Feedback {feedbackId} not found");
+            }
+
+            feedback.IsVerified = isVerified;
+            feedback.UpdatedDate = DateTime.UtcNow;
+
+            var updated = await _repository.UpdateAsync(feedback);
+
+            _logger.LogInformation($"Feedback {feedbackId} verification set to {isVerified}");
+
+            return MapToDto(updated);
+        }
+
+        /// [Admin] Publish/Unpublish feedback (ẩn spam)
+        public async Task<FeedbackDTO> PublishFeedbackAsync(int feedbackId, bool isPublished)
+        {
+            var feedback = await _repository.GetByIdAsync(feedbackId);
+            if (feedback == null)
+            {
+                throw new KeyNotFoundException($"Feedback {feedbackId} not found");
+            }
+
+            feedback.IsPublished = isPublished;
+            feedback.UpdatedDate = DateTime.UtcNow;
+
+            var updated = await _repository.UpdateAsync(feedback);
+
+            _logger.LogInformation($"Feedback {feedbackId} published set to {isPublished}");
+
+            return MapToDto(updated);
+        }
+
+        /// Lấy feedback theo feedbackid
+        public async Task<FeedbackDTO?> GetByIdAsync(int feedbackId)
+        {
+            _logger.LogInformation($"Getting feedback by ID: {feedbackId}");
+
+            var feedback = await _repository.GetByIdAsync(feedbackId);
+            if (feedback == null)
+            {
+                _logger.LogWarning($"Feedback {feedbackId} not found");
+                return null;
+            }
+
+            return MapToDto(feedback);
+        }
+
+
+        // ==================== HELPER ====================
 
         private FeedbackDTO MapToDto(Feedback feedback)
         {
@@ -141,10 +237,15 @@ namespace StationService.Services
             {
                 FeedbackId = feedback.FeedbackId,
                 StationId = feedback.StationId,
-                OrderId = feedback.OrderId,
+                StationName = feedback.Station?.Name,
+                UserId = feedback.UserId,
+                UserName = feedback.UserName,
                 Rate = feedback.Rate,
                 Description = feedback.Description,
-                CreatedDate = feedback.CreatedDate
+                CreatedDate = feedback.CreatedDate,
+                UpdatedDate = feedback.UpdatedDate,
+                IsVerified = feedback.IsVerified,
+                IsPublished = feedback.IsPublished
             };
         }
     }

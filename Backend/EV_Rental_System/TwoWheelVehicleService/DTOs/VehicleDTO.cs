@@ -5,6 +5,7 @@
         public int VehicleId { get; set; }
         public int? StationId { get; set; }
         public int? ModelId { get; set; }
+        public string LicensePlate { get; set; }
         public string Color { get; set; }
         public bool? IsActive { get; set; }
         public string? Status { get; set; }

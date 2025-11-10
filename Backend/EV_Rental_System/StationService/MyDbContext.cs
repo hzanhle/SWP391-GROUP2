@@ -9,18 +9,12 @@ namespace StationService
 
         public DbSet<Station> Stations { get; set; }
         public DbSet<StaffShift> StaffShifts { get; set; }
-        public DbSet<Feedback> Feedbacks { get; set; } 
+        public DbSet<Feedback> Feedbacks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            modelBuilder.Entity<Station>(e =>
-    {
-                e.Property(x => x.Name).HasMaxLength(200).IsRequired();
-                e.Property(x => x.Location).HasMaxLength(500).IsRequired();
-                e.Property(x => x.Lat).IsRequired();
-                e.Property(x => x.Lng).IsRequired();
-                    });
+
             ConfigureStation(modelBuilder);
             ConfigureStaffShift(modelBuilder);
             ConfigureFeedback(modelBuilder);
@@ -49,9 +43,6 @@ namespace StationService
                 entity.Property(e => e.Lng)
                     .IsRequired();
 
-                entity.Property(e => e.ManagerId)
-                    .IsRequired(false);
-
                 entity.Property(e => e.IsActive)
                     .IsRequired()
                     .HasDefaultValue(true);
@@ -62,7 +53,6 @@ namespace StationService
                     .HasForeignKey(ss => ss.StationId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                //
                 entity.HasMany(s => s.Feedbacks)
                     .WithOne(f => f.Station)
                     .HasForeignKey(f => f.StationId)
@@ -108,7 +98,6 @@ namespace StationService
                     .IsRequired()
                     .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                // Optional new fields
                 entity.Property(e => e.ActualCheckInTime)
                     .HasColumnType("datetime2")
                     .IsRequired(false);
@@ -146,7 +135,6 @@ namespace StationService
             });
         }
 
-
         private void ConfigureFeedback(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Feedback>(entity =>
@@ -154,13 +142,62 @@ namespace StationService
                 // Primary Key
                 entity.HasKey(e => e.FeedbackId);
 
-                // Properties
+                // Required Fields
+                entity.Property(e => e.StationId).IsRequired();
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.Rate).IsRequired();
+
+                // Optional Fields
+                entity.Property(e => e.UserName)
+                    .HasMaxLength(100)
+                    .IsRequired(false);
+
                 entity.Property(e => e.Description)
-                      .HasMaxLength(1000); // Giới hạn độ dài cho mô tả
+                    .HasMaxLength(1000)
+                    .IsRequired(false);
 
                 entity.Property(e => e.CreatedDate)
-                      .IsRequired()
-                      .HasDefaultValueSql("GETDATE()"); // Tự động lấy ngày giờ hiện tại
+                    .IsRequired()
+                    .HasDefaultValueSql("GETUTCDATE()");
+
+                entity.Property(e => e.UpdatedDate)
+                    .HasColumnType("datetime2")
+                    .IsRequired(false);
+
+                entity.Property(e => e.IsVerified)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.IsPublished)
+                    .IsRequired()
+                    .HasDefaultValue(true);
+
+                // 1 User chỉ feedback 1 lần cho 1 Station
+                entity.HasIndex(e => new { e.UserId, e.StationId })
+                    .IsUnique()
+                    .HasDatabaseName("UQ_Feedback_UserStation");
+
+                // Indexes for performance
+                entity.HasIndex(e => e.StationId)
+                    .HasDatabaseName("IX_Feedback_Station");
+
+                entity.HasIndex(e => e.UserId)
+                    .HasDatabaseName("IX_Feedback_User");
+
+                entity.HasIndex(e => e.Rate)
+                    .HasDatabaseName("IX_Feedback_Rate");
+
+                entity.HasIndex(e => e.IsPublished)
+                    .HasDatabaseName("IX_Feedback_IsPublished");
+
+                entity.HasIndex(e => e.CreatedDate)
+                    .HasDatabaseName("IX_Feedback_CreatedDate");
+
+                // Relationship to Station
+                entity.HasOne(e => e.Station)
+                    .WithMany(s => s.Feedbacks)
+                    .HasForeignKey(e => e.StationId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
 
@@ -174,7 +211,6 @@ namespace StationService
                     Location = "123 Nguyễn Huệ, Quận 1, TP.HCM",
                     Lat = 10.7769,
                     Lng = 106.7009,
-                    ManagerId = null,
                     IsActive = true
                 },
                 new Station
@@ -184,7 +220,6 @@ namespace StationService
                     Location = "456 Võ Văn Ngân, Thủ Đức, TP.HCM",
                     Lat = 10.8505,
                     Lng = 106.7717,
-                    ManagerId = null,
                     IsActive = true
                 },
                 new Station
@@ -194,7 +229,6 @@ namespace StationService
                     Location = "789 Xô Viết Nghệ Tĩnh, Bình Thạnh, TP.HCM",
                     Lat = 10.8014,
                     Lng = 106.7105,
-                    ManagerId = null,
                     IsActive = true
                 }
             );

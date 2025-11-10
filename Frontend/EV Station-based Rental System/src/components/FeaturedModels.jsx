@@ -23,9 +23,9 @@ function FeaturedModels() {
       if (data.length > 0) {
         setSelectedModel(data[0]);
       }
+      setError(null);
     } catch (err) {
-      setError(err.message);
-      console.error("Failed to fetch models:", err);
+      setError('Failed to load vehicles. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -46,7 +46,7 @@ function FeaturedModels() {
 
   if (loading) {
     return (
-      <section className="pick-section">
+      <section className="pick-section" aria-busy="true">
         <div className="container">
           <div className="pick-container">
             <div className="pick-container__title">
@@ -56,7 +56,16 @@ function FeaturedModels() {
                 Choose from our selection of high-performance electric vehicles for your next adventure or business trip
               </p>
             </div>
-            <div className="loading-message">Loading vehicles...</div>
+            <div className="pick-container__car-content">
+              <div className="pick-box">
+                {[1,2,3,4,5].map((i) => (
+                  <div key={i} className="skeleton skeleton-pill" aria-hidden="true"></div>
+                ))}
+              </div>
+              <div className="pick-car">
+                <div className="skeleton skeleton-card" aria-hidden="true"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -75,7 +84,7 @@ function FeaturedModels() {
                 Choose from our selection of high-performance electric vehicles for your next adventure or business trip
               </p>
             </div>
-            <div className="error-message">Failed to load vehicles. Please try again later.</div>
+            <div role="alert" className="error-card">{error}</div>
           </div>
         </div>
       </section>
@@ -95,12 +104,14 @@ function FeaturedModels() {
               </p>
             </div>
             <div className="pick-container__car-content">
-              <div className="pick-box">
+              <div className="pick-box" role="tablist" aria-label="Select vehicle model">
                 {models.map((model, index) => (
                   <button
                     key={model.modelId}
                     className={`${coloringButton(`btn${index + 1}`)}`}
                     onClick={() => handleModelSelect(model, `btn${index + 1}`)}
+                    role="tab"
+                    aria-selected={selectedModel?.modelId === model.modelId}
                   >
                     {model.manufacturer} {model.modelName}
                   </button>
