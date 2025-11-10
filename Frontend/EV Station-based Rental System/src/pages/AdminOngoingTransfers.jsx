@@ -117,7 +117,7 @@ export default function AdminOngoingTransfers() {
                 {filtered.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">No ongoing transfers found.</Typography>
                 ) : (
-                  <div style={{ overflowX: 'auto' }}>
+                  <div className="table-scroll-x">
                     <table>
                       <thead>
                         <tr>

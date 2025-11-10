@@ -98,7 +98,7 @@ export default function AdminTransferHistory() {
                     <MenuItem key={s} value={s}>{s === 'all' ? 'All statuses' : s}</MenuItem>
                   ))}
                 </TextField>
-                <Button variant="outlined" onClick={load} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</Button>
+                <Button variant="outlined" onClick={load} disabled={loading}>{loading ? 'Refreshing��' : 'Refresh'}</Button>
               </Stack>
             </Box>
 
@@ -110,7 +110,7 @@ export default function AdminTransferHistory() {
                 {filtered.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">No transfer history records found.</Typography>
                 ) : (
-                  <div style={{ overflowX: 'auto' }}>
+                  <div className="table-scroll-x">
                     <table>
                       <thead>
                         <tr>
