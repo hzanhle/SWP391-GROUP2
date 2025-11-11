@@ -457,7 +457,19 @@ namespace TwoWheelVehicleService.Services
 
             return vehicle;
         }
+
+        public async Task UpdateVehicleStationId(int vehicleId, int stationId)
+        {
+            var vehicle = await _vehicleRepository.GetVehicleById(vehicleId);
+            if (vehicle == null)
+            {
+                _logger.LogWarning("⚠ Cannot update station — Vehicle not found ID={VehicleId}", vehicleId);
+                return;
+            }
+            vehicle.StationId = stationId;
+            await _vehicleRepository.UpdateVehicle(vehicle);
+            _logger.LogInformation("✅ Vehicle station updated: ID={VehicleId}, StationId={StationId}", vehicleId, stationId);
+        }
+
     }
-
-
 }

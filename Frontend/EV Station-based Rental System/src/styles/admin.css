@@ -577,6 +577,9 @@
 .admin-stack { gap: 1.5rem; }
 .pt-2 { padding-top: 0.5rem; }
 
+/* Horizontal scroll helper for wide tables */
+.table-scroll-x { overflow-x: auto; }
+
 /* Mobile responsive adjustments */
 @media (max-width: 640px) {
   .admin-shell {

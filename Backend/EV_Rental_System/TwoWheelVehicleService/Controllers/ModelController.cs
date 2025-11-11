@@ -128,7 +128,7 @@ namespace TwoWheelVehicleService.Controllers
 
         // ============================ CREATE ============================
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPost]
         public async Task<IActionResult> CreateModel([FromForm] ModelRequest request)
         {
@@ -169,7 +169,7 @@ namespace TwoWheelVehicleService.Controllers
 
         // ============================ UPDATE ============================
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateModel(int id, [FromForm] ModelRequest request)
         {
@@ -237,7 +237,7 @@ namespace TwoWheelVehicleService.Controllers
 
         // ============================ PATCH ============================
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPatch("{id:int}/toggle")]
         public async Task<IActionResult> ToggleModelStatus(int id)
         {
