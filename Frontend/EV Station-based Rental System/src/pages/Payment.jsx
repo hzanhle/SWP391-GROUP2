@@ -17,6 +17,7 @@ export default function Payment() {
   const [contractDetails, setContractDetails] = useState(null)
   const [contractUrl, setContractUrl] = useState('')
   const [showFeedback, setShowFeedback] = useState(false)
+  const [selectedMethod, setSelectedMethod] = useState('VNPay')
 
   useEffect(() => {
     let connection = null
@@ -127,7 +128,7 @@ export default function Payment() {
                   ServiceFee: Number(bookingData.serviceFee || 0),
                   TotalPaymentAmount: Number(bookingData.totalCost || 0),
                   TransactionId: transactionId || '',
-                  PaymentMethod: 'VNPay',
+                  PaymentMethod: selectedMethod,
                   PaymentDate: new Date().toISOString(),
                 }
 
@@ -290,7 +291,7 @@ export default function Payment() {
                 ServiceFee: serviceFee,
                 TotalPaymentAmount: totalCost,
                 TransactionId: urlTransactionId || '',  // ✅ Use from VNPay URL callback
-                PaymentMethod: 'VNPay',
+                PaymentMethod: selectedMethod,
                 PaymentDate: new Date().toISOString(),
               }
 
@@ -378,14 +379,20 @@ export default function Payment() {
       setPaymentProcessing(true)
       setPaymentError(null)
 
-      // Get VNPay payment URL
-      const paymentRes = await bookingApi.createVNPayURL(booking.orderId, token)
-
-      if (paymentRes.data && paymentRes.data.paymentUrl) {
-        // Redirect to VNPay
-        window.location.href = paymentRes.data.paymentUrl
+      if (selectedMethod === 'VNPay') {
+        const paymentRes = await bookingApi.createVNPayURL(booking.orderId, token)
+        if (paymentRes.data && paymentRes.data.paymentUrl) {
+          window.location.href = paymentRes.data.paymentUrl
+        } else {
+          setPaymentError('Unable to create VNPay payment URL')
+        }
       } else {
-        setPaymentError('Unable to create payment URL')
+        const paymentRes = await bookingApi.createPayOSLink(booking.orderId, token)
+        if (paymentRes.data && paymentRes.data.paymentUrl) {
+          window.location.href = paymentRes.data.paymentUrl
+        } else {
+          setPaymentError('Unable to create PayOS payment link')
+        }
       }
     } catch (err) {
       console.error('Error creating payment:', err)
@@ -666,13 +673,32 @@ export default function Payment() {
               <div className="card">
                 <div className="card-body">
                   <h3 className="card-title">Payment Method</h3>
-                  
+
                   <div className="mt-8">
-                    <div className="payment-method-card" aria-busy={paymentProcessing} aria-live="polite">
-                      <div className="icon-xl">🏦</div>
-                      <h4 className="payment-title">VNPay e-wallet</h4>
-                      <p className="card-subtext">Fast and secure payment</p>
-                      <p className="card-subtext text-success mt-4">✓ 100% secure</p>
+                    <div className="stack">
+                      <button
+                        type="button"
+                        className="payment-method-card"
+                        aria-pressed={selectedMethod === 'VNPay'}
+                        onClick={() => setSelectedMethod('VNPay')}
+                      >
+                        <div className="icon-xl">🏦</div>
+                        <h4 className="payment-title">VNPay</h4>
+                        <p className="card-subtext">Fast and secure payment</p>
+                        {selectedMethod === 'VNPay' && <p className="card-subtext text-success mt-4">✓ Selected</p>}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="payment-method-card"
+                        aria-pressed={selectedMethod === 'PayOS'}
+                        onClick={() => setSelectedMethod('PayOS')}
+                      >
+                        <div className="icon-xl">💳</div>
+                        <h4 className="payment-title">PayOS</h4>
+                        <p className="card-subtext">Card and wallet payments</p>
+                        {selectedMethod === 'PayOS' && <p className="card-subtext text-success mt-4">✓ Selected</p>}
+                      </button>
                     </div>
 
                     {paymentError && (
@@ -688,7 +714,7 @@ export default function Payment() {
                         disabled={paymentProcessing}
                         variant="primary"
                       >
-                        {paymentProcessing ? 'Processing...' : 'Pay with VNPay'}
+                        {paymentProcessing ? 'Processing...' : (selectedMethod === 'VNPay' ? 'Pay with VNPay' : 'Pay with PayOS')}
                       </CTA>
                       <CTA
                         as="a"
@@ -704,7 +730,7 @@ export default function Payment() {
                   <div className="note-box mt-8">
                     <h4 className="note-title">ℹ️ Note</h4>
                     <ul className="note-list">
-                      <li>You will be redirected to the VNPay payment page</li>
+                      <li>You will be redirected to the {selectedMethod} payment page</li>
                       <li>Please do not close your browser while paying</li>
                       <li>After successful payment, the system will automatically confirm your order</li>
                     </ul>

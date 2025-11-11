@@ -496,6 +496,9 @@ namespace BookingService.Controllers
                     return BadRequest(new { message = "Payment expired" });
                 }
 
+                // Ensure payment method is set to PayOS for downstream flows (e.g., refund)
+                await _paymentService.UpdatePaymentMethodAsync(orderId, "PayOS");
+
                 var res = await payos.CreatePaymentLinkAsync(orderId, payment.Amount, $"Thanh toan don hang #{orderId}");
                 if (!res.Success || string.IsNullOrEmpty(res.CheckoutUrl))
                 {
@@ -547,6 +550,16 @@ namespace BookingService.Controllers
                 {
                     var success = await _paymentService.MarkPaymentCompletedAsync(orderId, transactionId ?? string.Empty, body);
                     _logger.LogInformation("PayOS webhook: payment completed for Order {OrderId}", orderId);
+                    try
+                    {
+                        await _hubContext.Clients.Group($"order_{orderId}")
+                            .SendAsync("PaymentSuccess", new { OrderId = orderId, TransactionId = transactionId ?? string.Empty });
+                        _logger.LogInformation("📡 SignalR PaymentSuccess sent for Order {OrderId} (PayOS)", orderId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "⚠️ Failed to send SignalR notification (PayOS) for Order {OrderId}", orderId);
+                    }
                     return Ok(new { success });
                 }
                 else if (string.Equals(status, "CANCELLED", StringComparison.OrdinalIgnoreCase) || string.Equals(status, "FAILED", StringComparison.OrdinalIgnoreCase))

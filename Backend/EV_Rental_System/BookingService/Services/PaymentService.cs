@@ -180,6 +180,27 @@ namespace BookingService.Services
                 .ToListAsync();
         }
 
+        public async Task<bool> UpdatePaymentMethodAsync(int orderId, string paymentMethod)
+        {
+            if (orderId <= 0) throw new ArgumentException("OrderId must be positive", nameof(orderId));
+            if (string.IsNullOrWhiteSpace(paymentMethod)) throw new ArgumentException("PaymentMethod cannot be null or empty", nameof(paymentMethod));
+
+            return await ExecuteInTransactionAsync(async () =>
+            {
+                var payment = await _context.Payments.FirstOrDefaultAsync(p => p.OrderId == orderId);
+                if (payment == null)
+                {
+                    _logger.LogWarning("Payment not found for Order {OrderId}", orderId);
+                    return false;
+                }
+
+                payment.PaymentMethod = paymentMethod;
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Payment method updated to {Method} for Order {OrderId}", paymentMethod, orderId);
+                return true;
+            }, $"update payment method for Order {orderId}");
+        }
+
         public async Task<IEnumerable<Payment>> GetExpiredPendingPaymentsAsync(
             int? expirationMinutes = null)
         {

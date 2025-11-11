@@ -92,6 +92,15 @@ export function createVNPayURL(orderId, token) {
   })
 }
 
+// Create PayOS payment link
+export function createPayOSLink(orderId, token) {
+  return request('/api/payment/payos/create', {
+    method: 'POST',
+    body: orderId,
+    token,
+  })
+}
+
 // Get payment status
 export function getPaymentStatus(orderId, token) {
   return request(`/api/payment/status/${orderId}`, {
@@ -167,6 +176,7 @@ export default {
   getOrderPreview,
   createOrder,
   createVNPayURL,
+  createPayOSLink,
   getPaymentStatus,
   getOrderById,
   getOrdersByUserId,
