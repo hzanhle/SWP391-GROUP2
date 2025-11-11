@@ -1,4 +1,4 @@
-﻿using BookingSerivce.Models.VNPAY;
+using BookingSerivce.Models.VNPAY;
 using BookingService;
 using BookingService.Models;
 using BookingService.Models.ModelSettings;
@@ -67,6 +67,7 @@ builder.Services.AddSignalR(options =>
 // ====================== Settings ======================
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<VNPaySettings>(builder.Configuration.GetSection("VNPaySettings"));
+builder.Services.Configure<PayOSSettings>(builder.Configuration.GetSection("PayOSSettings"));
 builder.Services.Configure<PdfSettings>(builder.Configuration.GetSection("PdfSettings"));
 builder.Services.Configure<ContractSettings>(builder.Configuration.GetSection("ContractSettings"));
 builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
@@ -91,6 +92,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ITrustScoreService, TrustScoreService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IVNPayService, VNPayService>();
+builder.Services.AddScoped<IPayOSService, PayOSService>();
 builder.Services.AddSingleton<IPdfConverterService, PuppeteerPdfService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 

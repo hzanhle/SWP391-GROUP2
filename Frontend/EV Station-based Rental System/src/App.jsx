@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import VerifyEmail from './pages/VerifyEmail'
 import Profile from './pages/Profile'
+import About from './pages/About'
 import ProfileDocs from './pages/ProfileDocs'
 import Stations from './pages/Stations'
 import Vehicles from './pages/Vehicles'
@@ -78,6 +79,7 @@ function resolveRoute() {
     case 'verify-email': return 'verify-email'
     case 'profile': return 'profile'
     case 'profile-docs': return 'profile-docs'
+    case 'about': return 'about'
     case 'stations': return 'stations'
     case 'vehicles': return 'vehicles'
     case 'booking-new': return 'booking-new'
@@ -124,6 +126,7 @@ export default function App() {
       {routeData === 'verify-email' && <VerifyEmail />}
       {routeData === 'profile' && <Profile />}
       {routeData === 'profile-docs' && <ProfileDocs />}
+      {routeData === 'about' && <About />}
       {routeData === 'stations' && <Stations />}
       {routeData === 'vehicles' && <Vehicles />}
       {routeData === 'booking-new' && <BookingNew />}

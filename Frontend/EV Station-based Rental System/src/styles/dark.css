@@ -16,6 +16,10 @@
 :root[data-theme='dark'] .hero-content__text h4,
 :root[data-theme='dark'] .hero-content__text p { color: var(--color-text); }
 
+/* About Page */
+:root[data-theme='dark'] .about-hero { background-color: var(--color-background); }
+:root[data-theme='dark'] .about-hero__title { color: var(--color-text); }
+
 /* Generic cards and surfaces */
 :root[data-theme='dark'] .card,
 :root[data-theme='dark'] .station-card,
@@ -23,7 +27,8 @@
 :root[data-theme='dark'] .stat-card,
 :root[data-theme='dark'] .map-card,
 :root[data-theme='dark'] .book-content__box,
-:root[data-theme='dark'] .booking-modal { background-color: var(--color-surface); color: var(--color-text); }
+:root[data-theme='dark'] .booking-modal,
+:root[data-theme='dark'] .summary { background-color: var(--color-surface); color: var(--color-text); }
 :root[data-theme='dark'] .booking-modal { border-color: var(--color-border); }
 
 /* Featured sections */
@@ -40,7 +45,9 @@
 :root[data-theme='dark'] .price-label { color: var(--color-muted); }
 :root[data-theme='dark'] .station-card-item,
 :root[data-theme='dark'] .model-card-item,
-:root[data-theme='dark'] .model-card-price { background-color: var(--color-surface); border-color: var(--color-border); }
+:root[data-theme='dark'] .model-card-price,
+:root[data-theme='dark'] .booking-grid .field .input,
+:root[data-theme='dark'] .booking-grid .field .select { background-color: var(--color-background); border-color: var(--color-border); color: var(--color-text); }
 :root[data-theme='dark'] .featured-stations-section { background: var(--color-background); }
 :root[data-theme='dark'] .featured-stations-section .section-header h2 { color: var(--color-text); }
 :root[data-theme='dark'] .featured-stations-section .section-header p { color: var(--color-muted); }
@@ -90,14 +97,17 @@
 :root[data-theme='dark'] .download-text h2 { color: var(--color-text); }
 :root[data-theme='dark'] .download-text p { color: var(--color-muted); }
 
-/* Auth pages */
+/* Auth pages & Forms */
 :root[data-theme='dark'] .auth-section { background: var(--color-background); }
 :root[data-theme='dark'] .auth-form-card { background: var(--color-surface); color: var(--color-text); }
 :root[data-theme='dark'] .auth-form-card h2 { color: var(--color-text); }
 :root[data-theme='dark'] .auth-form-subtitle { color: var(--color-muted); }
 :root[data-theme='dark'] .form-group label { color: var(--color-text); }
-:root[data-theme='dark'] .form-group input { background-color: var(--color-background); border-color: var(--color-border); color: var(--color-text); }
-:root[data-theme='dark'] .form-group input::placeholder { color: var(--color-muted); }
+:root[data-theme='dark'] .form-group input,
+:root[data-theme='dark'] .input,
+:root[data-theme='dark'] .select { background-color: var(--color-background); border-color: var(--color-border); color: var(--color-text); }
+:root[data-theme='dark'] .form-group input::placeholder,
+:root[data-theme='dark'] .input::placeholder { color: var(--color-muted); }
 :root[data-theme='dark'] .auth-divider { color: var(--color-border); }
 :root[data-theme='dark'] .auth-divider span { color: var(--color-muted); }
 :root[data-theme='dark'] .auth-footer-text { color: var(--color-muted); }
@@ -116,3 +126,7 @@
 :root[data-theme='dark'] .admin-nav-link { color: var(--color-muted); }
 :root[data-theme='dark'] .admin-nav-link:hover { color: var(--color-text); background-color: rgba(255,255,255,0.05); }
 :root[data-theme='dark'] .admin-main { background: var(--color-background); }
+:root[data-theme='dark'] .MuiPaper-root,
+:root[data-theme='dark'] .MuiCard-root,
+:root[data-theme='dark'] .MuiTableContainer-root { background-color: var(--color-surface) !important; }
+:root[data-theme='dark'] .MuiTableHead-root th { background-color: rgba(255,255,255,0.04) !important; }
