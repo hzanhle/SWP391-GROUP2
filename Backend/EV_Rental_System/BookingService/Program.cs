@@ -345,7 +345,7 @@ static void ConfigureCors(IServiceCollection services, IWebHostEnvironment env)
         {
             options.AddDefaultPolicy(policy =>
             {
-                policy.WithOrigins("https://yourdomain.com")
+                policy.WithOrigins("https://bcbd009fb85c.ngrok-free.app")
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials();
