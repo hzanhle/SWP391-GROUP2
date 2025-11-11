@@ -82,8 +82,6 @@ builder.Services.AddScoped<IImageRepository, ImageRepository>();
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddScoped<IModelRepository, ModelRepository>();
 builder.Services.AddScoped<IModelService, ModelService>();
-builder.Services.AddScoped<ITransferVehicleRepository, TransferVehicleRepository>();
-builder.Services.AddScoped<ITransferVehicleService, TransferVehicleService>();
 
 // ====================== JWT Configuration ======================
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

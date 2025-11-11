@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useThemeMode } from '../../theme/ThemeContext';
+import { useEffect, useMemo, useState } from 'react';
 
 function Icon({ name }) {
   const common = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -16,8 +15,13 @@ function Icon({ name }) {
 
 export default function AdminLayout({ children, active = 'overview' }) {
   const [collapsed, setCollapsed] = useState(false);
-  const { mode, toggleMode } = useThemeMode?.() || { mode: 'light', toggleMode: () => {} };
-  const isDarkMode = mode === 'dark';
+
+  useEffect(() => {
+    const el = document.documentElement;
+    const prev = el.dataset.theme;
+    el.dataset.theme = 'light';
+    return () => { if (prev) el.dataset.theme = prev; else delete el.dataset.theme; };
+  }, []);
 
   const links = useMemo(() => ([
     { key: 'overview', label: 'Overview', href: '#admin', icon: 'home' },
@@ -27,9 +31,6 @@ export default function AdminLayout({ children, active = 'overview' }) {
     { key: 'stations', label: 'Charging Stations', href: '#admin-stations', icon: 'home' },
     { key: 'staffshift', label: 'Staff Shifts', href: '#admin-staffshift', icon: 'schedule' },
     { key: 'create-staff', label: 'Create Staff', href: '#admin-create-staff', icon: 'users' },
-    { key: 'transfer', label: 'Transfer Vehicles', href: '#admin-transfer', icon: 'models' },
-    { key: 'transfer-ongoing', label: 'Ongoing Transfers', href: '#admin-transfer-ongoing', icon: 'schedule' },
-    { key: 'transfer-history', label: 'Transfer History', href: '#admin-transfer-history', icon: 'schedule' },
   ]), []);
 
   function logout(e) {
@@ -88,10 +89,6 @@ export default function AdminLayout({ children, active = 'overview' }) {
               </div>
             </div>
           )}
-          <button className="admin-theme-toggle" onClick={toggleMode} title={isDarkMode ? 'Light mode' : 'Dark mode'}>
-            <Icon name="settings" />
-            {!collapsed && <span>{isDarkMode ? 'Light' : 'Dark'}</span>}
-          </button>
           <button className="admin-logout" onClick={logout} title="Logout">
             <Icon name="logout" />
             {!collapsed && <span>Logout</span>}
