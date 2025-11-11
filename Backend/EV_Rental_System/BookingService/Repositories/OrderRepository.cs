@@ -32,7 +32,7 @@ namespace BookingService.Repositories
         {
             return await _context.Orders
                 .Include(o => o.OnlineContract)
-                .Include(o => o.Payments)
+                .Include(o => o.Payment)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
         }

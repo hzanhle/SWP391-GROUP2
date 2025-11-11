@@ -14,8 +14,6 @@ namespace AdminDashboardService.ExternalDbContexts
         public DbSet<InspectionDetail> InspectionDetails { get; set; }
         public DbSet<InspectionImage> InspectionImages { get; set; }
         public DbSet<Notification> Notifications { get; set; }
-        public DbSet<Settlement> Settlements { get; set; }
-        public DbSet<TrustScore> TrustScores { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -32,6 +30,9 @@ namespace AdminDashboardService.ExternalDbContexts
             // Configure Order
             modelBuilder.Entity<Order>(entity =>
             {
+                entity.Property(o => o.ModelPrice)
+                    .HasColumnType("decimal(18,2)");
+
                 entity.Property(o => o.TotalCost)
                     .HasColumnType("decimal(18,2)");
 

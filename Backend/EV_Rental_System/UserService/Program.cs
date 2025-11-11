@@ -7,7 +7,6 @@ using UserService;
 using UserService.Models;
 using UserService.Repositories;
 using UserService.Services;
-using UserService.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,9 +50,23 @@ builder.Services.AddSwaggerGen(options =>
         4. Paste token vào ô và click 'Authorize'"
     });
 
-    // Use operation filter to only apply security to endpoints with [Authorize]
-    // This respects [AllowAnonymous] attributes (e.g., login, register)
-    options.OperationFilter<AuthorizeCheckOperationFilter>();
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = ParameterLocation.Header
+            },
+            new List<string>()
+        }
+    });
 });
 
 // ====================== Database Configuration ======================

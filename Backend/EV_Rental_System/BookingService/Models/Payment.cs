@@ -12,12 +12,6 @@ namespace BookingService.Models
         Refunded      // Đã hoàn tiền (nếu cancel sau khi completed)
     }
 
-    public enum PaymentType
-    {
-        Deposit = 0,         // Deposit payment for booking
-        AdditionalCharge = 1 // Additional payment for settlement (damages, overtime)
-    }
-
     public class Payment
     {
         public int PaymentId { get; set; }
@@ -26,14 +20,6 @@ namespace BookingService.Models
         public int OrderId { get; set; }
         [JsonIgnore] // ✅ Prevent circular reference when serializing
         public Order? Order { get; set; }
-
-        // === Payment Type ===
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public PaymentType Type { get; set; } = PaymentType.Deposit;
-
-        // === Foreign Key đến Settlement (nullable - only for AdditionalCharge type) ===
-        public int? SettlementId { get; set; }
-        public Settlement? Settlement { get; set; }
 
         // === Payment details ===
         public decimal Amount { get; set; }

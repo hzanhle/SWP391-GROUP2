@@ -1,4 +1,4 @@
-﻿namespace BookingService.DTOs
+﻿namespace BookingSerivce.DTOs
 {
     public class ResponseDTO
     {

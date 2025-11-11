@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { getAllVehicles, createVehicle, updateVehicle, deleteVehicle, getAllModels } from '../api/vehicle'
-import { getAllStations } from '../api/station'
 import { 
   Box, Container, Card, CardContent, CardHeader, Typography, Button, TextField, Dialog, 
   DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, Stack, Grid, Paper,
@@ -9,28 +8,13 @@ import {
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material'
 import AdminLayout from '../components/admin/AdminLayout'
 
-
-function VehicleForm({ initial, onSubmit, onCancel, models, stations }) {
+function VehicleForm({ initial, onSubmit, onCancel, models }) {
   const [form, setForm] = useState(() => ({
     modelId: initial?.modelId || '',
-    stationId: initial?.stationId || '',
     color: initial?.color || '',
     status: initial?.status || 'Available',
     isActive: initial?.isActive !== undefined ? initial.isActive : true,
-    licensePlate: initial?.licensePlate || '',
   }))
-
-  // Đồng bộ form khi initial thay đổi (tránh controlled -> uncontrolled)
-  useEffect(() => {
-    setForm({
-      modelId: initial?.modelId ?? '',
-      stationId: initial?.stationId ?? '',
-      color: initial?.color ?? '',
-      status: initial?.status ?? 'Available',
-      isActive: initial?.isActive !== undefined ? !!initial.isActive : true,
-      licensePlate: initial?.licensePlate ?? '',
-    })
-  }, [initial])
 
   function updateField(k, v) { setForm(prev => ({ ...prev, [k]: v })) }
 
@@ -40,20 +24,9 @@ function VehicleForm({ initial, onSubmit, onCancel, models, stations }) {
       alert('Please select a model')
       return
     }
-    if (!form.stationId) {
-      alert('Please select a station')
-      return
-    }  
-
-    // Ép kiểu ID về số cho backend (nếu backend dùng số)
-    const payload = {
-      ...form,
-      modelId: Number(form.modelId),
-      stationId: Number(form.stationId),
-    }
-    await onSubmit(payload)
+    await onSubmit(form)
   }
-  
+
   return (
     <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Grid container spacing={2} sx={{ width: '100%' }}>
@@ -61,55 +34,23 @@ function VehicleForm({ initial, onSubmit, onCancel, models, stations }) {
           <FormControl fullWidth required>
             <InputLabel>Vehicle Model</InputLabel>
             <Select
-              value={String(form.modelId ?? '')}    // luôn dùng chuỗi để khớp với MenuItem
+              value={form.modelId}
               label="Vehicle Model"
-              onChange={e => updateField('modelId', String(e.target.value))}
+              onChange={e => updateField('modelId', e.target.value)}
             >
-              {models.map(m => {
-                const mid = m.modelId ?? m.id ?? m.Id
-                return (
-                  <MenuItem key={mid} value={String(mid)}>
-                    {m.manufacturer} {m.modelName}
-                  </MenuItem>
-                )
-              })}
+              {models.map(m => (
+                <MenuItem key={m.modelId} value={m.modelId}>
+                  {m.manufacturer} {m.modelName}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
-        </Grid>
-        <Grid size={{ xs: 12 }}>
-          <FormControl fullWidth required>
-            <InputLabel>Station</InputLabel>
-            <Select
-              value={String(form.stationId ?? '')}  // luôn dùng chuỗi để khớp với MenuItem
-              label="Station"
-              onChange={e => updateField('stationId', String(e.target.value))}
-            >
-              {stations.map(s => {
-                const sid = s.stationId ?? s.id ?? s.Id
-                return (
-                  <MenuItem key={sid} value={String(sid)}>
-                    {s.name}
-                  </MenuItem>
-                )
-              })}
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField 
-            fullWidth 
-            label="License Plate" 
-            value={form.licensePlate ?? ''} 
-            onChange={e => updateField('licensePlate', e.target.value)} 
-            required 
-            placeholder="59C2-811.69"
-          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField 
             fullWidth 
             label="Color" 
-            value={form.color ?? ''} 
+            value={form.color} 
             onChange={e => updateField('color', e.target.value)} 
             required 
             placeholder="e.g., Red, White, Black"
@@ -119,7 +60,7 @@ function VehicleForm({ initial, onSubmit, onCancel, models, stations }) {
           <FormControl fullWidth>
             <InputLabel>Status</InputLabel>
             <Select
-              value={form.status ?? 'Available'}
+              value={form.status}
               label="Status"
               onChange={e => updateField('status', e.target.value)}
             >
@@ -157,7 +98,6 @@ export default function AdminVehicles() {
   const [error, setError] = useState('')
   const [vehicles, setVehicles] = useState([])
   const [models, setModels] = useState([])
-  const [stations, setStations] = useState([])
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState(null)
   const [openDialog, setOpenDialog] = useState(false)
@@ -178,14 +118,12 @@ export default function AdminVehicles() {
     setLoading(true)
     setError('')
     try {
-      const [vehiclesRes, modelsRes, stationsRes ] = await Promise.all([
+      const [vehiclesRes, modelsRes] = await Promise.all([
         getAllVehicles(token),
-        getAllModels(token),
-        getAllStations(token)
+        getAllModels(token)
       ])
       setVehicles(Array.isArray(vehiclesRes.data) ? vehiclesRes.data : [])
       setModels(Array.isArray(modelsRes.data) ? modelsRes.data : [])
-      setStations(Array.isArray(stationsRes.data) ? stationsRes.data : [])
     } catch (e) {
       setError(e?.message || 'Failed to load vehicles')
     } finally {
@@ -258,7 +196,7 @@ export default function AdminVehicles() {
             )}
 
             {/* Search Box */}
-            <Card className="admin-card">
+            <Card>
               <CardContent>
                 <TextField 
                   fullWidth
@@ -343,7 +281,6 @@ export default function AdminVehicles() {
                   onSubmit={handleSubmit} 
                   onCancel={() => { setOpenDialog(false); setEditing(null) }}
                   models={models}
-                  stations={stations}
                 />
               </DialogContent>
             </Dialog>

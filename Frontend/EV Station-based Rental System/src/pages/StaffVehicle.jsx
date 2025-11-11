@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader } from '@mui/material'
 import StaffLayout from '../components/staff/StaffLayout'
 import { getStaffVehicles, updateVehicleStatus, getVehicleHistory } from '../api/staffVehicle'
-import { getAllModels, updateVehicleStatus as setVehicleStatus } from '../api/vehicle'
+import { getAllModels } from '../api/vehicle'
 import '../styles/staff.css'
 
 const VEHICLE_STATUSES = [
@@ -18,45 +18,14 @@ function getStatusBadge(status) {
 }
 
 function VehicleCard({ vehicle, onStatusChange, onViewHistory, getModelName }) {
-  const vehicleId = vehicle.vehicleId || vehicle.VehicleId || vehicle.id || vehicle.Id
   const [isUpdating, setIsUpdating] = useState(false)
-  const [showEditor, setShowEditor] = useState(false)
-  const vehicleBattery = Math.max(0, Math.min(100, Math.round(Number(vehicle.batteryLevel || vehicle.BatteryLevel || 0))))
-  const [formBattery, setFormBattery] = useState(vehicleBattery)
-  const [formTechnical, setFormTechnical] = useState('good')
-  const [formNotes, setFormNotes] = useState('')
   const currentStatus = vehicle.status || vehicle.Status || 'unknown'
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth.token') : ''
 
   async function handleStatusChange(newStatus) {
     if (newStatus === currentStatus) return
     try {
       setIsUpdating(true)
-      // Set vehicle.Status directly so UI reflects selected state
-      const mapped = (function mapVehicleStatus(s){
-        switch (s) {
-          case 'available': return 'Available'
-          case 'charging': return 'Charging'
-          case 'in_use': return 'InUse'
-          case 'maintenance': return 'Maintenance'
-          default: return 'Available'
-        }
-      })(newStatus)
-      await setVehicleStatus(vehicleId, mapped, token)
-
-      // Log/update battery + technical details via Staff API (history)
-      const technical = (function mapStatus(s){
-        switch (s) {
-          case 'available': return 'good'
-          case 'charging': return 'fair'
-          case 'in_use': return 'needs-check'
-          case 'maintenance': return 'needs-repair'
-          default: return 'good'
-        }
-      })(newStatus)
-      const batteryLevel = Math.max(0, Math.min(100, Math.round(Number(vehicle.batteryLevel || vehicle.BatteryLevel || 0))))
-      const payload = { BatteryLevel: batteryLevel, TechnicalStatus: technical, Notes: `Set status to ${newStatus}` }
-      await onStatusChange(vehicleId, payload)
+      await onStatusChange(vehicle.id || vehicle.Id, { status: newStatus })
     } finally {
       setIsUpdating(false)
     }
@@ -74,7 +43,7 @@ function VehicleCard({ vehicle, onStatusChange, onViewHistory, getModelName }) {
             {vehicle.licensePlate || vehicle.LicensePlate || 'N/A'}
           </h3>
           <p className="muted mb-0">
-            {getModelName(vehicle.modelId || vehicle.ModelId)}
+            {vehicle.licensePlate && vehicle.modelId ? getModelName(vehicle.modelId || vehicle.ModelId) : (vehicle.modelName || vehicle.ModelName || 'Unknown Model')}
           </p>
         </div>
         <span
@@ -128,57 +97,38 @@ function VehicleCard({ vehicle, onStatusChange, onViewHistory, getModelName }) {
         </div>
       </div>
 
-      <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
         {VEHICLE_STATUSES.map(status => (
           <button
             key={status.value}
             onClick={() => handleStatusChange(status.value)}
             disabled={isUpdating || currentStatus === status.value}
-            className="btn"
             style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '0.375rem',
               border: currentStatus === status.value ? `2px solid ${status.color}` : '1px solid var(--staff-border)',
               backgroundColor: currentStatus === status.value ? status.color : 'var(--staff-bg-primary)',
-              color: currentStatus === status.value ? status.textColor : 'var(--staff-text-secondary)'
+              color: currentStatus === status.value ? status.textColor : 'var(--staff-text-secondary)',
+              cursor: isUpdating || currentStatus === status.value ? 'not-allowed' : 'pointer',
+              opacity: isUpdating ? 0.6 : 1,
+              fontSize: '0.75rem',
+              fontWeight: '600',
+              fontFamily: 'Rubik, sans-serif',
+              transition: 'all 0.3s ease',
             }}
           >
             {status.label}
           </button>
         ))}
-        <button className="btn" onClick={()=>{ setShowEditor(s=>!s); setFormBattery(vehicleBattery); setFormTechnical('good'); setFormNotes('') }}>Update Details</button>
       </div>
 
-      {showEditor && (
-        <form onSubmit={(e)=>{e.preventDefault(); (async()=>{ try{ setIsUpdating(true); await onStatusChange(vehicleId, { BatteryLevel: formBattery, TechnicalStatus: formTechnical, Notes: formNotes || null }); setShowEditor(false);} finally { setIsUpdating(false) } })() }} className="card card-body mb-4">
-          <div className="docs-grid">
-            <div className="field">
-              <label className="label">Battery Level (0-100)</label>
-              <input type="number" min="0" max="100" value={formBattery} onChange={e=>setFormBattery(Math.max(0, Math.min(100, Number(e.target.value)||0)))} className="input" />
-            </div>
-            <div className="field">
-              <label className="label">Technical Status</label>
-              <select value={formTechnical} onChange={e=>setFormTechnical(e.target.value)} className="input">
-                <option value="good">Good</option>
-                <option value="fair">Fair</option>
-                <option value="needs-check">Needs Check</option>
-                <option value="needs-repair">Needs Repair</option>
-              </select>
-            </div>
-            <div className="field">
-              <label className="label">Notes</label>
-              <textarea rows={3} value={formNotes} onChange={e=>setFormNotes(e.target.value)} className="input" placeholder="Optional notes" />
-            </div>
-          </div>
-          <div className="row" style={{ justifyContent: 'flex-end', gap: '0.5rem' }}>
-            <button type="button" className="btn" onClick={()=>setShowEditor(false)} disabled={isUpdating}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={isUpdating}>Save</button>
-          </div>
-        </form>
-      )}
-
       <button
-        onClick={() => onViewHistory(vehicleId)}
+        onClick={() => onViewHistory(vehicle.id || vehicle.Id)}
         className="btn"
-        style={{ width: '100%', color: 'var(--staff-accent)' }}
+        style={{
+          width: '100%',
+          color: 'var(--staff-accent)',
+        }}
       >
         View History
       </button>
@@ -201,16 +151,13 @@ export default function StaffVehicle() {
   const [historyLoading, setHistoryLoading] = useState(false)
 
   const getModelName = (modelId) => {
-    const m = models.find(x => (x.modelId === modelId || x.id === modelId || x.ModelId === modelId || x.Id === modelId))
-    if (!m) return 'Unknown Model'
-    const manu = m.manufacturer || m.Manufacturer || ''
-    const name = m.modelName || m.ModelName || ''
-    return `${manu} ${name}`.trim() || (m.name || m.Name) || 'Unknown Model'
+    const m = models.find(x => x.modelId === modelId || x.id === modelId)
+    return m ? `${m.manufacturer} ${m.modelName}` : 'Unknown Model'
   }
 
   const rawUser = (typeof window !== 'undefined' && localStorage.getItem('auth.user')) || '{}'
   let currentRoleId = 0
-  try { currentRoleId = Number(JSON.parse(rawUser)?.roleId || JSON.parse(rawUser)?.RoleId || 0) } catch {error}
+  try { currentRoleId = Number(JSON.parse(rawUser)?.roleId || JSON.parse(rawUser)?.RoleId || 0) } catch {}
   const forbidden = currentRoleId !== 2
 
   useEffect(() => {
@@ -272,13 +219,8 @@ export default function StaffVehicle() {
 
   async function handleStatusChange(vehicleId, payload) {
     try {
-      const resp = await updateVehicleStatus(vehicleId, payload, token)
-      const body = resp?.data?.data || resp?.data || null
-      if (body && body.status && body.batteryLevel !== undefined) {
-        setSuccessMessage(`Updated #${body.vehicleId}: status=${body.status}, battery=${body.batteryLevel}%`)
-      } else {
-        setSuccessMessage('Vehicle status updated successfully!')
-      }
+      await updateVehicleStatus(vehicleId, payload, token)
+      setSuccessMessage('Vehicle status updated successfully!')
       setTimeout(() => setSuccessMessage(''), 3000)
 
       const [vehiclesRes, modelsRes] = await Promise.all([
@@ -442,7 +384,7 @@ export default function StaffVehicle() {
                   </p>
                   {filteredVehicles.map((vehicle) => (
                     <VehicleCard
-                      key={(vehicle.vehicleId || vehicle.VehicleId || vehicle.id || vehicle.Id) ?? Math.random()}
+                      key={vehicle.id || vehicle.Id}
                       vehicle={vehicle}
                       onStatusChange={handleStatusChange}
                       onViewHistory={handleViewHistory}

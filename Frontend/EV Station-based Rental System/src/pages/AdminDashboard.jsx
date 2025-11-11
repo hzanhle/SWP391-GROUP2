@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getDashboardSummary, getRevenueByMonth, getTopUsedVehicles, getUserGrowth } from '../api/adminDashboard'
 import { getAllStations as fetchAllStations } from '../api/station'
-import { getAllModels, getVehicleById } from '../api/vehicle'
 import { Card, CardContent, CardHeader, Typography } from '@mui/material'
 import { LineChart, BarChart, PieChart } from '@mui/x-charts'
 import AdminLayout from '../components/admin/AdminLayout'
@@ -40,40 +39,19 @@ export default function AdminDashboard() {
     ;(async () => {
       try {
         setLoading(true)
-        const [s, r, v, st, ug, sl, ml] = await Promise.all([
+        const [s, r, v, st, ug, sl] = await Promise.all([
           getDashboardSummary(token).catch(e => { throw e }), // summary is required
           getRevenueByMonth(new Date().getFullYear(), token).catch(() => ({ data: [] })),
           getTopUsedVehicles(10, token).catch(() => ({ data: [] })),
           // Avoid calling stations stats endpoint (currently failing on server); rely on station list instead
           Promise.resolve({ data: null }),
           getUserGrowth(token).catch(() => ({ data: [] })),
-          fetchAllStations(token).catch(() => ({ data: [] })),
-          getAllModels(token).catch(() => ({ data: [] }))
+          fetchAllStations(token).catch(() => ({ data: [] }))
         ])
         if (!mounted) return
         setSummary(s.data || null)
         setRevenue(Array.isArray(r.data) ? r.data : [])
-        const topRaw = Array.isArray(v.data) ? v.data : []
-        const modelList = Array.isArray(ml.data) ? ml.data : (Array.isArray(ml.data?.data) ? ml.data.data : [])
-        const modelNameById = new Map(modelList.map(m => [Number(m.modelId || m.ModelId), `${m.manufacturer || m.Manufacturer || ''} ${m.modelName || m.ModelName || ''}`.trim()]))
-        const vehicleIds = Array.from(new Set(topRaw.map(x => Number(x.vehicleId || x.VehicleId)).filter(id => Number.isFinite(id))))
-        const vehicleMap = {}
-        await Promise.all(vehicleIds.map(async (vid) => {
-          try {
-            const res = await getVehicleById(vid, token)
-            const vdata = res?.data || res?.data?.data
-            if (vdata) vehicleMap[vid] = vdata
-          } catch {}
-        }))
-        const enriched = topRaw.map(item => {
-          const vid = Number(item.vehicleId || item.VehicleId)
-          const veh = vehicleMap[vid]
-          const mid = Number(veh?.modelId || veh?.ModelId)
-          const name = modelNameById.get(mid) || (veh?.name || veh?.Name) || `Vehicle ${vid}`
-          const count = Number(item.totalBookings ?? item.TotalBookings ?? item.count ?? item.Count ?? 0)
-          return { ...item, vehicleId: vid, name, count }
-        })
-        setTopVehicles(enriched)
+        setTopVehicles(Array.isArray(v.data) ? v.data : [])
         setStationStatsState(st.data ?? null)
         setStationList(Array.isArray(sl.data) ? sl.data : [])
         setUserGrowth(Array.isArray(ug.data) ? ug.data : [])
@@ -159,8 +137,8 @@ export default function AdminDashboard() {
                     {topVehicles && topVehicles.length > 0 ? (
                       <BarChart
                         height={280}
-                        yAxis={[{ scaleType: 'band', data: (topVehicles || []).map((v, idx) => (v.name || v.Name || v.modelName || v.ModelName || `Vehicle ${idx + 1}`)).filter(name => name !== null && name !== undefined) }]}
-                        series={[{ data: (topVehicles || []).map(v => Number(v.count ?? v.usageCount ?? v.TotalBookings ?? 0)), label: 'Rentals' }]}
+                        yAxis={[{ scaleType: 'band', data: (topVehicles || []).map((v, idx) => (v.modelName || v.ModelName || v.name || v.Name || `Vehicle ${idx + 1}`)).filter(name => name !== null && name !== undefined) }]}
+                        series={[{ data: (topVehicles || []).map(v => Number(v.usageCount ?? v.UsageCount ?? v.count ?? 0)), label: 'Rentals' }]}
                         layout="horizontal"
                       />
                     ) : (

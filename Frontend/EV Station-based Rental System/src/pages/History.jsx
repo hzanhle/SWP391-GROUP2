@@ -3,13 +3,11 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import * as bookingApi from '../api/booking'
-import { getVehicleById, getAllModels } from '../api/vehicle'
 
 export default function History() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [vehicleModelMap, setVehicleModelMap] = useState({})
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -34,27 +32,6 @@ export default function History() {
         const { data } = await bookingApi.getOrdersByUserId(userId, authToken)
         const ordersList = Array.isArray(data) ? data : []
         setOrders(ordersList)
-
-        // Build vehicle -> model name mapping
-        const vehicleIds = Array.from(new Set(ordersList.map(o => Number(o.vehicleId || o.VehicleId)).filter(id => Number.isFinite(id))))
-        let modelList = []
-        try {
-          const modelsRes = await getAllModels(authToken)
-          modelList = Array.isArray(modelsRes.data) ? modelsRes.data : (Array.isArray(modelsRes.data?.data) ? modelsRes.data.data : [])
-        } catch {}
-        const modelNameById = new Map(modelList.map(m => [Number(m.modelId || m.ModelId), `${m.manufacturer || m.Manufacturer || ''} ${m.modelName || m.ModelName || ''}`.trim()]))
-        const vehicleToModel = {}
-        await Promise.all(vehicleIds.map(async (vid) => {
-          try {
-            const res = await getVehicleById(vid, authToken)
-            const v = res?.data || res?.data?.data
-            const mid = Number(v?.modelId || v?.ModelId)
-            if (Number.isFinite(mid)) {
-              vehicleToModel[vid] = modelNameById.get(mid) || String(mid)
-            }
-          } catch {}
-        }))
-        setVehicleModelMap(vehicleToModel)
         setError(null)
       } catch (err) {
         console.error('Error fetching booking history:', err)
@@ -200,7 +177,7 @@ export default function History() {
                             <h3 className="card-title">#{order.orderId || order.OrderId}</h3>
                             <p className="card-subtext">
                               {new Date(order.fromDate || order.FromDate).toLocaleDateString('vi-VN')} •
-                              {vehicleModelMap[Number(order.vehicleId || order.VehicleId)] || order.vehicle?.model || order.Vehicle?.Model || 'Unknown Model'} •
+                              {order.vehicle?.model || order.Vehicle?.Model || 'N/A'} •
                               ${Number(order.totalCost || order.TotalCost || 0).toFixed(2)}
                             </p>
                           </div>

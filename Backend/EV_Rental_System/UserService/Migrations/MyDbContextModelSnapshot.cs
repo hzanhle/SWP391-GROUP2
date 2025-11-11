@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using UserService;
 
 #nullable disable
 
@@ -22,6 +21,55 @@ namespace UserService.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("UserService.Models.CitizenInfo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly>("CitiRegisDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("CitiRegisOffice")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CitizenId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly>("DayOfBirth")
+                        .HasColumnType("date");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.PrimitiveCollection<string>("ImageUrls")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Sex")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("CitizenInfos");
+                });
+
             modelBuilder.Entity("UserService.Models.DriverLicense", b =>
                 {
                     b.Property<int>("Id")
@@ -30,112 +78,34 @@ namespace UserService.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("FullName")
+                    b.PrimitiveCollection<string>("ImageUrls")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
-
                     b.Property<string>("LicenseId")
                         .IsRequired()
-                        .HasMaxLength(12)
-                        .HasColumnType("nvarchar(12)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("LicenseType")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateOnly>("RegisterDate")
                         .HasColumnType("date");
 
                     b.Property<string>("RegisterOffice")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("DriverLicenses");
-                });
-
-            modelBuilder.Entity("UserService.Models.Image", b =>
-                {
-                    b.Property<int>("ImageId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ImageId"));
-
-                    b.Property<int?>("CitizenInfoId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("DriverLicenseId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int>("TypeId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Url")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.HasKey("ImageId");
-
-                    b.HasIndex("CitizenInfoId");
-
-                    b.HasIndex("DriverLicenseId");
-
-                    b.ToTable("Images");
-                });
-
-            modelBuilder.Entity("UserService.Models.Notification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("UserService.Models.Role", b =>
@@ -184,27 +154,28 @@ namespace UserService.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FullName")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Password")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RoleId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("StationId")
+                    b.Property<int>("TrustScore")
                         .HasColumnType("int");
 
                     b.Property<string>("UserName")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -212,111 +183,24 @@ namespace UserService.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("Users");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "admin@example.com",
-                            IsActive = true,
-                            Password = "$2a$11$eW8Gm1/ZVGw7Xu0R6q8OiOxXkdyI6g1A0Fh0Z0R0HJ0a5rXaIu3zq",
-                            PhoneNumber = "0123456789",
-                            RoleId = 3,
-                            UserName = "admin"
-                        });
                 });
 
-            modelBuilder.Entity("UserService.Models.UserService.Models.CitizenInfo", b =>
+            modelBuilder.Entity("UserService.Models.CitizenInfo", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateOnly>("CitiRegisDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("CitiRegisOffice")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("CitizenId")
-                        .IsRequired()
-                        .HasMaxLength(12)
-                        .HasColumnType("nvarchar(12)");
-
-                    b.Property<DateTime>("DayCreated")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateOnly>("DayOfBirth")
-                        .HasColumnType("date");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool?>("IsApproved")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Sex")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("CitizenInfos");
+                    b.HasOne("UserService.Models.User", null)
+                        .WithOne("CitizenInfo")
+                        .HasForeignKey("UserService.Models.CitizenInfo", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("UserService.Models.DriverLicense", b =>
                 {
-                    b.HasOne("UserService.Models.User", "User")
-                        .WithMany("DriverLicenses")
-                        .HasForeignKey("UserId")
+                    b.HasOne("UserService.Models.User", null)
+                        .WithOne("DriverLicense")
+                        .HasForeignKey("UserService.Models.DriverLicense", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("UserService.Models.Image", b =>
-                {
-                    b.HasOne("UserService.Models.UserService.Models.CitizenInfo", null)
-                        .WithMany("Images")
-                        .HasForeignKey("CitizenInfoId");
-
-                    b.HasOne("UserService.Models.DriverLicense", null)
-                        .WithMany("Images")
-                        .HasForeignKey("DriverLicenseId");
-                });
-
-            modelBuilder.Entity("UserService.Models.Notification", b =>
-                {
-                    b.HasOne("UserService.Models.User", "User")
-                        .WithMany("Notifications")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("UserService.Models.User", b =>
@@ -330,34 +214,11 @@ namespace UserService.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("UserService.Models.UserService.Models.CitizenInfo", b =>
-                {
-                    b.HasOne("UserService.Models.User", "User")
-                        .WithMany("CitizenInfos")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("UserService.Models.DriverLicense", b =>
-                {
-                    b.Navigation("Images");
-                });
-
             modelBuilder.Entity("UserService.Models.User", b =>
                 {
-                    b.Navigation("CitizenInfos");
+                    b.Navigation("CitizenInfo");
 
-                    b.Navigation("DriverLicenses");
-
-                    b.Navigation("Notifications");
-                });
-
-            modelBuilder.Entity("UserService.Models.UserService.Models.CitizenInfo", b =>
-                {
-                    b.Navigation("Images");
+                    b.Navigation("DriverLicense");
                 });
 #pragma warning restore 612, 618
         }

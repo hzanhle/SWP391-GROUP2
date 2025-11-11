@@ -105,11 +105,9 @@ export function createVehicle(vehicle, token) {
     method: 'POST',
     body: {
       modelId: vehicle.modelId,
-      stationId: vehicle.stationId,
       color: vehicle.color,
       status: vehicle.status ?? 'Available',
       isActive: vehicle.isActive ?? true,
-      licensePlate: vehicle.licensePlate || '',
     },
     token
   })
@@ -123,11 +121,9 @@ export function updateVehicle(id, vehicle, token) {
     method: 'PUT',
     body: {
       modelId: vehicle.modelId,
-      stationId: vehicle.stationId,
       color: vehicle.color,
       status: vehicle.status,
       isActive: vehicle.isActive,
-      licensePlate: vehicle.licensePlate || '',
     },
     token
   })
