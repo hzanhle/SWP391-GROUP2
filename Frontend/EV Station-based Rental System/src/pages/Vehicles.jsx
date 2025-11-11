@@ -8,6 +8,7 @@ export default function Vehicles() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedModel, setSelectedModel] = useState(null)
+  const [search, setSearch] = useState('') 
   const apiBaseUrl = (import.meta.env.VITE_VEHICLE_API_URL || import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export default function Vehicles() {
   const getImageUrl = (model) => {
     const placeholderImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23ff4d30' width='400' height='300'/%3E%3C/svg%3E"
 
-    if (!model.imageUrls || model.imageUrls.length === 0) {
+    if (!Array.isArray(model.imageUrls || model.ImageUrls) || (model.imageUrls || model.ImageUrls).length === 0) {
       return placeholderImg
     }
 
@@ -105,71 +106,89 @@ export default function Vehicles() {
             )}
 
             {!loading && !error && models.length > 0 && (
-              <div className="models-div">
-                {models
-                  .filter(model => model.isActive)
-                  .map((model) => (
-                    <div key={model.modelId} className="models-div__box">
-                      <div className="models-div__box__img">
-                        <img
-                          src={getImageUrl(model)}
-                          alt={`${model.manufacturer} ${model.modelName}`}
-                        />
-                        <div className="models-div__box__descr">
-                          <div className="models-div__box__descr__name-price">
-                            <div className="models-div__box__descr__name-price__name">
-                              <p>{model.manufacturer} {model.modelName}</p>
+              <>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '1rem 0' }}>
+                  <input
+                    type="search"
+                    placeholder="Search by manufacturer or model..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{ padding: '0.5rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '0.375rem', width: '100%', maxWidth: '320px' }}
+                    aria-label="Search vehicles"
+                  />
+                </div>
+                <div className="models-div">
+                  {models
+                    .filter(model => (model.isActive ?? model.IsActive ?? true))
+                    .filter(model => {
+                      const manu = (model.manufacturer || model.Manufacturer || '').toLowerCase()
+                      const name = (model.modelName || model.ModelName || '').toLowerCase()
+                      const q = search.toLowerCase()
+                      return !q || manu.includes(q) || name.includes(q)
+                    })
+                    .map((model) => (
+                      <div key={model.modelId || model.ModelId} className="models-div__box">
+                        <div className="models-div__box__img">
+                          <img
+                            src={getImageUrl(model)}
+                            alt={`${(model.manufacturer || model.Manufacturer || '')} ${(model.modelName || model.ModelName || '')}`.trim()}
+                          />
+                          <div className="models-div__box__descr">
+                            <div className="models-div__box__descr__name-price">
+                              <div className="models-div__box__descr__name-price__name">
+                                <p>{(model.manufacturer || model.Manufacturer)} {(model.modelName || model.ModelName)}</p>
+                                <span>
+                                  <i className="fa-solid fa-star"></i>
+                                  <i className="fa-solid fa-star"></i>
+                                  <i className="fa-solid fa-star"></i>
+                                  <i className="fa-solid fa-star"></i>
+                                  <i className="fa-solid fa-star"></i>
+                                </span>
+                              </div>
+                              <div className="models-div__box__descr__name-price__price">
+                                <h4>{formatVND(model.rentFeeForHour ?? model.RentFeeForHour ?? 0)}</h4>
+                                <p>per hour</p>
+                              </div>
+                            </div>
+                            <div className="models-div__box__descr__name-price__details">
                               <span>
-                                <i className="fa-solid fa-star"></i>
-                                <i className="fa-solid fa-star"></i>
-                                <i className="fa-solid fa-star"></i>
-                                <i className="fa-solid fa-star"></i>
-                                <i className="fa-solid fa-star"></i>
+                                <i className="fa-solid fa-car-side"></i> &nbsp; {(model.manufacturer || model.Manufacturer)}
+                              </span>
+                              <span style={{ textAlign: 'right' }}>
+                                {(model.vehicleCapacity ?? model.VehicleCapacity ?? '')} seats &nbsp; <i className="fa-solid fa-car-side"></i>
+                              </span>
+                              <span>
+                                <i className="fa-solid fa-car-side"></i> &nbsp; Automatic
+                              </span>
+                              <span style={{ textAlign: 'right' }}>
+                                Electric &nbsp; <i className="fa-solid fa-car-side"></i>
                               </span>
                             </div>
-                            <div className="models-div__box__descr__name-price__price">
-                              <h4>{formatVND(model.rentFeeForHour)}</h4>
-                              <p>per hour</p>
+                            <div className="models-div__box__descr__name-price__btn">
+                              <button
+                                onClick={() => setSelectedModel(model)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  color: 'inherit',
+                                }}
+                              >
+                                <a href="#" onClick={(e) => {
+                                  e.preventDefault()
+                                  setSelectedModel(model)
+                                }} style={{ textDecoration: 'none' }}>
+                                  View Details
+                                </a>
+                              </button>
                             </div>
-                          </div>
-                          <div className="models-div__box__descr__name-price__details">
-                            <span>
-                              <i className="fa-solid fa-car-side"></i> &nbsp; {model.manufacturer}
-                            </span>
-                            <span style={{ textAlign: "right" }}>
-                              {model.vehicleCapacity} seats &nbsp; <i className="fa-solid fa-car-side"></i>
-                            </span>
-                            <span>
-                              <i className="fa-solid fa-car-side"></i> &nbsp; Automatic
-                            </span>
-                            <span style={{ textAlign: "right" }}>
-                              Electric &nbsp; <i className="fa-solid fa-car-side"></i>
-                            </span>
-                          </div>
-                          <div className="models-div__box__descr__name-price__btn">
-                            <button
-                              onClick={() => setSelectedModel(model)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                padding: 0,
-                                color: 'inherit',
-                              }}
-                            >
-                              <a href="#" onClick={(e) => {
-                                e.preventDefault()
-                                setSelectedModel(model)
-                              }} style={{ textDecoration: 'none' }}>
-                                View Details
-                              </a>
-                            </button>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                </div>
+              </>
             )}
           </div>
 

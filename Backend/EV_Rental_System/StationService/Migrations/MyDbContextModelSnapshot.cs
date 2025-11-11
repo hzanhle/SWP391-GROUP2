@@ -22,6 +22,39 @@ namespace StationService.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("StationService.Models.Feedback", b =>
+                {
+                    b.Property<int>("FeedbackId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FeedbackId"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Rate")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StationId")
+                        .HasColumnType("int");
+
+                    b.HasKey("FeedbackId");
+
+                    b.HasIndex("StationId");
+
+                    b.ToTable("Feedbacks");
+                });
+
             modelBuilder.Entity("StationService.Models.StaffShift", b =>
                 {
                     b.Property<int>("Id")
@@ -30,18 +63,32 @@ namespace StationService.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("ActualCheckInTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ActualCheckOutTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                    b.Property<TimeOnly>("EndTime")
+                    b.Property<TimeSpan>("EndTime")
                         .HasColumnType("time");
 
-                    b.Property<DateOnly>("ShiftDate")
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("ShiftDate")
                         .HasColumnType("date");
 
-                    b.Property<TimeOnly>("StartTime")
+                    b.Property<TimeSpan>("StartTime")
                         .HasColumnType("time");
 
                     b.Property<int>("StationId")
@@ -54,10 +101,16 @@ namespace StationService.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("Scheduled");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_StaffShift_Status");
 
                     b.HasIndex("StationId", "ShiftDate")
                         .HasDatabaseName("IX_StaffShift_Station_Date");
@@ -85,6 +138,12 @@ namespace StationService.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<double>("Lat")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Lng")
+                        .HasColumnType("float");
+
                     b.Property<string>("Location")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -107,6 +166,8 @@ namespace StationService.Migrations
                         {
                             Id = 1,
                             IsActive = true,
+                            Lat = 10.776899999999999,
+                            Lng = 106.7009,
                             Location = "123 Nguyễn Huệ, Quận 1, TP.HCM",
                             Name = "Trạm Đăng Kiểm Quận 1"
                         },
@@ -114,6 +175,8 @@ namespace StationService.Migrations
                         {
                             Id = 2,
                             IsActive = true,
+                            Lat = 10.8505,
+                            Lng = 106.7717,
                             Location = "456 Võ Văn Ngân, Thủ Đức, TP.HCM",
                             Name = "Trạm Đăng Kiểm Thủ Đức"
                         },
@@ -121,15 +184,17 @@ namespace StationService.Migrations
                         {
                             Id = 3,
                             IsActive = true,
+                            Lat = 10.801399999999999,
+                            Lng = 106.7105,
                             Location = "789 Xô Viết Nghệ Tĩnh, Bình Thạnh, TP.HCM",
                             Name = "Trạm Đăng Kiểm Bình Thạnh"
                         });
                 });
 
-            modelBuilder.Entity("StationService.Models.StaffShift", b =>
+            modelBuilder.Entity("StationService.Models.Feedback", b =>
                 {
                     b.HasOne("StationService.Models.Station", "Station")
-                        .WithMany("StaffShifts")
+                        .WithMany("Feedbacks")
                         .HasForeignKey("StationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -137,8 +202,21 @@ namespace StationService.Migrations
                     b.Navigation("Station");
                 });
 
+            modelBuilder.Entity("StationService.Models.StaffShift", b =>
+                {
+                    b.HasOne("StationService.Models.Station", "Station")
+                        .WithMany("StaffShifts")
+                        .HasForeignKey("StationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Station");
+                });
+
             modelBuilder.Entity("StationService.Models.Station", b =>
                 {
+                    b.Navigation("Feedbacks");
+
                     b.Navigation("StaffShifts");
                 });
 #pragma warning restore 612, 618

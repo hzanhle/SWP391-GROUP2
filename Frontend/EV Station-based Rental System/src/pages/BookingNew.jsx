@@ -34,6 +34,8 @@ export default function BookingNew() {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState(null)
+  const [selectedVehicle, setSelectedVehicle] = useState(null)
+  const [suggestedStations, setSuggestedStations] = useState([])
   
   const [bookingLoading, setBookingLoading] = useState(false)
   const [bookingError, setBookingError] = useState(null)
@@ -210,30 +212,45 @@ export default function BookingNew() {
     init()
   }, [])
 
-  // Get first available vehicle for selected model
-  const getFirstAvailableVehicle = () => {
-    if (!selectedModel) return null
+  // Pick a random available vehicle for the selected model (optionally at selected station)
+  const getRandomAvailableVehicle = () => {
+    if (!selectedModel) return { vehicle: null, suggestions: [] }
 
     if (vehicles.length === 0) {
       console.warn('[BookingNew] No vehicles loaded from API')
-      return null
+      return { vehicle: null, suggestions: [] }
     }
 
     const modelId = selectedModel.ModelId || selectedModel.modelId
-    const available = vehicles.filter(v => {
+    const stationId = selectedStation?.Id || selectedStation?.stationId || selectedStation?.id
+
+    // Candidates: same model + status Available
+    const allCandidates = vehicles.filter(v => {
       const vModelId = v.ModelId || v.modelId
-      return vModelId === modelId
+      const vStatus = String(v.Status || v.status || '').toLowerCase()
+      return vModelId === modelId && vStatus === 'available'
     })
 
-    if (available.length > 0) {
-      const vehicleId = available[0].VehicleId || available[0].vehicleId || available[0].id
-      console.log('[BookingNew] Found vehicle for model:', { modelId, vehicleId })
-      return available[0]
+    // Filter by current station if chosen
+    const stationCandidates = stationId
+      ? allCandidates.filter(v => (v.StationId || v.stationId || v.StationID) === stationId)
+      : allCandidates
+
+    if (stationCandidates.length > 0) {
+      const idx = Math.floor(Math.random() * stationCandidates.length)
+      const chosen = stationCandidates[idx]
+      const vehicleId = chosen.VehicleId || chosen.vehicleId || chosen.id
+      console.log('[BookingNew] Random vehicle chosen for model at station:', { modelId, stationId, vehicleId })
+      return { vehicle: chosen, suggestions: [] }
     }
 
-    // Fallback: return first vehicle if available
-    console.warn('[BookingNew] No vehicle matched model, using first available')
-    return vehicles.length > 0 ? vehicles[0] : null
+    // Build suggestions from other stations having this model available
+    const suggestionStationIds = Array.from(new Set(allCandidates
+      .map(v => v.StationId || v.stationId || v.StationID)
+      .filter(Boolean)))
+    const suggestions = stations.filter(s => suggestionStationIds.includes(s.Id || s.stationId || s.id))
+    console.warn('[BookingNew] No vehicles available at selected station. Suggestions:', suggestions.map(s => s.Name || s.name))
+    return { vehicle: null, suggestions }
   }
 
   const handlePreview = async () => {
@@ -269,10 +286,12 @@ export default function BookingNew() {
     try {
       setPreviewLoading(true)
 
-      // 1) L��y xe khả dụng đầu tiên theo model đã chọn
-      const chosenVehicle = getFirstAvailableVehicle()
+      // 1) Chọn ngẫu nhiên 1 xe khả dụng theo model (ưu tiên tại trạm đã chọn)
+      const pick = getRandomAvailableVehicle()
+      const chosenVehicle = pick.vehicle
       if (!chosenVehicle) {
-        setPreviewError('No vehicles available for this model. Please choose another model.')
+        setSuggestedStations(pick.suggestions || [])
+        setPreviewError('Hết xe ở trạm này cho mẫu đã chọn. Vui lòng chọn trạm khác bên dưới.')
         return
       }
 
@@ -334,6 +353,8 @@ export default function BookingNew() {
       }
 
       setPreview(mappedPreview)
+      setSelectedVehicle(chosenVehicle)
+      setSuggestedStations([])
     } catch (err) {
       console.error('Error getting preview:', err)
       setPreviewError(err?.message || 'Error calculating cost. Please try again.')
@@ -380,9 +401,9 @@ export default function BookingNew() {
         return
       }
 
-      const vehicleToUse = getFirstAvailableVehicle()
+      const vehicleToUse = selectedVehicle
       if (!vehicleToUse) {
-        setBookingError('Cannot find a vehicle. Please go back and try again.')
+        setBookingError('No selected vehicle. Please preview again.')
         return
       }
 
@@ -568,23 +589,68 @@ export default function BookingNew() {
 
                 {/* Step 2 */}
                 {step === 2 && (
-                  <BookingStep3_Schedule
-                    selectedStation={selectedStation}
-                    selectedModel={selectedModel}
-                    pickupDate={pickupDate}
-                    dropoffDate={dropoffDate}
-                    onPickupDateChange={setPickupDate}
-                    onDropoffDateChange={setDropoffDate}
-                    preview={preview}
-                    previewLoading={previewLoading}
-                    previewError={previewError}
-                    bookingLoading={bookingLoading}
-                    bookingError={bookingError}
-                    onPreview={handlePreview}
-                    onConfirmBooking={handleConfirmBooking}
-                    termsAccepted={termsAccepted}
-                    setTermsAccepted={setTermsAccepted}
-                  />
+                  <>
+                    <BookingStep3_Schedule
+                      selectedStation={selectedStation}
+                      selectedModel={selectedModel}
+                      pickupDate={pickupDate}
+                      dropoffDate={dropoffDate}
+                      onPickupDateChange={setPickupDate}
+                      onDropoffDateChange={setDropoffDate}
+                      preview={preview}
+                      previewLoading={previewLoading}
+                      previewError={previewError}
+                      bookingLoading={bookingLoading}
+                      bookingError={bookingError}
+                      onPreview={handlePreview}
+                      onConfirmBooking={handleConfirmBooking}
+                      termsAccepted={termsAccepted}
+                      setTermsAccepted={setTermsAccepted}
+                    />
+
+                    {/* Station suggestions when no vehicles at current station */}
+                    {previewError && suggestedStations.length > 0 && (
+                      <div className="mt-6">
+                        <div className="error-message error-visible warning" role="alert">
+                          <span>Gợi ý trạm khác có sẵn xe cho mẫu này:</span>
+                        </div>
+                        <div className="stations-grid">
+                          {suggestedStations.map((station, index) => {
+                            const stationId = station.Id ?? station.stationId ?? station.id
+                            return (
+                              <div
+                                key={`suggestion-${stationId || index}`}
+                                className={`station-card-item`}
+                                onClick={() => {
+                                  setSelectedStation(station)
+                                  setStep(0)
+                                  setPreview(null)
+                                  setPreviewError(null)
+                                  setSuggestedStations([])
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    setSelectedStation(station)
+                                    setStep(0)
+                                    setPreview(null)
+                                    setPreviewError(null)
+                                    setSuggestedStations([])
+                                  }
+                                }}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Select ${station.Name || station.name}`}
+                              >
+                                <h4 className="station-card-name">{station.Name || station.name}</h4>
+                                <p className="station-card-location">{station.Location || station.location}</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <div className="row-between mt-8">

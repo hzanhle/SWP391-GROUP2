@@ -26,6 +26,18 @@ namespace BookingService.Services
         Task UpdateScoreOnNoShowAsync(int userId, int orderId);
 
         /**
+         * Cập nhật (trừ) điểm khi trả xe muộn.
+         * Penalty: -5 điểm mỗi giờ trễ (sau grace period).
+         */
+        Task UpdateScoreOnLateReturnAsync(int userId, int orderId, decimal overtimeHours);
+
+        /**
+         * Cập nhật (trừ) điểm khi có hư hỏng xe.
+         * Penalty: -10 điểm (minor) hoặc -30 điểm (major, >= 1M VND).
+         */
+        Task UpdateScoreOnDamageAsync(int userId, int orderId, decimal damageAmount);
+
+        /**
          * Lấy toàn bộ object TrustScore (ví dụ: cho trang admin).
          */
         Task<TrustScore?> GetFullTrustScoreAsync(int userId);
@@ -39,5 +51,20 @@ namespace BookingService.Services
          * Lấy điểm trung bình của toàn hệ thống.
          */
         Task<double> GetAverageScoreAsync();
+
+        /**
+         * Admin manually adjusts a user's trust score with reason.
+         */
+        Task ManuallyAdjustScoreAsync(int userId, int changeAmount, string reason, int adjustedByAdminId);
+
+        /**
+         * Get trust score change history for a user.
+         */
+        Task<List<TrustScoreHistory>> GetUserScoreHistoryAsync(int userId);
+
+        /**
+         * Get recent trust score changes for a user (last N entries).
+         */
+        Task<List<TrustScoreHistory>> GetRecentUserScoreHistoryAsync(int userId, int count = 10);
     }
 }
