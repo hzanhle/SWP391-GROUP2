@@ -80,16 +80,45 @@ namespace BookingService.Services
                 // Chọn chế độ SMTP theo cổng:
                 // - 587: STARTTLS (EnableSsl = true) => Gmail yêu cầu MustIssueSTARTTLSFirst
                 // - 465: SSL implicit (EnableSsl = true)
-                var host = _settings.SmtpServer;
-                var port = _settings.SmtpPort > 0 ? _settings.SmtpPort : 587;
+                // Chuẩn hóa cấu hình host/port để tránh lỗi khi cấu hình dạng "smtp.gmail.com:587" hoặc kèm scheme
+                var rawHost = _settings.SmtpServer?.Trim() ?? string.Empty;
+                string host = rawHost;
+                int port = _settings.SmtpPort > 0 ? _settings.SmtpPort : 587;
+
+                // Loại bỏ scheme nếu có (smtp://, smtps://, http://, https://)
+                if (host.StartsWith("smtp://", StringComparison.OrdinalIgnoreCase) ||
+                    host.StartsWith("smtps://", StringComparison.OrdinalIgnoreCase) ||
+                    host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                    host.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    var idx = host.IndexOf("://", StringComparison.Ordinal);
+                    host = host.Substring(idx + 3);
+                }
+
+                // Nếu host có kèm port "host:port" thì tách ra (ưu tiên giá trị SmtpPort nếu > 0)
+                var colonIdx = host.LastIndexOf(':');
+                if (colonIdx > -1 && colonIdx < host.Length - 1 &&
+                    int.TryParse(host.Substring(colonIdx + 1), out var parsedPort))
+                {
+                    host = host.Substring(0, colonIdx);
+                    if (_settings.SmtpPort <= 0)
+                    {
+                        port = parsedPort;
+                    }
+                }
+
                 var enableSsl = _settings.EnableSsl; // nên là true
+                if (port == 465) enableSsl = true; // 465 yêu cầu SSL implicit
+
+                // Gmail App Password thường hiển thị có khoảng trắng, cần bỏ khoảng trắng khi sử dụng
+                var senderPass = (_settings.SenderPassword ?? string.Empty).Replace(" ", string.Empty).Trim();
 
                 using var smtp = new SmtpClient(host, port)
                 {
                     EnableSsl = enableSsl,
                     DeliveryMethod = SmtpDeliveryMethod.Network,
                     UseDefaultCredentials = false,
-                    Credentials = new NetworkCredential(_settings.SenderEmail.Trim(), _settings.SenderPassword),
+                    Credentials = new NetworkCredential(_settings.SenderEmail.Trim(), senderPass),
                     Timeout = 15000
                 };
 
@@ -116,7 +145,7 @@ namespace BookingService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Lỗi không xác định khi gửi email đến {Email}", toEmail);
+                _logger.LogError(ex, "❌ Lỗi không x��c định khi gửi email đến {Email}", toEmail);
                 return false;
             }
         }
