@@ -92,6 +92,7 @@ builder.Services.AddCors(options =>
 // Dependency Injection
 builder.Services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService.Services.AdminDashboardService>();
+builder.Services.AddScoped<IRentalAnalyticsService, RentalAnalyticsService>();
 
 // <--- THÊM CẤU HÌNH XÁC THỰC JWT
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

@@ -23,6 +23,7 @@ namespace BookingService.Repositories
         {
             return await _context.Payments
                 .Include(p => p.Order)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
         }
 
@@ -30,6 +31,7 @@ namespace BookingService.Repositories
         {
             return await _context.Payments
                 .Include(p => p.Order)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.OrderId == orderId);
         }
 
@@ -37,6 +39,7 @@ namespace BookingService.Repositories
         {
             return await _context.Payments
                 .Include(p => p.Order)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.TransactionId == transactionId);
         }
 
@@ -44,6 +47,7 @@ namespace BookingService.Repositories
         {
             return await _context.Payments
                 .Include(p => p.Order)
+                .AsNoTracking()
                 .Where(p => p.Status == status)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
@@ -53,6 +57,7 @@ namespace BookingService.Repositories
         {
             return await _context.Payments
                 .Include(p => p.Order)
+                .AsNoTracking()
                 .Where(p => p.PaymentMethod == paymentMethod)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
@@ -62,6 +67,7 @@ namespace BookingService.Repositories
         {
             return await _context.Payments
                 .Include(p => p.Order)
+                .AsNoTracking()
                 .Where(p => p.Status == PaymentStatus.Pending)
                 .OrderBy(p => p.CreatedAt)
                 .ToListAsync();

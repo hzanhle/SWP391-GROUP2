@@ -22,6 +22,37 @@ namespace BookingService.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("BookingService.Models.Feedback", b =>
+                {
+                    b.Property<int>("FeedbackId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FeedbackId"));
+
+                    b.Property<string>("Comments")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("VehicleId")
+                        .HasColumnType("int");
+
+                    b.Property<double>("VehicleRating")
+                        .HasColumnType("float");
+
+                    b.HasKey("FeedbackId");
+
+                    b.ToTable("Feedbacks");
+                });
+
             modelBuilder.Entity("BookingService.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -230,6 +261,73 @@ namespace BookingService.Migrations
                     b.ToTable("Payments");
                 });
 
+            modelBuilder.Entity("BookingService.Models.Settlement", b =>
+                {
+                    b.Property<int>("SettlementId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SettlementId"));
+
+                    b.Property<DateTime>("ActualReturnTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("AdditionalPaymentRequired")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DamageCharge")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DamageDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal>("DepositRefundAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("FinalizedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("InitialDeposit")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("InvoiceUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsFinalized")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("OvertimeFee")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OvertimeHours")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("ScheduledReturnTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("TotalAdditionalCharges")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("SettlementId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("IsFinalized");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("Settlements");
+                });
+
             modelBuilder.Entity("BookingService.Models.TrustScore", b =>
                 {
                     b.Property<int>("TrustScoreId")
@@ -259,6 +357,58 @@ namespace BookingService.Migrations
                     b.ToTable("TrustScores");
                 });
 
+            modelBuilder.Entity("BookingService.Models.TrustScoreHistory", b =>
+                {
+                    b.Property<int>("HistoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HistoryId"));
+
+                    b.Property<int?>("AdjustedByAdminId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ChangeAmount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ChangeType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("NewScore")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PreviousScore")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("HistoryId");
+
+                    b.HasIndex("ChangeType");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TrustScoreHistories");
+                });
+
             modelBuilder.Entity("BookingService.Models.OnlineContract", b =>
                 {
                     b.HasOne("BookingService.Models.Order", "Order")
@@ -275,6 +425,17 @@ namespace BookingService.Migrations
                     b.HasOne("BookingService.Models.Order", "Order")
                         .WithOne("Payment")
                         .HasForeignKey("BookingService.Models.Payment", "OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("BookingService.Models.Settlement", b =>
+                {
+                    b.HasOne("BookingService.Models.Order", "Order")
+                        .WithOne()
+                        .HasForeignKey("BookingService.Models.Settlement", "OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

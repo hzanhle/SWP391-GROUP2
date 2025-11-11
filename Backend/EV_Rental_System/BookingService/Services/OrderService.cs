@@ -19,6 +19,9 @@ namespace BookingService.Services
         private readonly MyDbContext _context;
         private readonly ILogger<OrderService> _logger;
         private readonly OrderSettings _orderSettings;
+        private readonly IImageStorageService _imageStorageService;
+        private readonly IVehicleCheckInRepository _vehicleCheckInRepo;
+        private readonly IVehicleReturnRepository _vehicleReturnRepo;
 
         // ⚠️ ĐÃ XÓA: IOnlineContractService - Không còn tự động tạo contract nữa!
 
@@ -31,7 +34,10 @@ namespace BookingService.Services
             IUnitOfWork unitOfWork,
             MyDbContext context,
             ILogger<OrderService> logger,
-            IOptions<OrderSettings> orderSettings)
+            IOptions<OrderSettings> orderSettings,
+            IImageStorageService imageStorageService,
+            IVehicleCheckInRepository vehicleCheckInRepo,
+            IVehicleReturnRepository vehicleReturnRepo)
         {
             _orderRepo = orderRepo ?? throw new ArgumentNullException(nameof(orderRepo));
             _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
@@ -42,6 +48,9 @@ namespace BookingService.Services
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _orderSettings = orderSettings?.Value ?? throw new ArgumentNullException(nameof(orderSettings));
+            _imageStorageService = imageStorageService ?? throw new ArgumentNullException(nameof(imageStorageService));
+            _vehicleCheckInRepo = vehicleCheckInRepo ?? throw new ArgumentNullException(nameof(vehicleCheckInRepo));
+            _vehicleReturnRepo = vehicleReturnRepo ?? throw new ArgumentNullException(nameof(vehicleReturnRepo));
         }
 
         #region Order Preview
@@ -55,11 +64,11 @@ namespace BookingService.Services
                 "Getting order preview for User {UserId}, Vehicle {VehicleId}, from {FromDate} to {ToDate}",
                 userId, request.VehicleId, request.FromDate, request.ToDate);
 
-            // 1. Validate thời gian - THROW EXCEPTION nếu invalid
+            // 1. Validate thời gian
             var validationResult = ValidateDateRange(request.FromDate, request.ToDate);
             if (!validationResult.IsValid)
             {
-                throw new ArgumentException(validationResult.Message);
+                return CreatePreviewResponse(request, isAvailable: false, validationResult.Message, userId);
             }
 
             // 2. Kiểm tra tính khả dụng của xe
@@ -68,14 +77,7 @@ namespace BookingService.Services
                 request.FromDate,
                 request.ToDate);
 
-            // 3. THROW EXCEPTION nếu xe không available
-            if (!isAvailable)
-            {
-                throw new InvalidOperationException(
-                    "Xe đã được đặt trong khoảng thời gian này. Vui lòng chọn thời gian khác.");
-            }
-
-            // 4. Tính toán chi phí
+            // 3. Tính toán chi phí
             var costBreakdown = await CalculateOrderCostAsync(
                 userId,
                 request.FromDate,
@@ -83,7 +85,7 @@ namespace BookingService.Services
                 request.RentFeeForHour,
                 request.ModelPrice);
 
-            // 5. Trả về response - CHỈ KHI MỌI THỨ ĐỀU OK
+            // 4. Trả về response
             return new OrderPreviewResponse
             {
                 UserId = userId,
@@ -94,10 +96,13 @@ namespace BookingService.Services
                 DepositAmount = costBreakdown.Deposit,
                 ServiceFee = costBreakdown.ServiceFee,
                 TotalPaymentAmount = costBreakdown.TotalAmount,
-                IsAvailable = true,
-                Message = "Xe khả dụng. Vui lòng xác nhận đặt xe."
+                IsAvailable = isAvailable,
+                Message = isAvailable
+                    ? "Xe kh��� dụng. Vui lòng xác nhận đặt xe."
+                    : "Xe đã được đặt trong khoảng thời gian này. Vui lòng chọn thời gian khác."
             };
         }
+
         #endregion
 
         #region Create Order
@@ -386,14 +391,20 @@ namespace BookingService.Services
         #region Start & Complete Rental
 
         /// <summary>
-        /// Bắt đầu chuyến thuê xe
+        /// Bắt đầu chuyến thuê xe (với hình ảnh xác nhận xe)
         /// </summary>
-        public async Task<bool> StartRentalAsync(int orderId)
+        public async Task<bool> StartRentalAsync(int orderId, List<IFormFile> images, int confirmedBy, VehicleCheckInRequest request)
         {
-            _logger.LogInformation("Starting rental for Order {OrderId}", orderId);
+            _logger.LogInformation("Starting rental for Order {OrderId} with vehicle images", orderId);
 
             try
             {
+                // Validate images
+                if (images == null || images.Count == 0)
+                {
+                    throw new InvalidOperationException("Phải có ít nhất một ảnh xe để bắt đầu thuê.");
+                }
+
                 await _unitOfWork.BeginTransactionAsync();
 
                 var order = await GetOrderOrThrowAsync(orderId);
@@ -404,20 +415,43 @@ namespace BookingService.Services
                         $"Order {orderId} must be in Confirmed status to start rental. Current status: {order.Status}");
                 }
 
+                // Save images
+                var imageUrls = await _imageStorageService.SaveImagesAsync(images, "vehicle-checkin");
+
+                if (string.IsNullOrEmpty(imageUrls))
+                {
+                    throw new InvalidOperationException("Không thể lưu ảnh xe. Vui lòng thử lại.");
+                }
+
+                // Create vehicle check-in record
+                var checkIn = new VehicleCheckIn
+                {
+                    OrderId = orderId,
+                    CheckInTime = DateTime.UtcNow,
+                    OdometerReading = request.OdometerReading,
+                    FuelLevel = request.FuelLevel,
+                    ImageUrls = imageUrls,
+                    Notes = request.Notes,
+                    ConfirmedBy = confirmedBy
+                };
+
+                await _vehicleCheckInRepo.CreateAsync(checkIn);
+
+                // Start the rental (update order status)
                 order.StartRental();
                 await _orderRepo.UpdateAsync(order);
 
                 await _notificationService.CreateNotificationAsync(
                     userId: order.UserId,
                     title: "Chuyến thuê đã bắt đầu",
-                    description: $"Chuyến thuê xe #{orderId} đã bắt đầu.",
+                    description: $"Chuyến thuê xe #{orderId} đã bắt đầu. Ảnh xe đã được lưu.",
                     dataType: "RentalStarted",
                     dataId: orderId,
                     staffId: null);
 
                 await _unitOfWork.CommitTransactionAsync();
 
-                _logger.LogInformation("Rental started successfully for Order {OrderId}", orderId);
+                _logger.LogInformation("Rental started successfully for Order {OrderId} with {ImageCount} images", orderId, images.Count);
                 return true;
             }
             catch (Exception ex)
@@ -429,14 +463,20 @@ namespace BookingService.Services
         }
 
         /// <summary>
-        /// Hoàn thành chuyến thuê xe
+        /// Hoàn thành chuyến thuê xe (với hình ảnh xác nhận trả xe)
         /// </summary>
-        public async Task<bool> CompleteRentalAsync(int orderId)
+        public async Task<bool> CompleteRentalAsync(int orderId, List<IFormFile> images, int confirmedBy, VehicleReturnRequest request)
         {
-            _logger.LogInformation("Completing rental for Order {OrderId}", orderId);
+            _logger.LogInformation("Completing rental for Order {OrderId} with vehicle return images", orderId);
 
             try
             {
+                // Validate images
+                if (images == null || images.Count == 0)
+                {
+                    throw new InvalidOperationException("Phải có ít nhất một ảnh xe để hoàn thành thuê.");
+                }
+
                 await _unitOfWork.BeginTransactionAsync();
 
                 var order = await GetOrderOrThrowAsync(orderId);
@@ -447,23 +487,56 @@ namespace BookingService.Services
                         $"Order {orderId} must be in InProgress status to complete. Current status: {order.Status}");
                 }
 
+                // Save return images
+                var imageUrls = await _imageStorageService.SaveImagesAsync(images, "vehicle-return");
+
+                if (string.IsNullOrEmpty(imageUrls))
+                {
+                    throw new InvalidOperationException("Không thể lưu ảnh xe. Vui lòng thử lại.");
+                }
+
+                // Create vehicle return record
+                var vehicleReturn = new VehicleReturn
+                {
+                    OrderId = orderId,
+                    ReturnTime = DateTime.UtcNow,
+                    OdometerReading = request.OdometerReading,
+                    FuelLevel = request.FuelLevel,
+                    ImageUrls = imageUrls,
+                    ConditionNotes = request.ConditionNotes,
+                    HasDamage = request.HasDamage,
+                    DamageDescription = request.DamageDescription,
+                    // DamageCharge removed - customers should not set monetary charges
+                    // Staff will add actual damage charges via POST /api/settlement/{orderId}/damage
+                    DamageCharge = 0, // Default to 0 until staff assessment
+                    ConfirmedBy = confirmedBy
+                };
+
+                await _vehicleReturnRepo.CreateAsync(vehicleReturn);
+
+                // Complete the order (update status)
                 order.Complete();
                 await _orderRepo.UpdateAsync(order);
 
-                // Update Trust Score
+                // Update Trust Score (+10 bonus for completion)
                 await _trustScoreService.UpdateScoreOnRentalCompletionAsync(order.UserId, orderId);
+
+                var notificationMessage = vehicleReturn.HasDamage
+                    ? $"Chuyến thuê xe #{orderId} đã hoàn thành. Có phát hiện hư hỏng, vui lòng chờ xử lý thanh toán."
+                    : $"Chuyến thuê xe #{orderId} đã hoàn thành. Cảm ơn bạn đã sử dụng dịch vụ!";
 
                 await _notificationService.CreateNotificationAsync(
                     userId: order.UserId,
                     title: "Chuyến thuê hoàn thành",
-                    description: $"Chuyến thuê xe #{orderId} đã hoàn thành. Cảm ơn bạn đã sử dụng dịch vụ!",
+                    description: notificationMessage,
                     dataType: "RentalCompleted",
                     dataId: orderId,
                     staffId: null);
 
                 await _unitOfWork.CommitTransactionAsync();
 
-                _logger.LogInformation("Rental completed successfully for Order {OrderId}", orderId);
+                _logger.LogInformation("Rental completed successfully for Order {OrderId} with {ImageCount} return images",
+                    orderId, images.Count);
                 return true;
             }
             catch (Exception ex)
