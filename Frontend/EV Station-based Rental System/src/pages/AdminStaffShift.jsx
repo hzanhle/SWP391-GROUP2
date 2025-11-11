@@ -7,6 +7,8 @@ import {
 import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material'
 import AdminLayout from '../components/admin/AdminLayout'
 import * as staffApi from '../api/staffShiff'
+import { getAllUsers } from '../api/client'
+import { getActiveStations } from '../api/station'
 
 export default function AdminStaffShift() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth.token') : ''
@@ -16,20 +18,28 @@ export default function AdminStaffShift() {
   const [submitting, setSubmitting] = useState(false)
   const [openDialog, setOpenDialog] = useState(false)
   const [form, setForm] = useState({ userId: '', stationId: '', shiftDate: '', startTime: '', endTime: '' })
+  const [users, setUsers] = useState([])
+  const [stations, setStations] = useState([])
 
   useEffect(() => {
     let mounted = true
     ;(async () => {
       try {
         setLoading(true)
-        const res = await staffApi.getAllShifts(token)
+        const [shiftsRes, usersRes, stationsRes] = await Promise.all([
+          staffApi.getAllShifts(token),
+          getAllUsers(token).catch(() => ({ data: [] })),
+          getActiveStations(token).catch(() => ({ data: [] })),
+        ])
         if (!mounted) return
-        setShifts(Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []))
+        setShifts(Array.isArray(shiftsRes.data?.data) ? shiftsRes.data.data : (Array.isArray(shiftsRes.data) ? shiftsRes.data : []))
+        setUsers(Array.isArray(usersRes.data) ? usersRes.data : [])
+        setStations(Array.isArray(stationsRes.data) ? stationsRes.data : [])
         setError('')
       } catch (e) {
         setError(e.message || 'Failed to load shifts')
-      } finally { 
-        if (mounted) setLoading(false) 
+      } finally {
+        if (mounted) setLoading(false)
       }
     })()
     return () => { mounted = false }
@@ -71,7 +81,7 @@ export default function AdminStaffShift() {
 
   return (
     <AdminLayout active="staffshift">
-      <Box sx={{ py: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <Box sx={{ py: 3, backgroundColor: (theme) => theme.palette.background.default, minHeight: '100vh' }}>
         <Container maxWidth="lg">
           <Stack spacing={3}>
             {/* Header */}
@@ -108,7 +118,7 @@ export default function AdminStaffShift() {
             ) : (
               <TableContainer component={Paper}>
                 <Table>
-                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableHead sx={{ backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : '#f5f5f5' }}>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 600 }}>ID</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Staff</TableCell>
@@ -158,27 +168,43 @@ export default function AdminStaffShift() {
                 <Stack spacing={2}>
                   <TextField
                     fullWidth
-                    label="User ID"
-                    type="number"
+                    select
+                    label="User"
                     value={form.userId}
                     onChange={e => setForm({ ...form, userId: e.target.value })}
-                  />
+                    SelectProps={{ native: true }}
+                  >
+                    <option value="">Select a user</option>
+                    {users
+                      .filter(u => (u.roleId ?? u.RoleId) === 2) // staff only
+                      .map(u => (
+                        <option key={u.id ?? u.Id} value={u.id ?? u.Id}>
+                          {(u.fullName ?? u.FullName ?? u.userName ?? u.UserName) || `User #${u.id ?? u.Id}`}
+                        </option>
+                      ))}
+                  </TextField>
                   <TextField
                     fullWidth
-                    label="Station ID"
-                    type="number"
+                    select
+                    label="Station"
                     value={form.stationId}
                     onChange={e => setForm({ ...form, stationId: e.target.value })}
-                  />
+                    SelectProps={{ native: true }}
+                  >
+                    <option value="">Select a station</option>
+                    {stations.map(s => (
+                      <option key={s.Id ?? s.id ?? s.stationId} value={s.Id ?? s.id ?? s.stationId}>
+                        {s.Name ?? s.name}
+                      </option>
+                    ))}
+                  </TextField>
                   <TextField
                     fullWidth
                     label="Date"
                     type="date"
                     value={form.shiftDate}
                     onChange={e => setForm({ ...form, shiftDate: e.target.value })}
-                    slotProps={{
-                      inputLabel: { shrink: true }
-                    }}
+                    InputLabelProps={{ shrink: true }}
                   />
                   <TextField
                     fullWidth
@@ -186,9 +212,7 @@ export default function AdminStaffShift() {
                     type="time"
                     value={form.startTime}
                     onChange={e => setForm({ ...form, startTime: e.target.value })}
-                    slotProps={{
-                      inputLabel: { shrink: true }
-                    }}
+                    InputLabelProps={{ shrink: true }}
                   />
                   <TextField
                     fullWidth
@@ -196,9 +220,7 @@ export default function AdminStaffShift() {
                     type="time"
                     value={form.endTime}
                     onChange={e => setForm({ ...form, endTime: e.target.value })}
-                    slotProps={{
-                      inputLabel: { shrink: true }
-                    }}
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Stack>
               </DialogContent>

@@ -1,4 +1,4 @@
-﻿using BookingService.DTOs;
+using BookingService.DTOs;
 using BookingService.Models;
 using BookingService.Repositories;
 using BookingService.Services.SignalR;
@@ -25,6 +25,8 @@ namespace BookingService.Services
 
         // ⚠️ ĐÃ XÓA: IOnlineContractService - Không còn tự động tạo contract nữa!
 
+        private readonly IServiceProvider _serviceProvider;
+
         public OrderService(
             IOrderRepository orderRepo,
             IPaymentService paymentService,
@@ -35,9 +37,7 @@ namespace BookingService.Services
             MyDbContext context,
             ILogger<OrderService> logger,
             IOptions<OrderSettings> orderSettings,
-            IImageStorageService imageStorageService,
-            IVehicleCheckInRepository vehicleCheckInRepo,
-            IVehicleReturnRepository vehicleReturnRepo)
+            IServiceProvider serviceProvider)
         {
             _orderRepo = orderRepo ?? throw new ArgumentNullException(nameof(orderRepo));
             _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
@@ -48,9 +48,7 @@ namespace BookingService.Services
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _orderSettings = orderSettings?.Value ?? throw new ArgumentNullException(nameof(orderSettings));
-            _imageStorageService = imageStorageService ?? throw new ArgumentNullException(nameof(imageStorageService));
-            _vehicleCheckInRepo = vehicleCheckInRepo ?? throw new ArgumentNullException(nameof(vehicleCheckInRepo));
-            _vehicleReturnRepo = vehicleReturnRepo ?? throw new ArgumentNullException(nameof(vehicleReturnRepo));
+            _serviceProvider = serviceProvider;
         }
 
         #region Order Preview
@@ -535,8 +533,38 @@ namespace BookingService.Services
 
                 await _unitOfWork.CommitTransactionAsync();
 
-                _logger.LogInformation("Rental completed successfully for Order {OrderId} with {ImageCount} return images",
-                    orderId, images.Count);
+                // Attempt deposit refund for PayOS payments (non-blocking)
+                try
+                {
+                    var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
+                    if (payment != null && string.Equals(payment.PaymentMethod, "PayOS", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var transactionId = payment.TransactionId ?? string.Empty;
+                        var deposit = order.DepositAmount;
+                        if (!string.IsNullOrWhiteSpace(transactionId) && deposit > 0)
+                        {
+                            var payos = _serviceProvider?.GetService<IPayOSService>();
+                            if (payos != null)
+                            {
+                                var res = await payos.RefundDepositAsync(transactionId, deposit, $"Refund deposit for Order #{orderId}");
+                                if (!res.Success)
+                                {
+                                    _logger.LogWarning("PayOS refund failed for Order {OrderId}: {Error}", orderId, res.Error);
+                                }
+                                else
+                                {
+                                    _logger.LogInformation("PayOS refund success for Order {OrderId}, RefundId: {RefundId}", orderId, res.RefundId);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Non-blocking PayOS refund error for Order {OrderId}", orderId);
+                }
+
+                _logger.LogInformation("Rental completed successfully for Order {OrderId}", orderId);
                 return true;
             }
             catch (Exception ex)

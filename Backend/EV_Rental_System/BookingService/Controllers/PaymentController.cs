@@ -1,4 +1,4 @@
-﻿using BookingService.Services;
+using BookingService.Services;
 using BookingService.Services.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -470,6 +470,132 @@ namespace BookingService.Controllers
             {
                 _logger.LogError(ex, "Error processing expired payments");
                 return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        // ===== PayOS Integration =====
+
+        [HttpPost("payos/create")]
+        [Authorize(Roles = "Member")]
+        public async Task<IActionResult> CreatePayOSPayment([FromBody] int orderId, [FromServices] IPayOSService payos)
+        {
+            try
+            {
+                if (orderId <= 0) return BadRequest(new { message = "Invalid orderId" });
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+                var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
+                if (payment == null) return NotFound(new { message = "Payment not found" });
+
+                if (payment.IsCompleted()) return BadRequest(new { message = "Payment already completed" });
+                if (payment.IsFailed()) return BadRequest(new { message = "Payment failed. Please create a new order." });
+                if (payment.IsExpired)
+                {
+                    await _paymentService.CancelPaymentDueToTimeoutAsync(payment.PaymentId, "Timeout before PayOS create");
+                    return BadRequest(new { message = "Payment expired" });
+                }
+
+                var res = await payos.CreatePaymentLinkAsync(orderId, payment.Amount, $"Thanh toan don hang #{orderId}");
+                if (!res.Success || string.IsNullOrEmpty(res.CheckoutUrl))
+                {
+                    return StatusCode(502, new { message = res.Error ?? "PayOS error" });
+                }
+
+                return Ok(new { success = true, paymentUrl = res.CheckoutUrl, orderId, amount = payment.Amount, paymentMethod = "PayOS" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating PayOS link for Order {OrderId}", orderId);
+                return StatusCode(500, new { message = "Internal server error" });
+            }
+        }
+
+        [HttpPost("payos/webhook")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PayOSWebhook([FromServices] IPayOSService payos)
+        {
+            using var reader = new StreamReader(Request.Body);
+            var body = await reader.ReadToEndAsync();
+            var signature = Request.Headers["X-Checksum"]; // header name depending on PayOS
+            if (!payos.ValidateWebhookSignature(body, signature))
+            {
+                _logger.LogWarning("PayOS webhook: invalid signature");
+                return Unauthorized(new { success = false });
+            }
+
+            try
+            {
+                var doc = System.Text.Json.JsonDocument.Parse(body);
+                var root = doc.RootElement;
+                var data = root.TryGetProperty("data", out var d) ? d : root;
+                var status = data.TryGetProperty("status", out var st) ? st.GetString() : null;
+                var orderCodeStr = data.TryGetProperty("orderCode", out var oc) ? oc.GetString() : null;
+                var transactionId = data.TryGetProperty("transactionId", out var tid) ? tid.GetString() : null;
+                var amount = data.TryGetProperty("amount", out var amt) ? amt.GetDecimal() : 0m;
+
+                if (!int.TryParse(orderCodeStr, out var orderId) || orderId <= 0)
+                {
+                    _logger.LogError("PayOS webhook: invalid orderCode {OrderCode}", orderCodeStr);
+                    return BadRequest(new { success = false });
+                }
+
+                var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
+                if (payment == null) return NotFound(new { success = false, message = "Payment not found" });
+
+                if (string.Equals(status, "PAID", StringComparison.OrdinalIgnoreCase))
+                {
+                    var success = await _paymentService.MarkPaymentCompletedAsync(orderId, transactionId ?? string.Empty, body);
+                    _logger.LogInformation("PayOS webhook: payment completed for Order {OrderId}", orderId);
+                    return Ok(new { success });
+                }
+                else if (string.Equals(status, "CANCELLED", StringComparison.OrdinalIgnoreCase) || string.Equals(status, "FAILED", StringComparison.OrdinalIgnoreCase))
+                {
+                    await _paymentService.MarkPaymentFailedAsync(orderId, body);
+                    _logger.LogInformation("PayOS webhook: payment failed/cancelled for Order {OrderId}", orderId);
+                    return Ok(new { success = true });
+                }
+
+                // Unknown status -> accept
+                _logger.LogInformation("PayOS webhook: status {Status} for Order {OrderId}", status, orderId);
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling PayOS webhook");
+                return StatusCode(500, new { success = false });
+            }
+        }
+
+        [HttpPost("payos/refund")]
+        [Authorize(Roles = "Admin,Employee")]
+        public async Task<IActionResult> RefundDeposit([FromBody] int orderId, [FromServices] IPayOSService payos)
+        {
+            try
+            {
+                if (orderId <= 0) return BadRequest(new { message = "Invalid orderId" });
+                var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
+                if (payment == null) return NotFound(new { message = "Payment not found" });
+                if (!string.Equals(payment.PaymentMethod, "PayOS", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new { message = "Refund only supported for PayOS payments" });
+                }
+
+                var deposit = payment.Order?.DepositAmount ?? 0m;
+                if (deposit <= 0) return BadRequest(new { message = "No deposit to refund" });
+                if (string.IsNullOrWhiteSpace(payment.TransactionId)) return BadRequest(new { message = "Missing transactionId" });
+
+                var res = await payos.RefundDepositAsync(payment.TransactionId!, deposit, $"Refund deposit for Order #{orderId}");
+                if (!res.Success)
+                {
+                    return StatusCode(502, new { message = res.Error ?? "PayOS refund error" });
+                }
+                return Ok(new { success = true, refundId = res.RefundId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refunding deposit via PayOS for Order {OrderId}", orderId);
+                return StatusCode(500, new { message = "Internal server error" });
             }
         }
 

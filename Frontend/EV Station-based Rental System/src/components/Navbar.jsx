@@ -80,8 +80,8 @@ function Navbar() {
           <ul className="mobile-navbar__links" role="menu">
             <li role="none">
               <button type="button" className="navbar__theme-toggle" onClick={() => { toggleMode(); toggleNav(); }}>
-                <i className={isDark ? "fa-solid fa-sun" : "fa-solid fa-moon"} aria-hidden="true"></i>
-                <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+                <i className="fa-solid fa-moon" aria-hidden="true"></i>
+                <span>Dark Mode</span>
               </button>
             </li>
             {!isStaff && (
@@ -225,9 +225,9 @@ function Navbar() {
           </ul>
 
           <div className="navbar__right">
-            <button type="button" className="navbar__theme-toggle" onClick={toggleMode} title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
-              <i className={isDark ? "fa-solid fa-sun" : "fa-solid fa-moon"} aria-hidden="true"></i>
-              <span className="visually-hidden">Toggle theme</span>
+            <button type="button" className="navbar__theme-toggle" onClick={toggleMode} title="Toggle dark mode">
+              <i className="fa-solid fa-moon" aria-hidden="true"></i>
+              <span className="visually-hidden">Toggle dark mode</span>
             </button>
             {user ? (
               <div className="navbar__user">
