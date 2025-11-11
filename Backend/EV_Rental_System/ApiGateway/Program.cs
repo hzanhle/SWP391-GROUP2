@@ -4,8 +4,11 @@ using Yarp.ReverseProxy;
 var builder = WebApplication.CreateBuilder(args);
 
 // CORS cho FE public (sửa trong appsettings.json)
-var allowedOrigins = builder.Configuration
-    .GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+var allowedOrigins = (builder.Configuration
+    .GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>())
+    .Select(o => o?.Trim())
+    .Where(o => !string.IsNullOrWhiteSpace(o))
+    .ToArray();
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("NgrokCors", p =>
