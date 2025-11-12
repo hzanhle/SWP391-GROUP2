@@ -10,12 +10,24 @@ export default function CheckIn() {
   const [error, setError] = useState(null)
   const [agreed, setAgreed] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [frontImage, setFrontImage] = useState(null)
+  const [backImage, setBackImage] = useState(null)
+  const [leftImage, setLeftImage] = useState(null)
+  const [rightImage, setRightImage] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (!agreed) {
       setError('Please confirm that you have inspected the vehicle')
+      return
+    }
+
+    // Collect all images
+    const images = [frontImage, backImage, leftImage, rightImage].filter(img => img !== null)
+    
+    if (images.length === 0) {
+      setError('Please upload at least one vehicle photo')
       return
     }
 
@@ -43,7 +55,7 @@ export default function CheckIn() {
         return
       }
 
-      await bookingApi.startRental(orderId, token)
+      await bookingApi.startRental(orderId, images, token)
 
       setSuccess(true)
       localStorage.setItem('active_order', String(orderId))
@@ -107,11 +119,12 @@ export default function CheckIn() {
                 <div className="docs-grid">
                   <div className="doc-card">
                     <h3 className="card-title">Vehicle Condition Photos</h3>
+                    <p className="card-subtext" style={{ marginBottom: '1rem' }}>Please upload at least one photo of the vehicle</p>
                     <div className="doc-uploaders">
-                      <DocumentUploader label="Front" />
-                      <DocumentUploader label="Back" />
-                      <DocumentUploader label="Left" />
-                      <DocumentUploader label="Right" />
+                      <DocumentUploader label="Front" value={frontImage} onChange={setFrontImage} accept="image/*" />
+                      <DocumentUploader label="Back" value={backImage} onChange={setBackImage} accept="image/*" />
+                      <DocumentUploader label="Left" value={leftImage} onChange={setLeftImage} accept="image/*" />
+                      <DocumentUploader label="Right" value={rightImage} onChange={setRightImage} accept="image/*" />
                     </div>
                   </div>
                   <div className="doc-card">

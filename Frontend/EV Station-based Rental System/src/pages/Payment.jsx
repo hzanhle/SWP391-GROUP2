@@ -84,14 +84,18 @@ export default function Payment() {
                 // ✅ CRITICAL: Fetch order and verify payment is ACTUALLY completed
                 const orderResponse = await bookingApi.getOrderById(incomingOrderId, authToken)
                 const orderStatus = orderResponse.data?.Status
-                const payment = orderResponse.data?.Payment
+                // Payments is a collection, get the deposit payment
+                const payments = orderResponse.data?.Payments || []
+                const payment = Array.isArray(payments) && payments.length > 0 
+                  ? payments.find(p => p.Type === 'Deposit' || p.type === 'Deposit') || payments[0]
+                  : null
 
                 console.log('[Payment] Order status:', orderStatus)
-                console.log('[Payment] Payment status:', payment?.Status)
+                console.log('[Payment] Payment status:', payment?.Status || payment?.status)
 
                 // BOTH conditions must be true: order is Confirmed AND payment status is Completed
                 const isOrderConfirmed = orderStatus === 'Confirmed'
-                const isPaymentCompleted = payment?.Status === 'Completed' || payment?.status === 'Completed'
+                const isPaymentCompleted = payment && (payment.Status === 'Completed' || payment.status === 'Completed')
                 const isPaymentConfirmed = isOrderConfirmed && isPaymentCompleted
 
                 if (!isPaymentConfirmed) {
@@ -189,8 +193,8 @@ export default function Payment() {
           setPaymentStatus('failed')
           setError('Payment failed. Please try again.')
         } else if (paymentSuccess === 'true' && urlOrderId) {
-          // Returning from VNPay - create contract immediately instead of waiting for SignalR
-          console.log('[Payment] VNPay callback received with success=true, creating contract...')
+          // Returning from payment gateway (VNPay or PayOS) - create contract immediately instead of waiting for SignalR
+          console.log('[Payment] Payment callback received with success=true, creating contract...')
 
           try {
             // First, fetch the order to verify payment was completed
@@ -200,21 +204,28 @@ export default function Payment() {
             // ✅ CRITICAL: Verify payment is actually CONFIRMED before proceeding
             // Order.Status becomes "Confirmed" after payment completes
             const orderStatus = order.data?.Status
-            const payment = order.data?.Payment
+            // Payments is a collection, get the deposit payment (first one or the one with Type=Deposit)
+            const payments = order.data?.Payments || []
+            const payment = Array.isArray(payments) && payments.length > 0 
+              ? payments.find(p => p.Type === 'Deposit' || p.type === 'Deposit') || payments[0]
+              : null
 
             console.log('[Payment] Order status:', orderStatus)
-            console.log('[Payment] Payment status:', payment?.Status)
+            console.log('[Payment] Payments array:', payments)
+            console.log('[Payment] Payment object:', payment)
+            console.log('[Payment] Payment status:', payment?.Status || payment?.status)
 
             // Check if order is confirmed (payment succeeded)
             // BOTH conditions must be true: order is Confirmed AND payment status is Completed
             const isOrderConfirmed = orderStatus === 'Confirmed'
-            const isPaymentCompleted = payment?.Status === 'Completed' || payment?.status === 'Completed'
+            const isPaymentCompleted = payment && (payment.Status === 'Completed' || payment.status === 'Completed')
             const isPaymentConfirmed = isOrderConfirmed && isPaymentCompleted
 
             if (!isPaymentConfirmed) {
               console.warn('[Payment] ❌ Payment not fully confirmed yet')
               console.warn('[Payment]   - Order Status:', orderStatus, '(expected: Confirmed)')
-              console.warn('[Payment]   - Payment Status:', payment?.Status, '(expected: Completed)')
+              console.warn('[Payment]   - Payment Status:', payment?.Status || payment?.status, '(expected: Completed)')
+              console.warn('[Payment]   - Payment found:', !!payment)
               // Don't show success if order isn't confirmed
               // Just show the normal payment page instead
               setLoading(false)
@@ -290,8 +301,8 @@ export default function Payment() {
                 DepositAmount: depositCost,
                 ServiceFee: serviceFee,
                 TotalPaymentAmount: totalCost,
-                TransactionId: urlTransactionId || '',  // ✅ Use from VNPay URL callback
-                PaymentMethod: selectedMethod,
+                TransactionId: urlTransactionId || '',  // ✅ Use from payment gateway URL callback
+                PaymentMethod: payment?.PaymentMethod || payment?.paymentMethod || selectedMethod || 'PayOS',  // ✅ Get from payment record, fallback to selectedMethod
                 PaymentDate: new Date().toISOString(),
               }
 
@@ -339,7 +350,7 @@ export default function Payment() {
             // ✅ Clear URL params to prevent re-triggering on page refresh
             window.history.replaceState({}, document.title, window.location.pathname)
           } catch (err) {
-            console.error('[Payment] Error handling VNPay callback:', err)
+            console.error('[Payment] Error handling payment callback:', err)
             // Don't show success if there's an error
             setLoading(false)
           }

@@ -201,7 +201,8 @@ namespace BookingService.Controllers
         {
             try
             {
-                var order = await _orderService.GetOrderByIdAsync(orderId);
+                // Use GetOrderByIdWithDetailsAsync to include Payment and OnlineContract
+                var order = await _orderService.GetOrderByIdWithDetailsAsync(orderId);
                 if (order == null)
                 {
                     return NotFound(new { Message = $"Không tìm thấy đơn hàng {orderId}." });

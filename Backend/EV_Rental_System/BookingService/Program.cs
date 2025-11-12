@@ -74,6 +74,7 @@ builder.Services.Configure<ContractSettings>(builder.Configuration.GetSection("C
 builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
 builder.Services.Configure<AwsS3Settings>(builder.Configuration.GetSection("AwsS3Settings"));
 builder.Services.Configure<BillingSettings>(builder.Configuration.GetSection("BillingSettings"));
+builder.Services.Configure<FrontendSettings>(builder.Configuration.GetSection("FrontendSettings"));
 
 
 // ====================== Repositories ======================
@@ -349,7 +350,7 @@ static void ConfigureCors(IServiceCollection services, IWebHostEnvironment env)
         {
             options.AddDefaultPolicy(policy =>
             {
-                policy.WithOrigins("https://f5c571290e25.ngrok-free.app")
+                policy.WithOrigins("https://4e6db1215991.ngrok-free.app")
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials();

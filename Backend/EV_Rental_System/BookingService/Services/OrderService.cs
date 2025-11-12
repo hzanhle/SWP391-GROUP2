@@ -37,6 +37,9 @@ namespace BookingService.Services
             MyDbContext context,
             ILogger<OrderService> logger,
             IOptions<OrderSettings> orderSettings,
+            IImageStorageService imageStorageService,
+            IVehicleCheckInRepository vehicleCheckInRepo,
+            IVehicleReturnRepository vehicleReturnRepo,
             IServiceProvider serviceProvider)
         {
             _orderRepo = orderRepo ?? throw new ArgumentNullException(nameof(orderRepo));
@@ -48,6 +51,9 @@ namespace BookingService.Services
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _orderSettings = orderSettings?.Value ?? throw new ArgumentNullException(nameof(orderSettings));
+            _imageStorageService = imageStorageService ?? throw new ArgumentNullException(nameof(imageStorageService));
+            _vehicleCheckInRepo = vehicleCheckInRepo ?? throw new ArgumentNullException(nameof(vehicleCheckInRepo));
+            _vehicleReturnRepo = vehicleReturnRepo ?? throw new ArgumentNullException(nameof(vehicleReturnRepo));
             _serviceProvider = serviceProvider;
         }
 
