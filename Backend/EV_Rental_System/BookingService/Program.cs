@@ -349,7 +349,7 @@ static void ConfigureCors(IServiceCollection services, IWebHostEnvironment env)
         {
             options.AddDefaultPolicy(policy =>
             {
-                policy.WithOrigins("https://bcbd009fb85c.ngrok-free.app")
+                policy.WithOrigins("https://f5c571290e25.ngrok-free.app")
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials();
@@ -357,7 +357,7 @@ static void ConfigureCors(IServiceCollection services, IWebHostEnvironment env)
         }
     });
 }
-
+// REMEMBER TO FIX THIS WHEN RUN THE STARUP AGAIN
 static void ConfigureAuthentication(IServiceCollection services, IConfiguration config)
 {
     var jwtSettings = config.GetSection("JwtSettings");
