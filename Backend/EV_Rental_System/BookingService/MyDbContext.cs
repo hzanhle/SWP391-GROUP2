@@ -66,7 +66,14 @@ namespace BookingService
                       .HasForeignKey(p => p.OrderId)
                       .OnDelete(DeleteBehavior.Cascade);
 
+                // Many-to-One with Settlement (optional - only for AdditionalCharge payments)
+                entity.HasOne(p => p.Settlement)
+                      .WithMany()
+                      .HasForeignKey(p => p.SettlementId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(p => p.OrderId);
+                entity.HasIndex(p => p.SettlementId);
                 entity.HasIndex(p => p.Status);
                 entity.HasIndex(p => p.TransactionId);
             });
