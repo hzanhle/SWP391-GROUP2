@@ -163,9 +163,33 @@ export function startRental(orderId, images, token) {
 }
 
 // Complete rental (check-out/return)
-export function completeRental(orderId, token) {
+export function completeRental(orderId, images, hasDamage = false, damageDescription = '', conditionNotes = '', token) {
+  const formData = new FormData()
+  
+  // Append all images to formData with key "images"
+  if (images && Array.isArray(images)) {
+    images.forEach((image) => {
+      if (image) {
+        formData.append('images', image)
+      }
+    })
+  }
+  
+  // Append VehicleReturnRequest fields
+  formData.append('HasDamage', hasDamage.toString())
+  if (damageDescription) {
+    formData.append('DamageDescription', damageDescription)
+  }
+  // Optional fields
+  // formData.append('OdometerReading', '')
+  // formData.append('FuelLevel', '')
+  if (conditionNotes) {
+    formData.append('ConditionNotes', conditionNotes)
+  }
+  
   return request(`/api/orders/${orderId}/complete`, {
     method: 'POST',
+    body: formData,
     token,
   })
 }

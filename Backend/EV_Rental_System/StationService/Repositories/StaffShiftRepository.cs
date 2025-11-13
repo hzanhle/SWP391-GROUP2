@@ -168,13 +168,25 @@ namespace StationService.Repositories
 
         // ==================== Check-in/out ====================
 
+        private static DateTime NormalizeToUtc(DateTime localTime)
+        {
+            if (localTime.Kind == DateTimeKind.Utc)
+            {
+                return localTime;
+            }
+
+            // Assume localTime is in SE Asia Standard Time (UTC+7)
+            var utc = DateTime.SpecifyKind(localTime, DateTimeKind.Local).ToUniversalTime();
+            return utc;
+        }
+
         public async Task<bool> CheckInAsync(int shiftId, DateTime checkInTime)
         {
             var shift = await GetByIdAsync(shiftId);
-            if (shift == null || shift.Status != "Scheduled")
+            if (shift == null || !string.Equals(shift.Status?.Trim(), "Scheduled", StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            shift.ActualCheckInTime = checkInTime;
+            shift.ActualCheckInTime = NormalizeToUtc(checkInTime);
             shift.Status = "CheckedIn";
             shift.UpdatedAt = DateTime.UtcNow;
 
@@ -185,10 +197,10 @@ namespace StationService.Repositories
         public async Task<bool> CheckOutAsync(int shiftId, DateTime checkOutTime)
         {
             var shift = await GetByIdAsync(shiftId);
-            if (shift == null || shift.Status != "CheckedIn")
+            if (shift == null || !string.Equals(shift.Status?.Trim(), "CheckedIn", StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            shift.ActualCheckOutTime = checkOutTime;
+            shift.ActualCheckOutTime = NormalizeToUtc(checkOutTime);
             shift.Status = "Completed";
             shift.UpdatedAt = DateTime.UtcNow;
 

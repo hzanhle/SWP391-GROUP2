@@ -125,8 +125,13 @@ namespace BookingService.Services
                     signature
                 };
 
-                var res = await client.PostAsJsonAsync("v2/payment-requests", payload);
-                var text = await res.Content.ReadAsStringAsync();
+                var (res, text, endpointUsed) = await PostWithFallbackAsync(
+                    client,
+                    payload,
+                    new[] { "api/v2/payment-requests", "v2/payment-requests" },
+                    nameof(CreatePaymentLinkAsync));
+
+                _logger.LogDebug("PayOS create endpoint used: {Endpoint}", endpointUsed);
 
                 _logger.LogInformation("PayOS create response (HTTP {Status}): {Body}", (int)res.StatusCode, text);
 
@@ -185,8 +190,13 @@ namespace BookingService.Services
                     description = reason
                 };
 
-                var res = await client.PostAsJsonAsync("v2/refunds", payload);
-                var text = await res.Content.ReadAsStringAsync();
+                var (res, text, endpointUsed) = await PostWithFallbackAsync(
+                    client,
+                    payload,
+                    new[] { "api/v2/refunds", "v2/refunds" },
+                    nameof(RefundDepositAsync));
+
+                _logger.LogDebug("PayOS refund endpoint used: {Endpoint}", endpointUsed);
 
                 _logger.LogInformation("PayOS refund response (HTTP {Status}): {Body}", (int)res.StatusCode, text);
 
@@ -242,6 +252,35 @@ namespace BookingService.Services
             {
                 return false;
             }
+        }
+        private async Task<(HttpResponseMessage Response, string Body, string Endpoint)> PostWithFallbackAsync(
+            HttpClient client,
+            object payload,
+            string[] endpoints,
+            string callerName)
+        {
+            HttpResponseMessage? response = null;
+            string? body = null;
+            string endpointUsed = endpoints.Last();
+
+            foreach (var endpoint in endpoints)
+            {
+                response = await client.PostAsJsonAsync(endpoint, payload);
+                body = await response.Content.ReadAsStringAsync();
+                endpointUsed = endpoint;
+
+                if (response.StatusCode != HttpStatusCode.NotFound)
+                {
+                    break;
+                }
+
+                _logger.LogWarning(
+                    "PayOS endpoint {Endpoint} returned 404 for {Caller}. Trying next fallback if available.",
+                    endpoint,
+                    callerName);
+            }
+
+            return (response!, body ?? string.Empty, endpointUsed);
         }
     }
 }

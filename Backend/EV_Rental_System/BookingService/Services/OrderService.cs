@@ -466,6 +466,93 @@ namespace BookingService.Services
             }
         }
 
+        private async Task SchedulePayOSRefundAsync(Order order, bool hasDamage)
+        {
+            if (order == null)
+            {
+                return;
+            }
+
+            if (hasDamage)
+            {
+                _logger.LogInformation("Order {OrderId} reported damage. Skipping automatic PayOS refund.", order.OrderId);
+                return;
+            }
+
+            Payment? payment;
+            try
+            {
+                payment = await _paymentService.GetPaymentByOrderIdAsync(order.OrderId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unable to retrieve payment for Order {OrderId}. Skipping refund.", order.OrderId);
+                return;
+            }
+
+            if (payment == null || !string.Equals(payment.PaymentMethod, "PayOS", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(payment.TransactionId))
+            {
+                _logger.LogWarning("Order {OrderId} has no PayOS transaction id. Cannot process refund.", order.OrderId);
+                return;
+            }
+
+            if (order.DepositAmount <= 0)
+            {
+                _logger.LogInformation("Order {OrderId} deposit amount is {Deposit}. No refund necessary.", order.OrderId, order.DepositAmount);
+                return;
+            }
+
+            try
+            {
+                var payos = _serviceProvider?.GetService<IPayOSService>();
+                if (payos == null)
+                {
+                    _logger.LogWarning("IPayOSService not resolved from provider. Refund skipped for Order {OrderId}.", order.OrderId);
+                    return;
+                }
+
+                try
+                {
+                    _logger.LogInformation("Attempting PayOS refund for Order {OrderId} - Transaction {TransactionId}, Amount {Amount}",
+                        order.OrderId, payment.TransactionId, order.DepositAmount);
+
+                    var refundResult = await payos.RefundDepositAsync(payment.TransactionId!, order.DepositAmount,
+                        $"Refund deposit for Order #{order.OrderId}");
+
+                    if (!refundResult.Success)
+                    {
+                        _logger.LogWarning("PayOS refund failed for Order {OrderId}: {Error}", order.OrderId, refundResult.Error ?? "unknown error");
+                        return;
+                    }
+
+                    _logger.LogInformation("PayOS refund success for Order {OrderId}, RefundId {RefundId}",
+                        order.OrderId, refundResult.RefundId);
+
+                    try
+                    {
+                        await _paymentService.MarkDepositRefundedAsync(payment.PaymentId, refundResult.RefundId, DateTime.UtcNow, order.DepositAmount, null);
+                    }
+                    catch (Exception updateEx)
+                    {
+                        _logger.LogWarning(updateEx, "Failed to update payment refund metadata for Order {OrderId}", order.OrderId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "PayOS refund background task error for Order {OrderId}", order.OrderId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to schedule PayOS refund for Order {OrderId}", order.OrderId);
+            }
+        }
+
         /// <summary>
         /// Hoàn thành chuyến thuê xe (với hình ảnh xác nhận trả xe)
         /// </summary>
@@ -540,35 +627,7 @@ namespace BookingService.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 // Attempt deposit refund for PayOS payments (non-blocking)
-                try
-                {
-                    var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
-                    if (payment != null && string.Equals(payment.PaymentMethod, "PayOS", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var transactionId = payment.TransactionId ?? string.Empty;
-                        var deposit = order.DepositAmount;
-                        if (!string.IsNullOrWhiteSpace(transactionId) && deposit > 0)
-                        {
-                            var payos = _serviceProvider?.GetService<IPayOSService>();
-                            if (payos != null)
-                            {
-                                var res = await payos.RefundDepositAsync(transactionId, deposit, $"Refund deposit for Order #{orderId}");
-                                if (!res.Success)
-                                {
-                                    _logger.LogWarning("PayOS refund failed for Order {OrderId}: {Error}", orderId, res.Error);
-                                }
-                                else
-                                {
-                                    _logger.LogInformation("PayOS refund success for Order {OrderId}, RefundId: {RefundId}", orderId, res.RefundId);
-                                }
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Non-blocking PayOS refund error for Order {OrderId}", orderId);
-                }
+                _ = SchedulePayOSRefundAsync(order, vehicleReturn.HasDamage);
 
                 _logger.LogInformation("Rental completed successfully for Order {OrderId}", orderId);
                 return true;

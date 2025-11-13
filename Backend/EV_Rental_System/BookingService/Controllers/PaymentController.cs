@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
+using System;
 using System.Security.Claims;
 
 namespace BookingService.Controllers
@@ -31,10 +32,7 @@ namespace BookingService.Controllers
             _paymentService = paymentService;
             _logger = logger;
             _hubContext = hubContext;
-            _frontendSettings = frontendSettings.Value;
-            
-            // Log FrontendSettings for debugging
-            _logger.LogInformation("FrontendSettings loaded - BaseUrl: {BaseUrl}", _frontendSettings.BaseUrl);
+            _frontendSettings = frontendSettings?.Value ?? new FrontendSettings();
         }
 
         /// <summary>
@@ -239,16 +237,14 @@ namespace BookingService.Controllers
                             _logger.LogWarning(ex, "⚠️ Failed to send SignalR notification for Order {OrderId}", orderId);
                         }
 
-                        // Get FE URL from config
-                        var feUrl = _frontendSettings.BaseUrl;
+                        var feUrl = GetFrontendBaseUrl();
                         var redirectUrl = $"{feUrl}?success=true&orderId={orderId}&transactionId={transactionNo}#payment";
-                        _logger.LogInformation("VNPay redirecting to: {RedirectUrl}", redirectUrl);
                         return Redirect(redirectUrl);
                     }
                     else
                     {
                         _logger.LogError("Failed to mark payment completed for Order {OrderId}", orderId);
-                        var feUrl = _frontendSettings.BaseUrl;
+                        var feUrl = GetFrontendBaseUrl();
                         var redirectUrl = $"{feUrl}?success=false&orderId={orderId}&error=payment_update_failed#payment";
                         return Redirect(redirectUrl);
                     }
@@ -269,7 +265,7 @@ namespace BookingService.Controllers
                         orderId, responseCode, errorMessage
                     );
 
-                    var feUrl = _frontendSettings.BaseUrl;
+                    var feUrl = GetFrontendBaseUrl();
                     var redirectUrl = $"{feUrl}#payment?success=false&orderId={orderId}&error={errorMessage}";
                     return Redirect(redirectUrl);
                 }
@@ -523,175 +519,83 @@ namespace BookingService.Controllers
             }
         }
 
-        /// <summary>
-        /// Callback từ PayOS (user redirect)
-        /// </summary>
         [HttpGet("payos-deposit-callback")]
         [AllowAnonymous]
-        public async Task<IActionResult> PayOSCallback([FromServices] IPayOSService payos)
+        public async Task<IActionResult> PayOSDepositCallback()
         {
+            var query = Request.Query;
+            _logger.LogInformation("PayOS deposit callback received: {@Query}",
+                query.ToDictionary(k => k.Key, v => v.Value.ToString()));
+
+            var code = query["code"].ToString();
+            var status = query["status"].ToString();
+            var orderCodeStr = query["orderCode"].ToString();
+            var transactionId = query["transactionId"].ToString();
+            if (string.IsNullOrWhiteSpace(transactionId))
+            {
+                transactionId = query["id"].ToString();
+            }
+
+            var frontendBase = GetFrontendBaseUrl();
+
+            if (!int.TryParse(orderCodeStr, out var orderId) || orderId <= 0)
+            {
+                return Redirect($"{frontendBase}?success=false&error=invalid_order#payment");
+            }
+
             try
             {
-                var query = Request.Query;
-
-                _logger.LogInformation("PayOS callback received: {@Query}",
-                    query.ToDictionary(k => k.Key, v => v.Value.ToString()));
-
-                // Parse data from PayOS callback
-                var code = query["code"].ToString();
-                var orderCodeStr = query["orderCode"].ToString();
-                var id = query["id"].ToString();
-                var cancel = query["cancel"].ToString();
-                var status = query["status"].ToString();
-
-                // Validate required fields
-                if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(orderCodeStr))
-                {
-                    _logger.LogWarning("❌ PayOS callback - Missing required fields (code or orderCode)");
-                    var feUrl = _frontendSettings.BaseUrl;
-                    var redirectUrl = $"{feUrl}?success=false&error=missing_parameters#payment";
-                    return Redirect(redirectUrl);
-                }
-
-                // Parse orderId from orderCode
-                if (!int.TryParse(orderCodeStr, out var orderId) || orderId <= 0)
-                {
-                    _logger.LogError("Invalid orderCode: {OrderCode}", orderCodeStr);
-                    var feUrl = _frontendSettings.BaseUrl;
-                    var redirectUrl = $"{feUrl}?success=false&error=invalid_order#payment";
-                    return Redirect(redirectUrl);
-                }
-
-                // Get payment to validate
                 var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
                 if (payment == null)
                 {
-                    _logger.LogError("Payment not found for Order {OrderId}", orderId);
-                    var feUrl = _frontendSettings.BaseUrl;
-                    var redirectUrl = $"{feUrl}?success=false&orderId={orderId}&error=payment_not_found#payment";
-                    return Redirect(redirectUrl);
+                    _logger.LogWarning("PayOS deposit callback: payment not found for order {OrderId}", orderId);
+                    return Redirect($"{frontendBase}?success=false&orderId={orderId}&error=payment_not_found#payment");
                 }
 
-                // Check if already processed (idempotency)
                 if (payment.IsCompleted())
                 {
-                    _logger.LogInformation("Payment already completed for Order {OrderId}", orderId);
-                    var feUrl = _frontendSettings.BaseUrl;
-                    var redirectUrl = $"{feUrl}?success=true&orderId={orderId}&transactionId={payment.TransactionId}#payment";
-                    return Redirect(redirectUrl);
+                    _logger.LogInformation("PayOS deposit callback: payment already completed for order {OrderId}", orderId);
+                    return Redirect($"{frontendBase}?success=true&orderId={orderId}&transactionId={payment.TransactionId ?? transactionId}#payment");
                 }
 
-                // Process payment based on status
-                // PayOS returns: code="00" means success, status="PAID" means paid
-                if (code == "00" && string.Equals(status, "PAID", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(code, "00", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(status, "PAID", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Use id as transactionId if available, otherwise use orderCode
-                    var transactionId = !string.IsNullOrEmpty(id) ? id : orderCodeStr;
+                    var txn = string.IsNullOrWhiteSpace(transactionId)
+                        ? Guid.NewGuid().ToString("N")
+                        : transactionId;
 
-                    var gatewayResponse = System.Text.Json.JsonSerializer.Serialize(new
+                    var serialized = System.Text.Json.JsonSerializer.Serialize(
+                        query.ToDictionary(k => k.Key, v => v.Value.ToString()));
+
+                    var success = await _paymentService.MarkPaymentCompletedAsync(orderId, txn, serialized);
+                    if (!success)
                     {
-                        code,
-                        orderCode = orderCodeStr,
-                        id,
-                        cancel,
-                        status,
-                        timestamp = DateTime.UtcNow
-                    });
-
-                    var success = await _paymentService.MarkPaymentCompletedAsync(
-                        orderId,
-                        transactionId,
-                        gatewayResponse
-                    );
-
-                    if (success)
-                    {
-                        _logger.LogInformation(
-                            "✅ PayOS payment completed - Order: {OrderId}, TxnId: {TransactionId}",
-                            orderId, transactionId
-                        );
-
-                        // Send SignalR notification to waiting clients
-                        try
-                        {
-                            await _hubContext.Clients.Group($"order_{orderId}")
-                                .SendAsync("PaymentSuccess", new { OrderId = orderId, TransactionId = transactionId });
-                            _logger.LogInformation("📡 SignalR PaymentSuccess sent for Order {OrderId} (PayOS)", orderId);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(ex, "⚠️ Failed to send SignalR notification for Order {OrderId}", orderId);
-                        }
-
-                        // Get FE URL from config
-                        var feUrl = _frontendSettings.BaseUrl;
-                        var redirectUrl = $"{feUrl}?success=true&orderId={orderId}&transactionId={transactionId}#payment";
-                        _logger.LogInformation("PayOS redirecting to: {RedirectUrl}", redirectUrl);
-                        return Redirect(redirectUrl);
+                        return Redirect($"{frontendBase}?success=false&orderId={orderId}&error=payment_update_failed#payment");
                     }
-                    else
+
+                    try
                     {
-                        _logger.LogError("Failed to mark payment completed for Order {OrderId}", orderId);
-                        var feUrl = _frontendSettings.BaseUrl;
-                        var redirectUrl = $"{feUrl}?success=false&orderId={orderId}&error=payment_update_failed#payment";
-                        return Redirect(redirectUrl);
+                        await _hubContext.Clients.Group($"order_{orderId}")
+                            .SendAsync("PaymentSuccess", new { OrderId = orderId, TransactionId = txn });
+                        _logger.LogInformation("SignalR PayOS PaymentSuccess sent for order {OrderId}", orderId);
                     }
-                }
-                else if (cancel == "true" || string.Equals(status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
-                {
-                    // User cancelled payment
-                    var gatewayResponse = System.Text.Json.JsonSerializer.Serialize(new
+                    catch (Exception ex)
                     {
-                        code,
-                        orderCode = orderCodeStr,
-                        id,
-                        cancel,
-                        status,
-                        message = "User cancelled payment"
-                    });
+                        _logger.LogWarning(ex, "Failed to send PayOS PaymentSuccess SignalR for order {OrderId}", orderId);
+                    }
 
-                    await _paymentService.MarkPaymentFailedAsync(orderId, gatewayResponse);
-
-                    _logger.LogWarning(
-                        "❌ PayOS payment cancelled - Order: {OrderId}",
-                        orderId
-                    );
-
-                    var feUrl = _frontendSettings.BaseUrl;
-                    var redirectUrl = $"{feUrl}?success=false&orderId={orderId}&error=payment_cancelled#payment";
-                    return Redirect(redirectUrl);
+                    return Redirect($"{frontendBase}?success=true&orderId={orderId}&transactionId={txn}#payment");
                 }
                 else
                 {
-                    // Payment failed or unknown status
-                    var gatewayResponse = System.Text.Json.JsonSerializer.Serialize(new
-                    {
-                        code,
-                        orderCode = orderCodeStr,
-                        id,
-                        cancel,
-                        status,
-                        message = $"Payment failed - Code: {code}, Status: {status}"
-                    });
-
-                    await _paymentService.MarkPaymentFailedAsync(orderId, gatewayResponse);
-
-                    _logger.LogWarning(
-                        "❌ PayOS payment failed - Order: {OrderId}, Code: {Code}, Status: {Status}",
-                        orderId, code, status
-                    );
-
-                    var feUrl = _frontendSettings.BaseUrl;
-                    var redirectUrl = $"{feUrl}?success=false&orderId={orderId}&error=payment_failed#payment";
-                    return Redirect(redirectUrl);
+                    return Redirect($"{frontendBase}?success=false&orderId={orderId}&error=payment_failed#payment");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing PayOS callback");
-                var feUrl = _frontendSettings.BaseUrl;
-                var redirectUrl = $"{feUrl}?success=false&error=callback_error#payment";
-                return Redirect(redirectUrl);
+                _logger.LogError(ex, "Error handling PayOS deposit callback for Order {OrderId}", orderId);
+                return Redirect($"{frontendBase}?success=false&orderId={orderId}&error=callback_error#payment");
             }
         }
 
@@ -702,6 +606,11 @@ namespace BookingService.Controllers
             using var reader = new StreamReader(Request.Body);
             var body = await reader.ReadToEndAsync();
             var signature = Request.Headers["X-Checksum"]; // header name depending on PayOS
+            if (string.IsNullOrWhiteSpace(signature))
+            {
+                _logger.LogWarning("PayOS webhook ping received without signature. Returning 200 for verification.");
+                return Ok(new { success = false, message = "Missing checksum" });
+            }
             if (!payos.ValidateWebhookSignature(body, signature))
             {
                 _logger.LogWarning("PayOS webhook: invalid signature");
@@ -830,6 +739,22 @@ namespace BookingService.Controllers
                 "79" => "KH nhập sai mật khẩu thanh toán quá số lần quy định.",
                 _ => $"Giao dịch thất bại - Mã lỗi: {responseCode}"
             };
+        }
+
+        private string GetFrontendBaseUrl()
+        {
+            var envValue = Environment.GetEnvironmentVariable("FRONTEND_URL");
+            if (!string.IsNullOrWhiteSpace(envValue))
+            {
+                return envValue.TrimEnd('/');
+            }
+
+            if (!string.IsNullOrWhiteSpace(_frontendSettings.BaseUrl))
+            {
+                return _frontendSettings.BaseUrl.TrimEnd('/');
+            }
+
+            return "http://localhost:5173";
         }
     }
 }

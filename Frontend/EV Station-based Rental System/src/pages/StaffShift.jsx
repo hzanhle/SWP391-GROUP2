@@ -117,6 +117,39 @@ export default function StaffShift() {
   const today = new Date()
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString().split('T')[0]
 
+  function getShiftId(shift) {
+    return shift?.id ?? shift?.Id ?? shift?.shiftId ?? shift?.ShiftId ?? null
+  }
+
+  function normalizeShift(shift) {
+    const shiftDateRaw = shift.shiftDate || shift.ShiftDate || null
+    let shiftDateObj = null
+    if (shiftDateRaw) {
+      shiftDateObj = new Date(shiftDateRaw)
+      if (Number.isNaN(shiftDateObj.getTime())) {
+        // try normalizing by appending T00:00:00
+        const fallback = new Date(`${shiftDateRaw}T00:00:00`)
+        shiftDateObj = Number.isNaN(fallback.getTime()) ? null : fallback
+      }
+    }
+
+    const shiftDateISO = shiftDateObj ? shiftDateObj.toISOString().split('T')[0] : null
+
+    return {
+      ...shift,
+      id: getShiftId(shift),
+      shiftDate: shiftDateRaw,
+      shiftDateObj,
+      shiftDateISO,
+      startTime: shift.startTime ?? shift.StartTime ?? null,
+      endTime: shift.endTime ?? shift.EndTime ?? null,
+      checkInTime: shift.checkInTime ?? shift.CheckInTime ?? shift.actualCheckInTime ?? shift.ActualCheckInTime ?? null,
+      checkOutTime: shift.checkOutTime ?? shift.CheckOutTime ?? shift.actualCheckOutTime ?? shift.ActualCheckOutTime ?? null,
+      stationName: shift.stationName || shift.StationName || 'N/A',
+      status: (shift.status ?? shift.Status ?? '').trim()
+    }
+  }
+
   useEffect(() => {
     let mounted = true
     ;(async () => {
@@ -124,14 +157,12 @@ export default function StaffShift() {
         setLoading(true)
         const response = await getMyShifts(null, null, token)
         if (!mounted) return
-        const shiftList = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : [])
-        setShifts(shiftList)
+        const rawList = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : [])
+        const normalizedList = rawList.map(normalizeShift)
+        setShifts(normalizedList)
 
-        const today_shift = shiftList.find(s => {
-          const shiftDate = new Date(s.shiftDate || s.ShiftDate).toISOString().split('T')[0]
-          return shiftDate === todayStart
-        })
-        setTodayShift(today_shift || null)
+        const today_shift = normalizedList.find(s => s.shiftDateISO === todayStart)
+        setTodayShift(today_shift ?? null)
         setError('')
       } catch (e) {
         setError(e.message || 'Failed to load shifts')
@@ -151,13 +182,15 @@ export default function StaffShift() {
     if (!todayShift) return
     setConfirmDialog(prev => ({ ...prev, loading: true }))
     try {
-      await checkIn({ shiftId: todayShift.id || todayShift.Id }, token)
+      const shiftId = getShiftId(todayShift)
+      await checkIn({ shiftId }, token)
       setSuccessMessage('Check-in successful!')
       setTimeout(() => setSuccessMessage(''), 3000)
       const response = await getMyShifts(null, null, token)
-      const shiftList = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : [])
-      setShifts(shiftList)
-      const updated_shift = shiftList.find(s => (s.id || s.Id) === (todayShift.id || todayShift.Id))
+      const rawList = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : [])
+      const normalizedList = rawList.map(normalizeShift)
+      setShifts(normalizedList)
+      const updated_shift = normalizedList.find(s => s.id === shiftId)
       setTodayShift(updated_shift || null)
       setConfirmDialog({ isOpen: false, type: null, loading: false })
     } catch (e) {
@@ -170,13 +203,15 @@ export default function StaffShift() {
     if (!todayShift) return
     setConfirmDialog(prev => ({ ...prev, loading: true }))
     try {
-      await checkOut({ shiftId: todayShift.id || todayShift.Id }, token)
+      const shiftId = getShiftId(todayShift)
+      await checkOut({ shiftId }, token)
       setSuccessMessage('Check-out successful!')
       setTimeout(() => setSuccessMessage(''), 3000)
       const response = await getMyShifts(null, null, token)
-      const shiftList = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : [])
-      setShifts(shiftList)
-      const updated_shift = shiftList.find(s => (s.id || s.Id) === (todayShift.id || todayShift.Id))
+      const rawList = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : [])
+      const normalizedList = rawList.map(normalizeShift)
+      setShifts(normalizedList)
+      const updated_shift = normalizedList.find(s => s.id === shiftId)
       setTodayShift(updated_shift || null)
       setConfirmDialog({ isOpen: false, type: null, loading: false })
     } catch (e) {
@@ -185,13 +220,37 @@ export default function StaffShift() {
     }
   }
 
-  function formatTime(timeStr) {
-    if (!timeStr) return '-'
-    try {
-      return new Date(timeStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    } catch {
-      return timeStr
+  function buildDateFromParts(dateStr, timeStr) {
+    if (!timeStr) return null
+
+    // Direct parse (covers ISO strings)
+    const direct = new Date(timeStr)
+    if (!Number.isNaN(direct.getTime())) return direct
+
+    const segments = timeStr.split(':')
+    if (segments.length < 2) return null
+
+    const [hours, minutes, seconds] = segments.map(Number)
+    if ([hours, minutes, seconds].some(v => Number.isNaN(v))) return null
+
+    const base = dateStr ? new Date(dateStr) : new Date()
+    if (Number.isNaN(base.getTime())) {
+      const fallback = dateStr ? new Date(`${dateStr}T00:00:00`) : new Date()
+      if (Number.isNaN(fallback.getTime())) return null
+      fallback.setHours(hours || 0, minutes || 0, seconds || 0, 0)
+      return fallback
     }
+
+    const result = new Date(base)
+    result.setHours(hours || 0, minutes || 0, seconds || 0, 0)
+    return result
+  }
+
+  function formatTime(timeStr, dateStr) {
+    if (!timeStr) return '-'
+    const dt = buildDateFromParts(dateStr, timeStr)
+    if (!dt || Number.isNaN(dt.getTime())) return '-'
+    return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
   function formatDate(dateStr) {
@@ -201,6 +260,14 @@ export default function StaffShift() {
     } catch {
       return dateStr
     }
+  }
+
+  function hasCheckIn(shift) {
+    return Boolean(shift?.checkInTime)
+  }
+
+  function hasCheckOut(shift) {
+    return Boolean(shift?.checkOutTime)
   }
 
   if (forbidden) {
@@ -248,7 +315,7 @@ export default function StaffShift() {
                       <p className="card-subtext">{formatDate(todayShift.shiftDate || todayShift.ShiftDate)}</p>
                     </div>
                     <div className="row">
-                      {!todayShift.checkInTime && (
+                      {!hasCheckIn(todayShift) && (
                         <button
                           onClick={() => openConfirm('checkIn')}
                           disabled={confirmDialog.loading}
@@ -257,7 +324,7 @@ export default function StaffShift() {
                           {confirmDialog.loading ? 'Processing...' : 'Check In'}
                         </button>
                       )}
-                      {todayShift.checkInTime && !todayShift.checkOutTime && (
+                      {hasCheckIn(todayShift) && !hasCheckOut(todayShift) && (
                         <button
                           onClick={() => openConfirm('checkOut')}
                           disabled={confirmDialog.loading}
@@ -267,7 +334,7 @@ export default function StaffShift() {
                           {confirmDialog.loading ? 'Processing...' : 'Check Out'}
                         </button>
                       )}
-                      {todayShift.checkInTime && todayShift.checkOutTime && (
+                      {hasCheckIn(todayShift) && hasCheckOut(todayShift) && (
                         <span className="badge green">Completed</span>
                       )}
                     </div>
@@ -283,25 +350,25 @@ export default function StaffShift() {
                     <div>
                       <p className="muted mb-2">Start Time</p>
                       <p className="strong">
-                        {formatTime(todayShift.startTime || todayShift.StartTime)}
+                        {formatTime(todayShift.startTime || todayShift.StartTime, todayShift.shiftDate || todayShift.ShiftDate)}
                       </p>
                     </div>
                     <div>
                       <p className="muted mb-2">End Time</p>
                       <p className="strong">
-                        {formatTime(todayShift.endTime || todayShift.EndTime)}
+                        {formatTime(todayShift.endTime || todayShift.EndTime, todayShift.shiftDate || todayShift.ShiftDate)}
                       </p>
                     </div>
                     <div>
                       <p className="muted mb-2">Check In</p>
                       <p className="strong">
-                        {formatTime(todayShift.checkInTime || todayShift.CheckInTime)}
+                        {formatTime(todayShift.checkInTime, todayShift.shiftDateISO)}
                       </p>
                     </div>
                     <div>
                       <p className="muted mb-2">Check Out</p>
                       <p className="strong">
-                        {formatTime(todayShift.checkOutTime || todayShift.CheckOutTime)}
+                        {formatTime(todayShift.checkOutTime, todayShift.shiftDateISO)}
                       </p>
                     </div>
                   </div>
@@ -330,17 +397,17 @@ export default function StaffShift() {
                       <tbody>
                         {shifts.map((shift, idx) => (
                           <tr key={idx}>
-                            <td>{formatDate(shift.shiftDate || shift.ShiftDate)}</td>
-                            <td>{shift.stationName || shift.StationName || 'N/A'}</td>
+                            <td>{formatDate(shift.shiftDate)}</td>
+                            <td>{shift.stationName}</td>
                             <td>
-                              {formatTime(shift.startTime || shift.StartTime)} - {formatTime(shift.endTime || shift.EndTime)}
+                              {formatTime(shift.startTime, shift.shiftDateISO)} - {formatTime(shift.endTime, shift.shiftDateISO)}
                             </td>
-                            <td>{formatTime(shift.checkInTime || shift.CheckInTime)}</td>
-                            <td>{formatTime(shift.checkOutTime || shift.CheckOutTime)}</td>
+                            <td>{formatTime(shift.checkInTime, shift.shiftDateISO)}</td>
+                            <td>{formatTime(shift.checkOutTime, shift.shiftDateISO)}</td>
                             <td>
-                              {shift.checkInTime && shift.checkOutTime ? (
+                              {hasCheckIn(shift) && hasCheckOut(shift) ? (
                                 <span className="badge green">Completed</span>
-                              ) : shift.checkInTime ? (
+                              ) : hasCheckIn(shift) ? (
                                 <span className="badge orange">Checked In</span>
                               ) : (
                                 <span className="badge gray">Pending</span>
