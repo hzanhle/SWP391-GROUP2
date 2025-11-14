@@ -34,5 +34,11 @@ namespace BookingService.Services
         Task<bool> CompleteRentalAsync(int orderId, List<IFormFile> images, int confirmedBy, VehicleReturnRequest request);
 
         //Task<bool> CheckVehicleAvailabilityAsync(int vehicleId, DateTime fromDate, DateTime toDate);
+
+        // === STAFF QUERIES ===
+        Task<IEnumerable<Order>> GetOrdersByStationAsync(int stationId, OrderStatus? status = null, DateTime? fromDate = null, DateTime? toDate = null);
+
+        // === AVAILABILITY CHECK ===
+        Task<CheckVehiclesAvailabilityResponse> CheckVehiclesAvailabilityAsync(CheckVehiclesAvailabilityRequest request);
     }
 }

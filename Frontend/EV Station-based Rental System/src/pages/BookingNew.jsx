@@ -213,12 +213,17 @@ export default function BookingNew() {
   }, [])
 
   // Pick a random available vehicle for the selected model (optionally at selected station)
-  const getRandomAvailableVehicle = () => {
-    if (!selectedModel) return { vehicle: null, suggestions: [] }
+  // This function now checks availability before random selection
+  const getRandomAvailableVehicle = async (fromDate, toDate) => {
+    if (!selectedModel) return { vehicle: null, suggestions: [], error: null }
 
     if (vehicles.length === 0) {
       console.warn('[BookingNew] No vehicles loaded from API')
-      return { vehicle: null, suggestions: [] }
+      return { vehicle: null, suggestions: [], error: 'Không có dữ liệu xe từ hệ thống.' }
+    }
+
+    if (!fromDate || !toDate) {
+      return { vehicle: null, suggestions: [], error: 'Vui lòng chọn thời gian bắt đầu và kết thúc.' }
     }
 
     const modelId = selectedModel.ModelId || selectedModel.modelId
@@ -236,21 +241,78 @@ export default function BookingNew() {
       ? allCandidates.filter(v => (v.StationId || v.stationId || v.StationID) === stationId)
       : allCandidates
 
-    if (stationCandidates.length > 0) {
-      const idx = Math.floor(Math.random() * stationCandidates.length)
-      const chosen = stationCandidates[idx]
-      const vehicleId = chosen.VehicleId || chosen.vehicleId || chosen.id
-      console.log('[BookingNew] Random vehicle chosen for model at station:', { modelId, stationId, vehicleId })
-      return { vehicle: chosen, suggestions: [] }
+    if (stationCandidates.length === 0) {
+      // Build suggestions from other stations having this model available
+      const suggestionStationIds = Array.from(new Set(allCandidates
+        .map(v => v.StationId || v.stationId || v.StationID)
+        .filter(Boolean)))
+      const suggestions = stations.filter(s => suggestionStationIds.includes(s.Id || s.stationId || s.id))
+      console.warn('[BookingNew] No vehicles available at selected station. Suggestions:', suggestions.map(s => s.Name || s.name))
+      return { 
+        vehicle: null, 
+        suggestions,
+        error: 'Hết xe ở trạm này cho mẫu đã chọn. Vui lòng chọn trạm khác hoặc thời gian khác.' 
+      }
     }
 
-    // Build suggestions from other stations having this model available
-    const suggestionStationIds = Array.from(new Set(allCandidates
-      .map(v => v.StationId || v.stationId || v.StationID)
-      .filter(Boolean)))
-    const suggestions = stations.filter(s => suggestionStationIds.includes(s.Id || s.stationId || s.id))
-    console.warn('[BookingNew] No vehicles available at selected station. Suggestions:', suggestions.map(s => s.Name || s.name))
-    return { vehicle: null, suggestions }
+    // Check availability for all candidates
+    try {
+      const vehicleIds = stationCandidates.map(v => Number(v.VehicleId || v.vehicleId || v.id)).filter(id => !isNaN(id))
+      
+      if (vehicleIds.length === 0) {
+        return { vehicle: null, suggestions: [], error: 'Không tìm thấy xe hợp lệ.' }
+      }
+
+      const fromISO = new Date(fromDate).toISOString()
+      const toISO = new Date(toDate).toISOString()
+
+      const { data } = await bookingApi.checkVehiclesAvailability(vehicleIds, fromISO, toISO, token)
+      
+      const availableVehicleIds = data?.availableVehicleIds || data?.AvailableVehicleIds || []
+      
+      if (availableVehicleIds.length === 0) {
+        // All vehicles are booked, suggest other stations or different time
+        const suggestionStationIds = Array.from(new Set(allCandidates
+          .map(v => v.StationId || v.stationId || v.StationID)
+          .filter(Boolean)))
+        const suggestions = stations.filter(s => suggestionStationIds.includes(s.Id || s.stationId || s.id))
+        
+        return { 
+          vehicle: null, 
+          suggestions,
+          error: 'Tất cả xe mẫu này đã được đặt trong khoảng thời gian này. Vui lòng chọn trạm khác hoặc thời gian khác.' 
+        }
+      }
+
+      // Filter candidates to only available ones
+      const availableCandidates = stationCandidates.filter(v => {
+        const vid = Number(v.VehicleId || v.vehicleId || v.id)
+        return availableVehicleIds.includes(vid)
+      })
+
+      if (availableCandidates.length === 0) {
+        return { 
+          vehicle: null, 
+          suggestions: [],
+          error: 'Không có xe khả dụng trong khoảng thời gian này. Vui lòng chọn thời gian khác.' 
+        }
+      }
+
+      // Random from available candidates
+      const idx = Math.floor(Math.random() * availableCandidates.length)
+      const chosen = availableCandidates[idx]
+      const vehicleId = chosen.VehicleId || chosen.vehicleId || chosen.id
+      console.log('[BookingNew] Random available vehicle chosen:', { modelId, stationId, vehicleId, fromDate, toDate })
+      
+      return { vehicle: chosen, suggestions: [], error: null }
+    } catch (err) {
+      console.error('[BookingNew] Error checking vehicle availability:', err)
+      return { 
+        vehicle: null, 
+        suggestions: [],
+        error: 'Lỗi khi kiểm tra tính khả dụng của xe. Vui lòng thử lại.' 
+      }
+    }
   }
 
   const handlePreview = async () => {
@@ -286,12 +348,17 @@ export default function BookingNew() {
     try {
       setPreviewLoading(true)
 
+      // 2) Convert dates to ISO format first (needed for availability check)
+      const fromISO = new Date(pickupDate).toISOString()
+      const toISO = new Date(dropoffDate).toISOString()
+
       // 1) Chọn ngẫu nhiên 1 xe khả dụng theo model (ưu tiên tại trạm đã chọn)
-      const pick = getRandomAvailableVehicle()
+      // Now checks availability before random selection
+      const pick = await getRandomAvailableVehicle(pickupDate, dropoffDate)
       const chosenVehicle = pick.vehicle
       if (!chosenVehicle) {
         setSuggestedStations(pick.suggestions || [])
-        setPreviewError('Hết xe ở trạm này cho mẫu đã chọn. Vui lòng chọn trạm khác bên dưới.')
+        setPreviewError(pick.error || 'Hết xe ở trạm này cho mẫu đã chọn. Vui lòng chọn trạm khác hoặc thời gian khác.')
         return
       }
 
@@ -300,10 +367,6 @@ export default function BookingNew() {
         setPreviewError('Vehicle information is invalid. Please try again.')
         return
       }
-
-      // 2) Convert dates to ISO format
-      const fromISO = new Date(pickupDate).toISOString()
-      const toISO = new Date(dropoffDate).toISOString()
 
       // 3) Lấy userId an toàn
       const previewUserId =

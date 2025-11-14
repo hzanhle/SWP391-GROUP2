@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from '@mui/material'
 import StaffLayout from '../components/staff/StaffLayout'
 import { getStaffVehicles, updateVehicleStatus, getVehicleHistory } from '../api/staffVehicle'
 import { getAllModels, updateVehicleStatus as setVehicleStatus } from '../api/vehicle'
+import { getAllStations } from '../api/station'
 import '../styles/staff.css'
 
 const VEHICLE_STATUSES = [
@@ -17,7 +18,7 @@ function getStatusBadge(status) {
   return statusObj || { label: status, color: '#f3f4f6', textColor: '#6b7280' }
 }
 
-function VehicleCard({ vehicle, onStatusChange, onViewHistory, getModelName }) {
+function VehicleCard({ vehicle, onStatusChange, onViewHistory, getModelName, getStationName }) {
   const vehicleId = vehicle.vehicleId || vehicle.VehicleId || vehicle.id || vehicle.Id
   const [isUpdating, setIsUpdating] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
@@ -71,7 +72,7 @@ function VehicleCard({ vehicle, onStatusChange, onViewHistory, getModelName }) {
       <div className="row-between mb-4">
         <div>
           <h3 style={{ fontSize: '1.25rem', fontWeight: '700', margin: '0 0 0.25rem' }}>
-            {vehicle.licensePlate || vehicle.LicensePlate || 'N/A'}
+            {vehicle.licensePlate || vehicle.LicensePlate || vehicle.vehicleCode || vehicle.VehicleCode || `Vehicle #${vehicleId}`}
           </h3>
           <p className="muted mb-0">
             {getModelName(vehicle.modelId || vehicle.ModelId)}
@@ -115,7 +116,7 @@ function VehicleCard({ vehicle, onStatusChange, onViewHistory, getModelName }) {
             Station
           </p>
           <p className="strong">
-            {vehicle.stationName || vehicle.StationName || 'N/A'}
+            {getStationName(vehicle.stationId || vehicle.StationId)}
           </p>
         </div>
         <div>
@@ -190,6 +191,7 @@ export default function StaffVehicle() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth.token') : ''
   const [vehicles, setVehicles] = useState([])
   const [models, setModels] = useState([])
+  const [stations, setStations] = useState([])
   const [filteredVehicles, setFilteredVehicles] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -208,6 +210,12 @@ export default function StaffVehicle() {
     return `${manu} ${name}`.trim() || (m.name || m.Name) || 'Unknown Model'
   }
 
+  const getStationName = (stationId) => {
+    if (!stationId) return 'N/A'
+    const station = stations.find(s => (s.stationId === stationId || s.id === stationId || s.StationId === stationId || s.Id === stationId))
+    return station ? (station.name || station.Name || station.stationName || station.StationName || `Station ${stationId}`) : `Station ${stationId}`
+  }
+
   const rawUser = (typeof window !== 'undefined' && localStorage.getItem('auth.user')) || '{}'
   let currentRoleId = 0
   try { currentRoleId = Number(JSON.parse(rawUser)?.roleId || JSON.parse(rawUser)?.RoleId || 0) } catch {error}
@@ -218,15 +226,18 @@ export default function StaffVehicle() {
     ;(async () => {
       try {
         setLoading(true)
-        const [vehiclesRes, modelsRes] = await Promise.all([
+        const [vehiclesRes, modelsRes, stationsRes] = await Promise.all([
           getStaffVehicles(null, null, null, token),
-          getAllModels(token)
+          getAllModels(token),
+          getAllStations(token).catch(() => ({ data: [] })) // Don't fail if stations API fails
         ])
         if (!mounted) return
         const vehicleList = Array.isArray(vehiclesRes.data?.data) ? vehiclesRes.data.data : (Array.isArray(vehiclesRes.data) ? vehiclesRes.data : [])
         const modelsList = Array.isArray(modelsRes.data?.data) ? modelsRes.data.data : (Array.isArray(modelsRes.data) ? modelsRes.data : [])
+        const stationsList = Array.isArray(stationsRes.data?.data) ? stationsRes.data.data : (Array.isArray(stationsRes.data) ? stationsRes.data : [])
         setVehicles(vehicleList)
         setModels(modelsList)
+        setStations(stationsList)
         setError('')
       } catch (e) {
         setError(e.message || 'Failed to load vehicles')
@@ -281,14 +292,17 @@ export default function StaffVehicle() {
       }
       setTimeout(() => setSuccessMessage(''), 3000)
 
-      const [vehiclesRes, modelsRes] = await Promise.all([
+      const [vehiclesRes, modelsRes, stationsRes] = await Promise.all([
         getStaffVehicles(null, null, null, token),
-        getAllModels(token)
+        getAllModels(token),
+        getAllStations(token).catch(() => ({ data: [] }))
       ])
       const vehicleList = Array.isArray(vehiclesRes.data?.data) ? vehiclesRes.data.data : (Array.isArray(vehiclesRes.data) ? vehiclesRes.data : [])
       const modelsList = Array.isArray(modelsRes.data?.data) ? modelsRes.data.data : (Array.isArray(modelsRes.data) ? modelsRes.data : [])
+      const stationsList = Array.isArray(stationsRes.data?.data) ? stationsRes.data.data : (Array.isArray(stationsRes.data) ? stationsRes.data : [])
       setVehicles(vehicleList)
       setModels(modelsList)
+      setStations(stationsList)
     } catch (e) {
       setError(e.message || 'Failed to update vehicle status')
     }
@@ -447,6 +461,7 @@ export default function StaffVehicle() {
                       onStatusChange={handleStatusChange}
                       onViewHistory={handleViewHistory}
                       getModelName={getModelName}
+                      getStationName={getStationName}
                     />
                   ))}
                 </div>

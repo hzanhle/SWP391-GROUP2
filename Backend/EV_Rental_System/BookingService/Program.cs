@@ -6,6 +6,7 @@ using BookingService.Repositories;
 using BookingService.Services;
 using BookingService.Services.SignalR;
 using BookingService.Swagger;
+using BookingService.ExternalDbContexts;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -81,7 +82,11 @@ builder.Services.Configure<FrontendSettings>(builder.Configuration.GetSection("F
 
 // ====================== Repositories ======================
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderRepository>(sp =>
+{
+    var context = sp.GetRequiredService<MyDbContext>();
+    return new OrderRepository(context, sp);
+});
 builder.Services.AddScoped<IOnlineContractRepository, OnlineContractRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
@@ -333,6 +338,21 @@ static void ConfigureDatabase(IServiceCollection services, IConfiguration config
             options.EnableDetailedErrors();
         }
     });
+
+    // External DbContext for TwoWheelVehicleService (CHỈ ĐỌC LẤY DỮ LIỆU)
+    var vehicleConnStr = config.GetConnectionString("TwoWheelVehicleServiceConnection");
+    if (!string.IsNullOrEmpty(vehicleConnStr))
+    {
+        services.AddDbContext<TwoWheelVehicleServiceDbContext>(options =>
+        {
+            options.UseSqlServer(vehicleConnStr, sqlOptions =>
+            {
+                sqlOptions.EnableRetryOnFailure(0);
+                sqlOptions.CommandTimeout(30);
+            });
+            options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        });
+    }
 }
 
 static void ConfigureCors(IServiceCollection services, IConfiguration configuration, IWebHostEnvironment env)

@@ -693,9 +693,9 @@ export default function Payment() {
                         aria-pressed={selectedMethod === 'VNPay'}
                         onClick={() => setSelectedMethod('VNPay')}
                       >
-                        <div className="icon-xl">🏦</div>
+                        <div className="icon-xl">💳</div>
                         <h4 className="payment-title">VNPay</h4>
-                        <p className="card-subtext">Fast and secure payment</p>
+                        <p className="card-subtext">Card Payments</p>
                         {selectedMethod === 'VNPay' && <p className="card-subtext text-success mt-4">✓ Selected</p>}
                       </button>
 
@@ -705,9 +705,9 @@ export default function Payment() {
                         aria-pressed={selectedMethod === 'PayOS'}
                         onClick={() => setSelectedMethod('PayOS')}
                       >
-                        <div className="icon-xl">💳</div>
+                        <div className="icon-xl">🏦</div>
                         <h4 className="payment-title">PayOS</h4>
-                        <p className="card-subtext">Card and wallet payments</p>
+                        <p className="card-subtext">Chuyển khoản, quét mã</p>
                         {selectedMethod === 'PayOS' && <p className="card-subtext text-success mt-4">✓ Selected</p>}
                       </button>
                     </div>

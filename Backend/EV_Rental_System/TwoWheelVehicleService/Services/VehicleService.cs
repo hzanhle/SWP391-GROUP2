@@ -443,7 +443,13 @@ namespace TwoWheelVehicleService.Services
                 TechnicalStatusDescription = GetDescription(vehicle.CurrentTechnicalStatus),
                 NextBooking = null, // TODO: Implement if you have Booking model
                 LastUpdate = vehicle.LastStatusUpdate?.ToString("HH:mm - dd/MM/yyyy") ?? "Chưa cập nhật",
-                LastUpdatedBy = vehicle.LastUpdatedBy.HasValue ? $"User #{vehicle.LastUpdatedBy}" : "N/A"
+                LastUpdatedBy = vehicle.LastUpdatedBy.HasValue ? $"User #{vehicle.LastUpdatedBy}" : "N/A",
+                StationId = vehicle.StationId,
+                StationName = null, // Will be populated by frontend or separate API call
+                LicensePlate = vehicle.LicensePlate,
+                Color = vehicle.Color,
+                ModelId = vehicle.ModelId,
+                LastStatusUpdate = vehicle.LastStatusUpdate
             };
         }
 

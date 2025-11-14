@@ -125,6 +125,32 @@ export function getOrdersByUserId(userId, token) {
   })
 }
 
+// Get orders by station (for staff)
+export function getOrdersByStation(stationId, filters, token) {
+  const params = new URLSearchParams()
+  if (filters?.status) params.append('status', filters.status)
+  if (filters?.fromDate) params.append('fromDate', filters.fromDate)
+  if (filters?.toDate) params.append('toDate', filters.toDate)
+  
+  return request(`/api/orders/station/${stationId}?${params}`, {
+    method: 'GET',
+    token,
+  })
+}
+
+// Check availability of multiple vehicles for a date range
+export function checkVehiclesAvailability(vehicleIds, fromDate, toDate, token) {
+  return request('/api/orders/check-vehicles-availability', {
+    method: 'POST',
+    body: {
+      vehicleIds,
+      fromDate,
+      toDate,
+    },
+    token,
+  })
+}
+
 // Confirm payment (webhook - called from backend after VNPay callback)
 export function confirmPayment(payload) {
   return request('/api/orders/confirm-payment', {

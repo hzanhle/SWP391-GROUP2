@@ -27,6 +27,7 @@ import AdminCreateStaff from './pages/AdminCreateStaff'
 import AdminTransfer from './pages/AdminTransfer'
 import StaffShift from './pages/StaffShift'
 import StaffVehicle from './pages/StaffVehicle'
+import StaffOrders from './pages/StaffOrders'
 import Feedback from './pages/Feedback'
 import AdminOngoingTransfers from './pages/AdminOngoingTransfers'
 import AdminTransferHistory from './pages/AdminTransferHistory'
@@ -98,6 +99,7 @@ function resolveRoute() {
     case 'admin-risk-customers': return 'admin-risk-customers'
     case 'admin-users': return 'admin-users'
     case 'staff-verify': return 'staff-verify'
+    case 'staff-orders': return 'staff-orders'
     case 'admin-models': return 'admin-models'
     case 'admin-stations': return 'admin-stations'
     case 'admin-vehicles': return 'admin-vehicles'
@@ -124,7 +126,7 @@ export default function App() {
   // Check if current route is admin route
   const isAdminRoute = ['admin', 'admin-orders', 'admin-risk-customers', 'admin-users', 'admin-models', 'admin-stations', 'admin-vehicles', 'admin-staffshift', 'admin-create-staff', 'admin-transfer', 'admin-transfer-ongoing', 'admin-transfer-history', 'staff-verify'].includes(routeData)
   // Check if current route is staff route
-  const isStaffRoute = ['staff-shifts', 'staff-vehicles'].includes(routeData)
+  const isStaffRoute = ['staff-shifts', 'staff-vehicles', 'staff-orders'].includes(routeData)
 
   return (
     <>
@@ -160,6 +162,7 @@ export default function App() {
       {routeData === 'staff-verify' && <StaffVerification />}
       {routeData === 'staff-shifts' && <StaffShift />}
       {routeData === 'staff-vehicles' && <StaffVehicle />}
+      {routeData === 'staff-orders' && <StaffOrders />}
       {routeData === 'home' && <Home />}
     </>
   )

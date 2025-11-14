@@ -697,6 +697,50 @@ namespace BookingService.Services
             return await _orderRepo.GetByUserIdAsync(userId);
         }
 
+        public async Task<IEnumerable<Order>> GetOrdersByStationAsync(int stationId, OrderStatus? status = null, DateTime? fromDate = null, DateTime? toDate = null)
+        {
+            _logger.LogInformation("Getting orders for Station {StationId} with filters: Status={Status}, FromDate={FromDate}, ToDate={ToDate}",
+                stationId, status, fromDate, toDate);
+
+            var orders = await _orderRepo.GetByStationIdAsync(stationId, status, fromDate, toDate);
+            return orders;
+        }
+
+        public async Task<CheckVehiclesAvailabilityResponse> CheckVehiclesAvailabilityAsync(CheckVehiclesAvailabilityRequest request)
+        {
+            _logger.LogInformation("Checking availability for {Count} vehicles from {FromDate} to {ToDate}",
+                request.VehicleIds.Count, request.FromDate, request.ToDate);
+
+            var results = new List<VehicleAvailabilityResponse>();
+            var availableVehicleIds = new List<int>();
+
+            foreach (var vehicleId in request.VehicleIds)
+            {
+                var isAvailable = await _orderRepo.IsVehicleAvailableAsync(
+                    vehicleId,
+                    request.FromDate,
+                    request.ToDate);
+
+                results.Add(new VehicleAvailabilityResponse
+                {
+                    VehicleId = vehicleId,
+                    IsAvailable = isAvailable,
+                    Reason = isAvailable ? null : "Vehicle is already booked for this time period"
+                });
+
+                if (isAvailable)
+                {
+                    availableVehicleIds.Add(vehicleId);
+                }
+            }
+
+            return new CheckVehiclesAvailabilityResponse
+            {
+                Results = results,
+                AvailableVehicleIds = availableVehicleIds
+            };
+        }
+
         public async Task<PeakHoursReportResponse> GetPeakHoursReportAsync()
         {
             _logger.LogInformation("Getting peak hours report");

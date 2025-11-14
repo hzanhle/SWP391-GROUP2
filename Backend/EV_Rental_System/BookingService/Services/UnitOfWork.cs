@@ -1,11 +1,13 @@
 ﻿using BookingService.Repositories;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BookingService.Services
 {
     public class UnitOfWork : IUnitOfWork
     {
         private readonly MyDbContext _context;
+        private readonly IServiceProvider _serviceProvider;
         private IDbContextTransaction? _transaction;
         private bool _disposed = false;
 
@@ -14,9 +16,10 @@ namespace BookingService.Services
         private IPaymentRepository? _paymentRepository;
         private IOnlineContractRepository? _contractRepository;
 
-        public UnitOfWork(MyDbContext context)
+        public UnitOfWork(MyDbContext context, IServiceProvider serviceProvider)
         {
             _context = context;
+            _serviceProvider = serviceProvider;
         }
 
         // ===== REPOSITORIES =====
@@ -25,7 +28,7 @@ namespace BookingService.Services
         {
             get
             {
-                _orderRepository ??= new OrderRepository(_context);
+                _orderRepository ??= new OrderRepository(_context, _serviceProvider);
                 return _orderRepository;
             }
         }

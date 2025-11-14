@@ -29,5 +29,8 @@ namespace BookingService.Repositories
         Task<IEnumerable<Order>> GetExpiredPendingOrdersAsync(); // ExpiresAt < now
         Task<int> GetUserCompletedOrdersCountAsync(int userId);
         Task<bool> HasCompletedOrderAsync(int userId);
+
+        // === STAFF QUERIES ===
+        Task<IEnumerable<Order>> GetByStationIdAsync(int stationId, OrderStatus? status = null, DateTime? fromDate = null, DateTime? toDate = null);
     }
 }

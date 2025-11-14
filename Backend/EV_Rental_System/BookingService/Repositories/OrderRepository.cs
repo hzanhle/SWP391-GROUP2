@@ -1,15 +1,20 @@
 ﻿using BookingService.Models;
+using BookingService.ExternalDbContexts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BookingService.Repositories
 {
     public class OrderRepository : IOrderRepository
     {
         private readonly MyDbContext _context;
+        private readonly TwoWheelVehicleServiceDbContext? _vehicleDb;
 
-        public OrderRepository(MyDbContext context)
+        public OrderRepository(MyDbContext context, IServiceProvider serviceProvider)
         {
             _context = context;
+            // Try to get external DbContext if available
+            _vehicleDb = serviceProvider.GetService<TwoWheelVehicleServiceDbContext>();
         }
 
         // === CREATE ===
@@ -182,6 +187,54 @@ namespace BookingService.Repositories
                 .Select(kvp => kvp.Key)
                 .OrderBy(hour => hour)
                 .ToList();
+        }
+
+        // === STAFF QUERIES ===
+        public async Task<IEnumerable<Order>> GetByStationIdAsync(int stationId, OrderStatus? status = null, DateTime? fromDate = null, DateTime? toDate = null)
+        {
+            if (_vehicleDb == null)
+            {
+                throw new InvalidOperationException("TwoWheelVehicleServiceDbContext is not configured. Please check connection string.");
+            }
+
+            // Get vehicle IDs for the station
+            var vehicleIds = await _vehicleDb.Vehicles
+                .Where(v => v.StationId == stationId)
+                .Select(v => v.VehicleId)
+                .ToListAsync();
+
+            if (!vehicleIds.Any())
+            {
+                return Enumerable.Empty<Order>();
+            }
+
+            // Query orders for those vehicles
+            var query = _context.Orders
+                .Include(o => o.Payments)
+                .Include(o => o.OnlineContract)
+                .AsNoTracking()
+                .Where(o => vehicleIds.Contains(o.VehicleId));
+
+            // Apply status filter
+            if (status.HasValue)
+            {
+                query = query.Where(o => o.Status == status.Value);
+            }
+
+            // Apply date filters
+            if (fromDate.HasValue)
+            {
+                query = query.Where(o => o.CreatedAt >= fromDate.Value);
+            }
+
+            if (toDate.HasValue)
+            {
+                query = query.Where(o => o.CreatedAt <= toDate.Value);
+            }
+
+            return await query
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using BookingService.DTOs;
 using BookingService.Services;
 using BookingService.Repositories;
+using BookingService.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -232,6 +233,59 @@ namespace BookingService.Controllers
             {
                 _logger.LogError(ex, "Error getting all orders");
                 return StatusCode(500, new { Message = "Lỗi hệ thống." });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách đơn hàng theo Station (Staff/Admin)
+        /// </summary>
+        [HttpGet("station/{stationId}")]
+        [Authorize(Roles = "Employee,Admin")]
+        public async Task<IActionResult> GetOrdersByStation(
+            int stationId,
+            [FromQuery] string? status = null,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null)
+        {
+            try
+            {
+                OrderStatus? orderStatus = null;
+                if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<OrderStatus>(status, true, out var parsedStatus))
+                {
+                    orderStatus = parsedStatus;
+                }
+
+                var orders = await _orderService.GetOrdersByStationAsync(stationId, orderStatus, fromDate, toDate);
+                return Ok(orders);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting orders for Station {StationId}", stationId);
+                return StatusCode(500, new { Message = "Lỗi hệ thống khi lấy danh sách đơn hàng." });
+            }
+        }
+
+        /// <summary>
+        /// Check availability of multiple vehicles for a date range
+        /// </summary>
+        [HttpPost("check-vehicles-availability")]
+        [Authorize(Roles = "Member")]
+        public async Task<IActionResult> CheckVehiclesAvailability([FromBody] CheckVehiclesAvailabilityRequest request)
+        {
+            try
+            {
+                if (request.VehicleIds == null || request.VehicleIds.Count == 0)
+                {
+                    return BadRequest(new { Message = "VehicleIds list cannot be empty." });
+                }
+
+                var result = await _orderService.CheckVehiclesAvailabilityAsync(request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking vehicles availability");
+                return StatusCode(500, new { Message = "Lỗi hệ thống khi kiểm tra tính khả dụng của xe." });
             }
         }
 

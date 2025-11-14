@@ -6,6 +6,7 @@ function Icon({ name }) {
   const common = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
   switch (name) {
     case 'shifts': return <svg {...common}><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
+    case 'orders': return <svg {...common}><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
     case 'vehicles': return <svg {...common}><path d="M3 9h18M5 9v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M9 5h6a2 2 0 0 1 2 2v2H7V7a2 2 0 0 1 2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
     case 'verify': return <svg {...common}><path d="M9 16.17L4.83 12m0 0L3 13.83m1.83-1.83l5.34-5.34a2 2 0 0 1 2.83 0l5.34 5.34M3 21h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
     case 'logout': return <svg {...common}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
@@ -22,6 +23,7 @@ export default function StaffLayout({ children, active = 'shifts' }) {
 
   const links = useMemo(() => ([
     { key: 'shifts', label: 'My Shifts', href: '#staff-shifts', icon: 'shifts' },
+    { key: 'orders', label: 'Station Orders', href: '#staff-orders', icon: 'orders' },
     { key: 'vehicles', label: 'Vehicle Management', href: '#staff-vehicles', icon: 'vehicles' },
     { key: 'verify', label: 'Staff Verification', href: '#staff-verify', icon: 'verify' },
   ]), []);
