@@ -880,6 +880,11 @@ namespace BookingService.Services
                 userId, orderId, transactionId);
         }
 
+        public Task<IEnumerable<Order>> GetAllOrdersAsync()
+        {
+            return _orderRepo.GetAllAsync();
+        }
+
 
 
         #endregion

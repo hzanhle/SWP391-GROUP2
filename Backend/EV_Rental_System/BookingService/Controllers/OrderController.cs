@@ -57,6 +57,22 @@ namespace BookingService.Controllers
 
             return userId;
         }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin,Employee")]
+        public async Task<IActionResult> GetAllOrders()
+        {
+            try
+            {
+                var orders = await _orderService.GetAllOrdersAsync();
+                return Ok(orders);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all orders");
+                return StatusCode(500, new { Message = "Lỗi hệ thống." });
+            }
+        }
         /// <summary>
         /// Xem trước đơn hàng: tính toán chi phí và kiểm tra lịch.
         /// Chỉ Member mới có thể xem trước đơn hàng của mình

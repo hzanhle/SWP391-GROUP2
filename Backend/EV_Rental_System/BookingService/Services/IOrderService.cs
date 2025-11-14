@@ -6,6 +6,7 @@ namespace BookingService.Services
 {
     public interface IOrderService
     {
+        Task<IEnumerable<Order>> GetAllOrdersAsync();
         // (MỚI) Xem trước
         Task<OrderPreviewResponse> GetOrderPreviewAsync(OrderRequest request, int userId);
 
