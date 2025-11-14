@@ -782,19 +782,40 @@ namespace BookingService.Services
         // ===== Cost Calculation =====
 
         private async Task<OrderCostBreakdown> CalculateOrderCostAsync(
-            int userId,
-            DateTime fromDate,
-            DateTime toDate,
-            decimal hourlyRate,
-            decimal vehiclePrice)
+        int userId,
+        DateTime fromDate,
+        DateTime toDate,
+        decimal hourlyRate,
+        decimal vehiclePrice)
         {
             var totalHours = (decimal)(toDate - fromDate).TotalHours;
             var rentalCost = totalHours * hourlyRate;
-            var deposit = vehiclePrice * _orderSettings.DepositPercentage;
+
+            // Tính tiền cọc ban đầu (30% của giá xe)
+            var baseDeposit = vehiclePrice * _orderSettings.DepositPercentage;
 
             // Check if user has completed orders (waive service fee)
             var hasCompletedOrder = await _orderRepo.HasCompletedOrderAsync(userId);
             var serviceFee = hasCompletedOrder ? 0m : _orderSettings.ServiceFee;
+
+            // Tính tiền cọc dựa trên TrustScore nếu user có đơn hàng
+            var deposit = baseDeposit;
+            if (hasCompletedOrder)
+            {
+                var trustScore = await _trustScoreService.GetCurrentScoreAsync(userId);
+
+                if (trustScore >= 1000)
+                {
+                    // Miễn cọc nếu điểm >= 1000
+                    deposit = 0m;
+                }
+                else if (trustScore >= 500)
+                {
+                    // Giảm 50% cọc nếu điểm >= 500
+                    deposit = baseDeposit * 0.5m;
+                }
+                // Nếu điểm < 500 thì giữ nguyên tiền cọc
+            }
 
             var totalAmount = rentalCost + deposit + serviceFee;
 
