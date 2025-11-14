@@ -1,8 +1,11 @@
+using BookingService.Models.ModelSettings;
 using BookingService.Services;
 using BookingService.Services.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
+using System;
 using System.Security.Claims;
 
 namespace BookingService.Controllers
@@ -16,17 +19,20 @@ namespace BookingService.Controllers
         private readonly IPaymentService _paymentService;
         private readonly ILogger<PaymentController> _logger;
         private readonly IHubContext<OrderTimerHub> _hubContext;
+        private readonly FrontendSettings _frontendSettings;
 
         public PaymentController(
             IVNPayService vnpayService,
             IPaymentService paymentService,
             ILogger<PaymentController> logger,
-            IHubContext<OrderTimerHub> hubContext)
+            IHubContext<OrderTimerHub> hubContext,
+            IOptions<FrontendSettings> frontendSettings)
         {
             _vnpayService = vnpayService;
             _paymentService = paymentService;
             _logger = logger;
             _hubContext = hubContext;
+            _frontendSettings = frontendSettings?.Value ?? new FrontendSettings();
         }
 
         /// <summary>
@@ -231,15 +237,14 @@ namespace BookingService.Controllers
                             _logger.LogWarning(ex, "⚠️ Failed to send SignalR notification for Order {OrderId}", orderId);
                         }
 
-                        // Get FE URL from environment or config
-                        var feUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
+                        var feUrl = GetFrontendBaseUrl();
                         var redirectUrl = $"{feUrl}?success=true&orderId={orderId}&transactionId={transactionNo}#payment";
                         return Redirect(redirectUrl);
                     }
                     else
                     {
                         _logger.LogError("Failed to mark payment completed for Order {OrderId}", orderId);
-                        var feUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
+                        var feUrl = GetFrontendBaseUrl();
                         var redirectUrl = $"{feUrl}?success=false&orderId={orderId}&error=payment_update_failed#payment";
                         return Redirect(redirectUrl);
                     }
@@ -260,7 +265,7 @@ namespace BookingService.Controllers
                         orderId, responseCode, errorMessage
                     );
 
-                    var feUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
+                    var feUrl = GetFrontendBaseUrl();
                     var redirectUrl = $"{feUrl}#payment?success=false&orderId={orderId}&error={errorMessage}";
                     return Redirect(redirectUrl);
                 }
@@ -514,6 +519,86 @@ namespace BookingService.Controllers
             }
         }
 
+        [HttpGet("payos-deposit-callback")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PayOSDepositCallback()
+        {
+            var query = Request.Query;
+            _logger.LogInformation("PayOS deposit callback received: {@Query}",
+                query.ToDictionary(k => k.Key, v => v.Value.ToString()));
+
+            var code = query["code"].ToString();
+            var status = query["status"].ToString();
+            var orderCodeStr = query["orderCode"].ToString();
+            var transactionId = query["transactionId"].ToString();
+            if (string.IsNullOrWhiteSpace(transactionId))
+            {
+                transactionId = query["id"].ToString();
+            }
+
+            var frontendBase = GetFrontendBaseUrl();
+
+            if (!int.TryParse(orderCodeStr, out var orderId) || orderId <= 0)
+            {
+                return Redirect($"{frontendBase}?success=false&error=invalid_order#payment");
+            }
+
+            try
+            {
+                var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
+                if (payment == null)
+                {
+                    _logger.LogWarning("PayOS deposit callback: payment not found for order {OrderId}", orderId);
+                    return Redirect($"{frontendBase}?success=false&orderId={orderId}&error=payment_not_found#payment");
+                }
+
+                if (payment.IsCompleted())
+                {
+                    _logger.LogInformation("PayOS deposit callback: payment already completed for order {OrderId}", orderId);
+                    return Redirect($"{frontendBase}?success=true&orderId={orderId}&transactionId={payment.TransactionId ?? transactionId}#payment");
+                }
+
+                if (string.Equals(code, "00", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(status, "PAID", StringComparison.OrdinalIgnoreCase))
+                {
+                    var txn = string.IsNullOrWhiteSpace(transactionId)
+                        ? Guid.NewGuid().ToString("N")
+                        : transactionId;
+
+                    var serialized = System.Text.Json.JsonSerializer.Serialize(
+                        query.ToDictionary(k => k.Key, v => v.Value.ToString()));
+
+                    var success = await _paymentService.MarkPaymentCompletedAsync(orderId, txn, serialized);
+                    if (!success)
+                    {
+                        return Redirect($"{frontendBase}?success=false&orderId={orderId}&error=payment_update_failed#payment");
+                    }
+
+                    try
+                    {
+                        await _hubContext.Clients.Group($"order_{orderId}")
+                            .SendAsync("PaymentSuccess", new { OrderId = orderId, TransactionId = txn });
+                        _logger.LogInformation("SignalR PayOS PaymentSuccess sent for order {OrderId}", orderId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to send PayOS PaymentSuccess SignalR for order {OrderId}", orderId);
+                    }
+
+                    return Redirect($"{frontendBase}?success=true&orderId={orderId}&transactionId={txn}#payment");
+                }
+                else
+                {
+                    return Redirect($"{frontendBase}?success=false&orderId={orderId}&error=payment_failed#payment");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling PayOS deposit callback for Order {OrderId}", orderId);
+                return Redirect($"{frontendBase}?success=false&orderId={orderId}&error=callback_error#payment");
+            }
+        }
+
         [HttpPost("payos/webhook")]
         [AllowAnonymous]
         public async Task<IActionResult> PayOSWebhook([FromServices] IPayOSService payos)
@@ -521,6 +606,11 @@ namespace BookingService.Controllers
             using var reader = new StreamReader(Request.Body);
             var body = await reader.ReadToEndAsync();
             var signature = Request.Headers["X-Checksum"]; // header name depending on PayOS
+            if (string.IsNullOrWhiteSpace(signature))
+            {
+                _logger.LogWarning("PayOS webhook ping received without signature. Returning 200 for verification.");
+                return Ok(new { success = false, message = "Missing checksum" });
+            }
             if (!payos.ValidateWebhookSignature(body, signature))
             {
                 _logger.LogWarning("PayOS webhook: invalid signature");
@@ -649,6 +739,22 @@ namespace BookingService.Controllers
                 "79" => "KH nhập sai mật khẩu thanh toán quá số lần quy định.",
                 _ => $"Giao dịch thất bại - Mã lỗi: {responseCode}"
             };
+        }
+
+        private string GetFrontendBaseUrl()
+        {
+            var envValue = Environment.GetEnvironmentVariable("FRONTEND_URL");
+            if (!string.IsNullOrWhiteSpace(envValue))
+            {
+                return envValue.TrimEnd('/');
+            }
+
+            if (!string.IsNullOrWhiteSpace(_frontendSettings.BaseUrl))
+            {
+                return _frontendSettings.BaseUrl.TrimEnd('/');
+            }
+
+            return "http://localhost:5173";
         }
     }
 }

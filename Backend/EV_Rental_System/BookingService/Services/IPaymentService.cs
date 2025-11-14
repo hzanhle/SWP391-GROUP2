@@ -9,6 +9,7 @@ namespace BookingService.Services
         Task<bool> MarkPaymentFailedAsync(int orderId, string? gatewayResponse);
         Task<bool> MarkPaymentCancelledAsync(int orderId, string? reason);
         Task<bool> UpdatePaymentMethodAsync(int orderId, string paymentMethod);
+        Task MarkDepositRefundedAsync(int paymentId, string? refundTransactionId, DateTime refundedAt, decimal? amount = null, string? gatewayResponse = null);
 
         // Query operations
         Task<Payment?> GetPaymentByOrderIdAsync(int orderId);

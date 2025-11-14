@@ -52,8 +52,27 @@ namespace BookingService.Services
         {
             try
             {
-                feedback.Created = DateTime.UtcNow;
-                await _feedbackRepository.CreateAsync(feedback);
+                if (feedback == null)
+                {
+                    throw new ArgumentNullException(nameof(feedback));
+                }
+
+                var existing = await _feedbackRepository.GetByOrderIdAsync(feedback.OrderId);
+                if (existing != null)
+                {
+                    existing.Rating = feedback.Rating;
+                    existing.Comments = feedback.Comments;
+                    existing.VehicleId = feedback.VehicleId;
+                    existing.UserId = feedback.UserId;
+
+                    await _feedbackRepository.UpdateAsync(existing);
+                    feedback.FeedbackId = existing.FeedbackId;
+                }
+                else
+                {
+                    feedback.Created = DateTime.UtcNow;
+                    await _feedbackRepository.CreateAsync(feedback);
+                }
             }
             catch (Exception ex)
             {

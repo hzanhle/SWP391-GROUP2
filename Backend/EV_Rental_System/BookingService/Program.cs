@@ -52,7 +52,7 @@ ConfigureSwagger(builder.Services);
 ConfigureDatabase(builder.Services, builder.Configuration);
 
 // ====================== CORS ======================
-ConfigureCors(builder.Services, builder.Environment);
+ConfigureCors(builder.Services, builder.Configuration, builder.Environment);
 
 // ====================== Authentication ======================
 ConfigureAuthentication(builder.Services, builder.Configuration);
@@ -74,6 +74,7 @@ builder.Services.Configure<ContractSettings>(builder.Configuration.GetSection("C
 builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
 builder.Services.Configure<AwsS3Settings>(builder.Configuration.GetSection("AwsS3Settings"));
 builder.Services.Configure<BillingSettings>(builder.Configuration.GetSection("BillingSettings"));
+builder.Services.Configure<FrontendSettings>(builder.Configuration.GetSection("FrontendSettings"));
 
 
 // ====================== Repositories ======================
@@ -331,7 +332,7 @@ static void ConfigureDatabase(IServiceCollection services, IConfiguration config
     });
 }
 
-static void ConfigureCors(IServiceCollection services, IWebHostEnvironment env)
+static void ConfigureCors(IServiceCollection services, IConfiguration configuration, IWebHostEnvironment env)
 {
     services.AddCors(options =>
     {
@@ -347,9 +348,45 @@ static void ConfigureCors(IServiceCollection services, IWebHostEnvironment env)
         }
         else
         {
+            var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var configOrigin = configuration["FrontendSettings:BaseUrl"];
+            if (!string.IsNullOrWhiteSpace(configOrigin))
+            {
+                if (Uri.TryCreate(configOrigin, UriKind.Absolute, out var uri))
+                {
+                    allowedOrigins.Add(uri.GetLeftPart(UriPartial.Authority));
+                }
+                else
+                {
+                    allowedOrigins.Add(configOrigin.TrimEnd('/'));
+                }
+            }
+
+            var envOrigin = Environment.GetEnvironmentVariable("FRONTEND_URL");
+            if (!string.IsNullOrWhiteSpace(envOrigin))
+            {
+                if (Uri.TryCreate(envOrigin, UriKind.Absolute, out var uri))
+                {
+                    allowedOrigins.Add(uri.GetLeftPart(UriPartial.Authority));
+                }
+                else
+                {
+                    allowedOrigins.Add(envOrigin.TrimEnd('/'));
+                }
+            }
+
+            if (!allowedOrigins.Contains("http://localhost:5173"))
+            {
+                allowedOrigins.Add("http://localhost:5173");
+            }
+            if (!allowedOrigins.Contains("https://localhost:5173"))
+            {
+                allowedOrigins.Add("https://localhost:5173");
+            }
+
             options.AddDefaultPolicy(policy =>
             {
-                policy.WithOrigins("https://bcbd009fb85c.ngrok-free.app")
+                policy.WithOrigins(allowedOrigins.ToArray())
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials();
@@ -357,7 +394,7 @@ static void ConfigureCors(IServiceCollection services, IWebHostEnvironment env)
         }
     });
 }
-
+// REMEMBER TO FIX THIS WHEN RUN THE STARUP AGAIN
 static void ConfigureAuthentication(IServiceCollection services, IConfiguration config)
 {
     var jwtSettings = config.GetSection("JwtSettings");

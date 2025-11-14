@@ -9,5 +9,6 @@ namespace BookingService.Models.ModelSettings
         public string ReturnUrl { get; set; } = string.Empty;
         public string CancelUrl { get; set; } = string.Empty;
         public string WebhookSecret { get; set; } = string.Empty;
+        public bool PreferIPv4 { get; set; } = false;
     }
 }

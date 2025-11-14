@@ -1,7 +1,37 @@
-const DASHBOARD_BASE_URL = (import.meta.env.VITE_AdminDashboard_API_URL || '').replace(/\/$/, '')
+function ensureAdminDashboardPath(baseUrl) {
+  if (!baseUrl) return ''
+  let trimmed = baseUrl.trim()
+  if (!trimmed) return ''
+  trimmed = trimmed.replace(/\/+$/, '')
+
+  // If already ends with /admin-dashboard (case-insensitive), keep as-is
+  if (/\/admin-dashboard$/i.test(trimmed)) {
+    return trimmed
+  }
+
+  // If ends with /admin (from older config), replace with /admin-dashboard
+  if (/\/admin$/i.test(trimmed)) {
+    return trimmed.replace(/\/admin$/i, '/admin-dashboard')
+  }
+
+  // If URL only contains domain (no specific path), append /admin-dashboard
+  try {
+    const url = new URL(trimmed)
+    return `${url.origin}/admin-dashboard`
+  } catch {
+    // Fallback: append path directly
+    return `${trimmed}/admin-dashboard`
+  }
+}
+
+const rawDashboardBase =
+  import.meta.env.VITE_AdminDashboard_API_URL ||
+  (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}` : '')
+
+const DASHBOARD_BASE_URL = ensureAdminDashboardPath(rawDashboardBase)
 
 async function request(path, { method = 'GET', body, token, headers = {} } = {}) {
-  if (!DASHBOARD_BASE_URL) throw new Error('VITE_AdminDashboard_API_URL is not set')
+  if (!DASHBOARD_BASE_URL) throw new Error('Admin dashboard API base URL is not configured (set VITE_AdminDashboard_API_URL or VITE_API_URL)')
   const url = `${DASHBOARD_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
   const init = {

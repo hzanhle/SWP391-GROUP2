@@ -152,6 +152,51 @@ namespace BookingService.Services
             $"cancel payment for Order {orderId}");
         }
 
+        public async Task MarkDepositRefundedAsync(int paymentId, string? refundTransactionId, DateTime refundedAt, decimal? amount = null, string? gatewayResponse = null)
+        {
+            try
+            {
+                var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == paymentId);
+                if (payment == null)
+                {
+                    _logger.LogWarning("Cannot mark refund: payment {PaymentId} not found", paymentId);
+                    return;
+                }
+
+                if (payment.IsRefunded())
+                {
+                    _logger.LogInformation("Payment {PaymentId} already refunded (idempotent).", paymentId);
+                    return;
+                }
+
+                if (!payment.IsCompleted())
+                {
+                    _logger.LogWarning("Payment {PaymentId} is not completed (status: {Status}). Skip refund.", paymentId, payment.Status);
+                    return;
+                }
+
+                var refundAmount = amount ?? payment.Amount;
+                var refundPayload = new
+                {
+                    refundAmount,
+                refundTransactionId,
+                    refundedAt = refundedAt.ToUniversalTime(),
+                    gatewayResponse
+                };
+                var refundJson = JsonSerializer.Serialize(refundPayload);
+                payment.MarkAsRefunded(refundJson);
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Payment {PaymentId} marked as refunded. Amount={Amount}, RefundTxn={RefundTxn}", paymentId, refundAmount, refundTransactionId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking payment {PaymentId} as refunded", paymentId);
+                throw;
+            }
+        }
+
         // ============== QUERY METHODS ==============
 
         public async Task<Payment?> GetPaymentByOrderIdAsync(int orderId)

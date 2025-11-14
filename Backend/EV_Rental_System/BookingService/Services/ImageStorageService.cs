@@ -55,7 +55,13 @@ namespace BookingService.Services
                 Directory.CreateDirectory(uploadsFolder);
 
                 // Generate unique filename
-                var fileExtension = Path.GetExtension(image.FileName);
+                var fileName = image.FileName ?? "image";
+                var fileExtension = Path.GetExtension(fileName);
+                if (string.IsNullOrEmpty(fileExtension))
+                {
+                    // Default to .jpg if no extension
+                    fileExtension = ".jpg";
+                }
                 var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
                 var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
@@ -140,15 +146,16 @@ namespace BookingService.Services
             // Check file size
             if (file.Length > _maxFileSize)
             {
-                _logger.LogWarning("File size exceeds limit: {FileName} ({Size} bytes)", file.FileName, file.Length);
+                _logger.LogWarning("File size exceeds limit: {FileName} ({Size} bytes)", file.FileName ?? "unknown", file.Length);
                 return false;
             }
 
             // Check file extension
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            if (!_allowedExtensions.Contains(extension))
+            var fileName = file.FileName ?? string.Empty;
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+            if (string.IsNullOrEmpty(extension) || !_allowedExtensions.Contains(extension))
             {
-                _logger.LogWarning("Invalid file extension: {FileName}", file.FileName);
+                _logger.LogWarning("Invalid file extension: {FileName}", fileName);
                 return false;
             }
 

@@ -20,6 +20,23 @@ namespace StationService.Services
             _logger = logger;
         }
 
+        private static DateTime GetVietnamNow()
+        {
+            try
+            {
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                return DateTime.UtcNow.AddHours(7);
+            }
+            catch (InvalidTimeZoneException)
+            {
+                return DateTime.UtcNow.AddHours(7);
+            }
+        }
+
         public async Task<StaffShiftResponseDTO?> GetShiftByIdAsync(int id)
         {
             _logger.LogInformation("Getting shift with ID: {Id}", id);
@@ -164,12 +181,14 @@ namespace StationService.Services
                 throw new UnauthorizedAccessException("Bạn không phải nhân viên của ca này");
             }
 
-            if (shift.Status != "Scheduled")
+            if (!string.Equals(shift.Status?.Trim(), "Scheduled", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException("Ca làm việc không ở trạng thái Scheduled");
             }
 
-            var result = await _repository.CheckInAsync(dto.ShiftId, DateTime.UtcNow);
+            var checkInTime = GetVietnamNow();
+
+            var result = await _repository.CheckInAsync(dto.ShiftId, checkInTime);
             _logger.LogInformation("Check-in successful for shift {ShiftId}", dto.ShiftId);
 
             return result;
@@ -190,12 +209,14 @@ namespace StationService.Services
                 throw new UnauthorizedAccessException("Bạn không phải nhân viên của ca này");
             }
 
-            if (shift.Status != "CheckedIn")
+            if (!string.Equals(shift.Status?.Trim(), "CheckedIn", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException("Ca làm việc chưa check-in");
             }
 
-            var result = await _repository.CheckOutAsync(dto.ShiftId, DateTime.UtcNow);
+            var checkOutTime = GetVietnamNow();
+
+            var result = await _repository.CheckOutAsync(dto.ShiftId, checkOutTime);
             _logger.LogInformation("Check-out successful for shift {ShiftId}", dto.ShiftId);
 
             return result;
