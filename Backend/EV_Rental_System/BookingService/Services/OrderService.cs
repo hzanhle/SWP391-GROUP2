@@ -57,6 +57,53 @@ namespace BookingService.Services
             _serviceProvider = serviceProvider;
         }
 
+        public async Task<PeakHoursReportResponse> GetPeakHoursReportAsync()
+        {
+            // Lấy dữ liệu từ repository
+            var ordersByHour = await _orderRepo.GetOrderCountByHourAsync();
+            var topPeakHours = await _orderRepo.GetTopPeakHoursAsync(3);
+
+            // Tính tổng số đơn
+            var totalOrders = ordersByHour.Values.Sum();
+
+            // Build hourly data cho tất cả 24 giờ
+            var hourlyData = new List<HourlyOrderCount>();
+
+            for (int hour = 0; hour < 24; hour++)
+            {
+                var orderCount = ordersByHour.GetValueOrDefault(hour, 0);
+
+                hourlyData.Add(new HourlyOrderCount
+                {
+                    Hour = hour,
+                    TimeSlot = $"{hour:D2}:00 - {(hour + 1) % 24:D2}:00",
+                    OrderCount = orderCount,
+                    Percentage = totalOrders > 0 ? Math.Round((double)orderCount / totalOrders * 100, 2) : 0,
+                    IsPeakHour = topPeakHours.Contains(hour)
+                });
+            }
+
+            return new PeakHoursReportResponse
+            {
+                TotalOrders = totalOrders,
+                HourlyData = hourlyData,
+                TopPeakHours = topPeakHours
+            };
+        }
+
+        public async Task UpdateOrderAsync(Order order)
+        {
+            try
+            {
+                await _orderRepo.UpdateAsync(order);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating order {OrderId}", order.OrderId);
+                throw;
+            }
+        }
+
         #region Order Preview
 
         /// <summary>

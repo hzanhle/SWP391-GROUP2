@@ -23,7 +23,7 @@ namespace BookingService.Services
         private static readonly SemaphoreSlim _contractNumberLock = new(1, 1);
 
         public OnlineContractService(
-            IAwsS3Service s3Service, // ✅ Đổi từ ICloudinaryService
+            IAwsS3Service s3Service, 
             IOnlineContractRepository contractRepo,
             IEmailService emailService,
             ILogger<OnlineContractService> logger,

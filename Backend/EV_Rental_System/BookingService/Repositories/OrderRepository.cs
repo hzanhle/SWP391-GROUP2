@@ -156,5 +156,30 @@ namespace BookingService.Repositories
                 .AsNoTracking()
                 .AnyAsync(o => o.UserId == userId && o.Status == OrderStatus.Completed);
         }
+
+        public async Task<Dictionary<int, int>> GetOrderCountByHourAsync()
+        {
+            var orders = await _context.Orders
+                .Select(o => o.CreatedAt.Hour)
+                .ToListAsync();
+
+            return orders
+                .GroupBy(hour => hour)
+                .ToDictionary(g => g.Key, g => g.Count())
+                .OrderBy(kvp => kvp.Key)
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        }
+
+        public async Task<List<int>> GetTopPeakHoursAsync(int topCount = 3)
+        {
+            var ordersByHour = await GetOrderCountByHourAsync();
+
+            return ordersByHour
+                .OrderByDescending(kvp => kvp.Value)
+                .Take(topCount)
+                .Select(kvp => kvp.Key)
+                .OrderBy(hour => hour)
+                .ToList();
+        }
     }
 }

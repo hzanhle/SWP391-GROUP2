@@ -4,6 +4,7 @@ using BookingService.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using BookingService.Models;
 
 namespace BookingService.Controllers
 {
@@ -495,6 +496,53 @@ namespace BookingService.Controllers
             {
                 _logger.LogError(ex, "Error fetching vehicle name for VehicleId {VehicleId}", vehicleId);
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Lấy báo cáo giờ cao điểm đặt xe
+        /// </summary>
+        /// <returns>Thống kê số lượng đơn theo từng giờ trong ngày và top giờ cao điểm</returns>
+        [Authorize(Roles = "Admin")]
+        [HttpGet("reports/peak-hours")]
+        [ProducesResponseType(typeof(ResponseDTO), StatusCodes.Status200OK)]
+        public async Task<ActionResult<ResponseDTO>> GetPeakHoursReport()
+        {
+            try
+            {
+                var report = await _orderService.GetPeakHoursReportAsync();
+
+                return Ok(new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Lấy báo cáo giờ cao điểm thành công",
+                    Data = report
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi khi tạo báo cáo giờ cao điểm",
+                    Data = ex.Message
+                });
+            }
+        }
+
+        [HttpPut]
+        [AllowAnonymous]
+        public async Task<IActionResult> UpdateOrder([FromBody] Order request)
+        {
+            try
+            {
+                await _orderService.UpdateOrderAsync(request);
+                return Ok(new { Message = "Cập nhật đơn hàng thành công." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating order {OrderId}", request.OrderId);
+                return StatusCode(500, new { Message = "Lỗi hệ thống khi cập nhật đơn hàng." });
             }
         }
 
