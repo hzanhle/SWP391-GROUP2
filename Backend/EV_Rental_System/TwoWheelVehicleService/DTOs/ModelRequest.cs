@@ -33,7 +33,7 @@ namespace TwoWheelVehicleService.DTOs
         [Range(1, 10, ErrorMessage = "Số chỗ ngồi phải từ 1 đến 10")]
         public int VehicleCapacity { get; set; }
 
-        [Range(1000000, 10000000000, ErrorMessage = "Giá thành phải từ 1,000,000 đến 10,000,000,000 VNĐ")]
+        // ModelCost validation removed - no price validation required
         public double ModelCost { get; set; }
 
         [Range(10000, 10000000, ErrorMessage = "Giá thuê theo giờ phải từ 10,000 đến 10,000,000 VNĐ")]

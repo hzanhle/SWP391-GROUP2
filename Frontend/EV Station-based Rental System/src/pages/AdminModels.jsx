@@ -62,7 +62,7 @@ function ModelForm({ initial, onSubmit, onCancel }) {
           <TextField fullWidth type="number" label="Seats" value={form.vehicleCapacity} onChange={e=>updateField('vehicleCapacity', Number(e.target.value))} required />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField fullWidth type="number" label="Model price (VND)" value={form.modelCost} onChange={e=>updateField('modelCost', Number(e.target.value))} required />
+          <TextField fullWidth type="number" label="Model price (VND)" value={form.modelCost} onChange={e=>updateField('modelCost', Number(e.target.value))} />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField fullWidth type="number" label="Rent per hour (VND)" value={form.rentFeeForHour} onChange={e=>updateField('rentFeeForHour', Number(e.target.value))} required />

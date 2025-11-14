@@ -178,34 +178,119 @@ namespace BookingService.Services
         public async Task<(bool Success, string? RefundId, string? Error)>
             RefundDepositAsync(string transactionId, decimal amount, string reason)
         {
+            // Use payout API instead of refund endpoint (PayOS doesn't have refund API)
+            var payoutResult = await CreatePayoutAsync(transactionId, amount, reason);
+            return (payoutResult.Success, payoutResult.PayoutId, payoutResult.Error);
+        }
+
+        public async Task<(bool Success, string? PayoutId, string? Error)>
+            CreatePayoutAsync(string transactionId, decimal amount, string description, string? accountNumber = null, string? accountName = null, string? bankCode = null)
+        {
             try
             {
                 using var client = CreateHttpClient();
 
                 int amountVnd = (int)Math.Round(amount, MidpointRounding.AwayFromZero);
-                var payload = new
+                
+                // PayOS payout API - try multiple payload formats
+                // Format 1: Refund to original payment account (using transactionId)
+                var payload1 = new
                 {
                     transactionId,
                     amount = amountVnd,
-                    description = reason
+                    description = description ?? "Refund deposit"
                 };
 
-                var (res, text, endpointUsed) = await PostWithFallbackAsync(
-                    client,
-                    payload,
-                    new[] { "api/v2/refunds", "v2/refunds" },
-                    nameof(RefundDepositAsync));
-
-                _logger.LogDebug("PayOS refund endpoint used: {Endpoint}", endpointUsed);
-
-                _logger.LogInformation("PayOS refund response (HTTP {Status}): {Body}", (int)res.StatusCode, text);
-
-                if (!res.IsSuccessStatusCode)
+                // Format 2: Payout with bank account details (if provided)
+                object? payload2 = null;
+                if (!string.IsNullOrWhiteSpace(accountNumber) && !string.IsNullOrWhiteSpace(accountName) && !string.IsNullOrWhiteSpace(bankCode))
                 {
-                    return (false, null, text);
+                    payload2 = new
+                    {
+                        accountNumber,
+                        accountName,
+                        bankCode,
+                        amount = amountVnd,
+                        description = description ?? "Refund deposit"
+                    };
                 }
 
-                using var doc = JsonDocument.Parse(text);
+                // PayOS payout API endpoint: /v1/payouts (theo tài liệu payos.vn/docs/api)
+                const string payoutEndpoint = "v1/payouts";
+                
+                HttpResponseMessage? response = null;
+                string? body = null;
+                bool success = false;
+
+                // Try transactionId-based payout first (automatic refund to original payment account)
+                try
+                {
+                    _logger.LogInformation("PayOS payout: Attempting payout with transactionId {TransactionId}, Amount {Amount}", 
+                        transactionId, amountVnd);
+                    
+                    response = await client.PostAsJsonAsync(payoutEndpoint, payload1);
+                    body = await response.Content.ReadAsStringAsync();
+
+                    _logger.LogInformation("PayOS payout response (endpoint: {Endpoint}, HTTP {Status}): {Body}", 
+                        payoutEndpoint, (int)response.StatusCode, body);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        success = true;
+                    }
+                    else if (response.StatusCode == HttpStatusCode.BadRequest && payload2 != null)
+                    {
+                        // If transactionId format is not accepted, try with bank account details
+                        _logger.LogInformation("PayOS payout with transactionId failed. Trying with bank account details");
+                    }
+                    else
+                    {
+                        // Other errors - return failure
+                        success = false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error calling PayOS payout endpoint {Endpoint} with transactionId", payoutEndpoint);
+                    success = false;
+                }
+
+                // If transactionId-based payout failed and we have bank account details, try that
+                if (!success && payload2 != null)
+                {
+                    try
+                    {
+                        _logger.LogInformation("PayOS payout: Attempting payout with bank account details");
+                        
+                        response = await client.PostAsJsonAsync(payoutEndpoint, payload2);
+                        body = await response.Content.ReadAsStringAsync();
+
+                        _logger.LogInformation("PayOS payout with bank account (endpoint: {Endpoint}, HTTP {Status}): {Body}", 
+                            payoutEndpoint, (int)response.StatusCode, body);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            success = true;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error calling PayOS payout endpoint {Endpoint} with bank account", payoutEndpoint);
+                        success = false;
+                    }
+                }
+
+                if (!success || response == null)
+                {
+                    return (false, null, $"PayOS payout failed: {body ?? "No response"}");
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return (false, null, body ?? $"HTTP {(int)response.StatusCode}");
+                }
+
+                using var doc = JsonDocument.Parse(body ?? "{}");
                 var root = doc.RootElement;
 
                 var code = root.TryGetProperty("code", out var codeEl) && codeEl.ValueKind == JsonValueKind.String
@@ -220,18 +305,26 @@ namespace BookingService.Services
                     return (false, null, $"{code ?? "??"}: {descMsg ?? "Unknown PayOS error"}");
                 }
 
-                string? refundId = null;
-                if (root.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Object &&
-                    dataEl.TryGetProperty("refundId", out var rid) && rid.ValueKind == JsonValueKind.String)
+                string? payoutId = null;
+                if (root.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Object)
                 {
-                    refundId = rid.GetString();
+                    // Try different possible field names for payout ID
+                    if (dataEl.TryGetProperty("payoutId", out var pid) && pid.ValueKind == JsonValueKind.String)
+                        payoutId = pid.GetString();
+                    else if (dataEl.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.String)
+                        payoutId = id.GetString();
+                    else if (dataEl.TryGetProperty("transactionId", out var tid) && tid.ValueKind == JsonValueKind.String)
+                        payoutId = tid.GetString();
                 }
 
-                return (true, refundId, null);
+                _logger.LogInformation("PayOS payout created successfully. PayoutId: {PayoutId}, Endpoint: {Endpoint}", 
+                    payoutId ?? "N/A", payoutEndpoint);
+
+                return (true, payoutId, null);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error refunding via PayOS");
+                _logger.LogError(ex, "Error creating PayOS payout");
                 return (false, null, ex.Message);
             }
         }

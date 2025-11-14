@@ -1,3 +1,4 @@
+using BookingService.Models;
 using BookingService.Models.ModelSettings;
 using BookingService.Services;
 using BookingService.Services.SignalR;
@@ -625,42 +626,96 @@ namespace BookingService.Controllers
                 var status = data.TryGetProperty("status", out var st) ? st.GetString() : null;
                 var orderCodeStr = data.TryGetProperty("orderCode", out var oc) ? oc.GetString() : null;
                 var transactionId = data.TryGetProperty("transactionId", out var tid) ? tid.GetString() : null;
+                var payoutId = data.TryGetProperty("payoutId", out var pid) ? pid.GetString() : null;
                 var amount = data.TryGetProperty("amount", out var amt) ? amt.GetDecimal() : 0m;
+                var type = data.TryGetProperty("type", out var tp) ? tp.GetString() : null;
 
-                if (!int.TryParse(orderCodeStr, out var orderId) || orderId <= 0)
+                // Handle payout webhook (refund status updates)
+                if (!string.IsNullOrWhiteSpace(payoutId) || string.Equals(type, "payout", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("PayOS webhook: payout event received. PayoutId: {PayoutId}, Status: {Status}", payoutId, status);
+                    
+                    // Find payment by payoutId stored in PaymentGatewayResponse or by transactionId
+                    Models.Payment? payment = null;
+                    if (!string.IsNullOrWhiteSpace(transactionId))
+                    {
+                        payment = await _paymentService.GetPaymentByTransactionIdAsync(transactionId);
+                    }
+
+                    if (payment == null && !string.IsNullOrWhiteSpace(orderCodeStr) && int.TryParse(orderCodeStr, out var payoutOrderId))
+                    {
+                        payment = await _paymentService.GetPaymentByOrderIdAsync(payoutOrderId);
+                    }
+
+                    if (payment == null)
+                    {
+                        _logger.LogWarning("PayOS payout webhook: payment not found. PayoutId: {PayoutId}, TransactionId: {TransactionId}", payoutId, transactionId);
+                        return Ok(new { success = true, message = "Payment not found but webhook accepted" });
+                    }
+
+                    // Update payout status
+                    if (string.Equals(status, "COMPLETED", StringComparison.OrdinalIgnoreCase) || string.Equals(status, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!payment.IsRefunded())
+                        {
+                            await _paymentService.MarkDepositRefundedAsync(
+                                payment.PaymentId, 
+                                payoutId ?? transactionId ?? string.Empty, 
+                                DateTime.UtcNow, 
+                                amount > 0 ? amount : payment.Amount, 
+                                body);
+                            _logger.LogInformation("PayOS webhook: payout completed for Payment {PaymentId}, Order {OrderId}", payment.PaymentId, payment.OrderId);
+                        }
+                        return Ok(new { success = true });
+                    }
+                    else if (string.Equals(status, "FAILED", StringComparison.OrdinalIgnoreCase) || string.Equals(status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogWarning("PayOS webhook: payout failed/cancelled for Payment {PaymentId}, Order {OrderId}. Status: {Status}", 
+                            payment.PaymentId, payment.OrderId, status);
+                        return Ok(new { success = true });
+                    }
+                    else
+                    {
+                        _logger.LogInformation("PayOS webhook: payout status {Status} for Payment {PaymentId}", status, payment.PaymentId);
+                        return Ok(new { success = true });
+                    }
+                }
+
+                // Handle payment webhook (original payment status updates)
+                if (!int.TryParse(orderCodeStr, out var orderId2) || orderId2 <= 0)
                 {
                     _logger.LogError("PayOS webhook: invalid orderCode {OrderCode}", orderCodeStr);
                     return BadRequest(new { success = false });
                 }
 
-                var payment = await _paymentService.GetPaymentByOrderIdAsync(orderId);
-                if (payment == null) return NotFound(new { success = false, message = "Payment not found" });
+                var payment2 = await _paymentService.GetPaymentByOrderIdAsync(orderId2);
+                if (payment2 == null) return NotFound(new { success = false, message = "Payment not found" });
 
                 if (string.Equals(status, "PAID", StringComparison.OrdinalIgnoreCase))
                 {
-                    var success = await _paymentService.MarkPaymentCompletedAsync(orderId, transactionId ?? string.Empty, body);
-                    _logger.LogInformation("PayOS webhook: payment completed for Order {OrderId}", orderId);
+                    var success = await _paymentService.MarkPaymentCompletedAsync(orderId2, transactionId ?? string.Empty, body);
+                    _logger.LogInformation("PayOS webhook: payment completed for Order {OrderId}", orderId2);
                     try
                     {
-                        await _hubContext.Clients.Group($"order_{orderId}")
-                            .SendAsync("PaymentSuccess", new { OrderId = orderId, TransactionId = transactionId ?? string.Empty });
-                        _logger.LogInformation("📡 SignalR PaymentSuccess sent for Order {OrderId} (PayOS)", orderId);
+                        await _hubContext.Clients.Group($"order_{orderId2}")
+                            .SendAsync("PaymentSuccess", new { OrderId = orderId2, TransactionId = transactionId ?? string.Empty });
+                        _logger.LogInformation("📡 SignalR PaymentSuccess sent for Order {OrderId} (PayOS)", orderId2);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "⚠️ Failed to send SignalR notification (PayOS) for Order {OrderId}", orderId);
+                        _logger.LogWarning(ex, "⚠️ Failed to send SignalR notification (PayOS) for Order {OrderId}", orderId2);
                     }
                     return Ok(new { success });
                 }
                 else if (string.Equals(status, "CANCELLED", StringComparison.OrdinalIgnoreCase) || string.Equals(status, "FAILED", StringComparison.OrdinalIgnoreCase))
                 {
-                    await _paymentService.MarkPaymentFailedAsync(orderId, body);
-                    _logger.LogInformation("PayOS webhook: payment failed/cancelled for Order {OrderId}", orderId);
+                    await _paymentService.MarkPaymentFailedAsync(orderId2, body);
+                    _logger.LogInformation("PayOS webhook: payment failed/cancelled for Order {OrderId}", orderId2);
                     return Ok(new { success = true });
                 }
 
                 // Unknown status -> accept
-                _logger.LogInformation("PayOS webhook: status {Status} for Order {OrderId}", status, orderId);
+                _logger.LogInformation("PayOS webhook: status {Status} for Order {OrderId}", status, orderId2);
                 return Ok(new { success = true });
             }
             catch (Exception ex)

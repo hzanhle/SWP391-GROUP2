@@ -315,17 +315,14 @@ export default function BookingNew() {
         return
       }
 
-      // 4) Giá tiền hợp lệ
+      // 4) Giá tiền hợp lệ (chỉ validate RentFeeForHour, không validate ModelCost)
       const rentFee = Number(selectedModel.RentFeeForHour || selectedModel.rentFeeForHour || 0)
       const modelCost = Number(selectedModel.ModelCost || selectedModel.modelCost || 0)
       if (!(rentFee > 0)) {
         setPreviewError('Rent price invalid. Please try again or choose another model.')
         return
       }
-      if (!(modelCost > 0)) {
-        setPreviewError('Model price invalid. Please try again or choose another model.')
-        return
-      }
+      // ModelCost validation removed - no price validation required
 
       // 5) Gọi preview
       const previewRes = await bookingApi.getOrderPreview({
@@ -416,8 +413,9 @@ export default function BookingNew() {
       const rentFee = Number(selectedModel.RentFeeForHour || selectedModel.rentFeeForHour || 0)
       const modelCost = Number(selectedModel.ModelCost || selectedModel.modelCost || 0)
 
-      if (rentFee <= 0 || modelCost <= 0) {
-        setBookingError('Vehicle price information is invalid. Please try again.')
+      // Only validate RentFeeForHour, ModelCost validation removed
+      if (rentFee <= 0) {
+        setBookingError('Rent price information is invalid. Please try again.')
         return
       }
 

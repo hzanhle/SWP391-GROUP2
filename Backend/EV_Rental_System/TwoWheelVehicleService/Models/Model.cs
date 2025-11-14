@@ -37,7 +37,7 @@ namespace TwoWheelVehicleService.Models
 
         public bool IsActive { get; set; }
 
-        [Range(0, double.MaxValue, ErrorMessage = "Giá thành phải lớn hơn hoặc bằng 0")]
+        // ModelCost validation removed - no price validation required
         public double ModelCost { get; set; }
 
         [Range(0, double.MaxValue, ErrorMessage = "Giá thuê theo giờ phải lớn hơn hoặc bằng 0")]
