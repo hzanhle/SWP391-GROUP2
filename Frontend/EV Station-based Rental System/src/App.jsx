@@ -30,6 +30,8 @@ import StaffVehicle from './pages/StaffVehicle'
 import Feedback from './pages/Feedback'
 import AdminOngoingTransfers from './pages/AdminOngoingTransfers'
 import AdminTransferHistory from './pages/AdminTransferHistory'
+import AdminOrders from './pages/AdminOrders'
+import AdminRiskCustomers from './pages/AdminRiskCustomers'
 
 function getRoleId() {
   try {
@@ -92,6 +94,8 @@ function resolveRoute() {
     case 'return': return 'return'
     case 'history': return 'history'
     case 'feedback': return 'feedback'
+    case 'admin-orders': return 'admin-orders'
+    case 'admin-risk-customers': return 'admin-risk-customers'
     case 'admin-users': return 'admin-users'
     case 'staff-verify': return 'staff-verify'
     case 'admin-models': return 'admin-models'
@@ -118,7 +122,7 @@ export default function App() {
   }, [])
 
   // Check if current route is admin route
-  const isAdminRoute = ['admin', 'admin-users', 'admin-models', 'admin-stations', 'admin-vehicles', 'admin-staffshift', 'admin-create-staff', 'admin-transfer', 'admin-transfer-ongoing', 'admin-transfer-history', 'staff-verify'].includes(routeData)
+  const isAdminRoute = ['admin', 'admin-orders', 'admin-risk-customers', 'admin-users', 'admin-models', 'admin-stations', 'admin-vehicles', 'admin-staffshift', 'admin-create-staff', 'admin-transfer', 'admin-transfer-ongoing', 'admin-transfer-history', 'staff-verify'].includes(routeData)
   // Check if current route is staff route
   const isStaffRoute = ['staff-shifts', 'staff-vehicles'].includes(routeData)
 
@@ -142,6 +146,8 @@ export default function App() {
       {routeData === 'history' && <History />}
       {routeData === 'feedback' && <Feedback />}
       {routeData === 'admin' && <AdminDashboard />}
+      {routeData === 'admin-orders' && <AdminOrders />}
+      {routeData === 'admin-risk-customers' && <AdminRiskCustomers />}
       {routeData === 'admin-users' && <AdminUsers />}
       {routeData === 'admin-models' && <AdminModels />}
       {routeData === 'admin-stations' && <AdminStations />}

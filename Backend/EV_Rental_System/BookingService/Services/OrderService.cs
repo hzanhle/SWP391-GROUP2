@@ -22,6 +22,7 @@ namespace BookingService.Services
         private readonly IImageStorageService _imageStorageService;
         private readonly IVehicleCheckInRepository _vehicleCheckInRepo;
         private readonly IVehicleReturnRepository _vehicleReturnRepo;
+        private readonly ISettlementService _settlementService;
 
         // ⚠️ ĐÃ XÓA: IOnlineContractService - Không còn tự động tạo contract nữa!
 
@@ -40,6 +41,7 @@ namespace BookingService.Services
             IImageStorageService imageStorageService,
             IVehicleCheckInRepository vehicleCheckInRepo,
             IVehicleReturnRepository vehicleReturnRepo,
+            ISettlementService settlementService,
             IServiceProvider serviceProvider)
         {
             _orderRepo = orderRepo ?? throw new ArgumentNullException(nameof(orderRepo));
@@ -54,54 +56,8 @@ namespace BookingService.Services
             _imageStorageService = imageStorageService ?? throw new ArgumentNullException(nameof(imageStorageService));
             _vehicleCheckInRepo = vehicleCheckInRepo ?? throw new ArgumentNullException(nameof(vehicleCheckInRepo));
             _vehicleReturnRepo = vehicleReturnRepo ?? throw new ArgumentNullException(nameof(vehicleReturnRepo));
+            _settlementService = settlementService ?? throw new ArgumentNullException(nameof(settlementService));
             _serviceProvider = serviceProvider;
-        }
-
-        public async Task<PeakHoursReportResponse> GetPeakHoursReportAsync()
-        {
-            // Lấy dữ liệu từ repository
-            var ordersByHour = await _orderRepo.GetOrderCountByHourAsync();
-            var topPeakHours = await _orderRepo.GetTopPeakHoursAsync(3);
-
-            // Tính tổng số đơn
-            var totalOrders = ordersByHour.Values.Sum();
-
-            // Build hourly data cho tất cả 24 giờ
-            var hourlyData = new List<HourlyOrderCount>();
-
-            for (int hour = 0; hour < 24; hour++)
-            {
-                var orderCount = ordersByHour.GetValueOrDefault(hour, 0);
-
-                hourlyData.Add(new HourlyOrderCount
-                {
-                    Hour = hour,
-                    TimeSlot = $"{hour:D2}:00 - {(hour + 1) % 24:D2}:00",
-                    OrderCount = orderCount,
-                    Percentage = totalOrders > 0 ? Math.Round((double)orderCount / totalOrders * 100, 2) : 0,
-                    IsPeakHour = topPeakHours.Contains(hour)
-                });
-            }
-
-            return new PeakHoursReportResponse
-            {
-                TotalOrders = totalOrders,
-                HourlyData = hourlyData,
-                TopPeakHours = topPeakHours
-            };
-        }
-
-        public async Task UpdateOrderAsync(Order order)
-        {
-            try
-            {
-                await _orderRepo.UpdateAsync(order);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating order {OrderId}", order.OrderId);
-                throw;
-            }
         }
 
         #region Order Preview
@@ -652,6 +608,35 @@ namespace BookingService.Services
 
                 await _vehicleReturnRepo.CreateAsync(vehicleReturn);
 
+                // Create settlement automatically with actual return time
+                try
+                {
+                    var actualReturnTime = vehicleReturn.ReturnTime;
+                    await _settlementService.CreateSettlementAsync(orderId, actualReturnTime);
+                    _logger.LogInformation("Settlement created automatically for Order {OrderId} at {ReturnTime}", orderId, actualReturnTime);
+                    
+                    // Auto-finalize settlement if no damage (allows immediate refund processing)
+                    if (!vehicleReturn.HasDamage)
+                    {
+                        try
+                        {
+                            await _settlementService.FinalizeSettlementAsync(orderId);
+                            _logger.LogInformation("Settlement auto-finalized for Order {OrderId} (no damage)", orderId);
+                        }
+                        catch (Exception finalizeEx)
+                        {
+                            // Log but don't fail - settlement can be finalized manually later
+                            _logger.LogWarning(finalizeEx, "Failed to auto-finalize settlement for Order {OrderId}. Can be finalized manually later.", orderId);
+                        }
+                    }
+                }
+                catch (Exception settlementEx)
+                {
+                    // Log but don't fail the rental completion if settlement creation fails
+                    // Settlement can be created manually later if needed
+                    _logger.LogWarning(settlementEx, "Failed to create settlement for Order {OrderId}. Settlement can be created manually later.", orderId);
+                }
+
                 // Complete the order (update status)
                 order.Complete();
                 await _orderRepo.UpdateAsync(order);
@@ -691,6 +676,12 @@ namespace BookingService.Services
 
         #region Query Methods
 
+        public async Task<IEnumerable<Order>> GetAllOrdersAsync()
+        {
+            _logger.LogInformation("Getting all orders");
+            return await _orderRepo.GetAllAsync();
+        }
+
         public async Task<Order?> GetOrderByIdAsync(int orderId)
         {
             return await _orderRepo.GetByIdAsync(orderId);
@@ -704,6 +695,74 @@ namespace BookingService.Services
         public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(int userId)
         {
             return await _orderRepo.GetByUserIdAsync(userId);
+        }
+
+        public async Task<PeakHoursReportResponse> GetPeakHoursReportAsync()
+        {
+            _logger.LogInformation("Getting peak hours report");
+
+            try
+            {
+                var hourlyCounts = await _orderRepo.GetOrderCountByHourAsync();
+                var topPeakHours = await _orderRepo.GetTopPeakHoursAsync(3);
+                var totalOrders = hourlyCounts.Values.Sum();
+
+                var hourlyData = new List<HourlyOrderCount>();
+                for (int hour = 0; hour < 24; hour++)
+                {
+                    var count = hourlyCounts.ContainsKey(hour) ? hourlyCounts[hour] : 0;
+                    var percentage = totalOrders > 0 ? (count * 100.0 / totalOrders) : 0.0;
+                    var isPeakHour = topPeakHours.Contains(hour);
+
+                    hourlyData.Add(new HourlyOrderCount
+                    {
+                        Hour = hour,
+                        TimeSlot = $"{hour:D2}:00 - {(hour + 1):D2}:00",
+                        OrderCount = count,
+                        Percentage = Math.Round(percentage, 2),
+                        IsPeakHour = isPeakHour
+                    });
+                }
+
+                return new PeakHoursReportResponse
+                {
+                    TotalOrders = totalOrders,
+                    HourlyData = hourlyData,
+                    TopPeakHours = topPeakHours,
+                    GeneratedAt = DateTime.UtcNow.ToString("o")
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting peak hours report");
+                throw;
+            }
+        }
+
+        public async Task UpdateOrderAsync(Order order)
+        {
+            if (order == null)
+            {
+                throw new ArgumentNullException(nameof(order));
+            }
+
+            _logger.LogInformation("Updating Order {OrderId}", order.OrderId);
+
+            try
+            {
+                var success = await _orderRepo.UpdateAsync(order);
+                if (!success)
+                {
+                    throw new InvalidOperationException($"Failed to update Order {order.OrderId}");
+                }
+
+                _logger.LogInformation("Order {OrderId} updated successfully", order.OrderId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating Order {OrderId}", order.OrderId);
+                throw;
+            }
         }
 
         #endregion
@@ -899,11 +958,6 @@ namespace BookingService.Services
             _logger.LogInformation(
                 "SignalR PaymentSuccess sent to User {UserId} for Order {OrderId}, TransactionId: {TransactionId}",
                 userId, orderId, transactionId);
-        }
-
-        public Task<IEnumerable<Order>> GetAllOrdersAsync()
-        {
-            return _orderRepo.GetAllAsync();
         }
 
 

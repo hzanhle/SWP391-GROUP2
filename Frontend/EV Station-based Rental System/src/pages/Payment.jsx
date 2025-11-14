@@ -4,7 +4,6 @@ import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import * as bookingApi from '../api/booking'
 import * as signalR from '@microsoft/signalr'
-import * as client from '../api/client'
 import FeedbackForm from '../components/FeedbackForm'
 
 export default function Payment() {

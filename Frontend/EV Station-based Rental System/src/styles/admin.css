@@ -103,7 +103,7 @@
   color: #706f7b;
   padding: 0.75rem 0.75rem;
   border-radius: 0.5rem;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 500;
   font-family: "Rubik", sans-serif;
   transition: all 0.3s ease;
@@ -221,7 +221,7 @@
 }
 
 .card-subtext {
-  font-size: 0.875rem;
+  font-size: 1.125rem;
   color: #706f7b;
   font-family: "Rubik", sans-serif;
   margin: 0;
@@ -248,7 +248,7 @@
 }
 
 .stat-card .stat-title {
-  font-size: 0.875rem;
+  font-size: 1.125rem;
   color: #706f7b;
   margin: 0 0 0.5rem;
   font-weight: 500;
@@ -266,7 +266,7 @@
 
 .stat-card .stat-caption {
   color: #94a3b8;
-  font-size: 0.875rem;
+  font-size: 1.125rem;
   font-family: "Rubik", sans-serif;
 }
 
@@ -364,7 +364,8 @@
   font-weight: 600;
   color: #010103;
   font-family: "Poppins", sans-serif;
-  font-size: 0.875rem;
+  font-size: 1.125rem;
+  white-space: nowrap;
 }
 
 .admin-main table td {
@@ -372,9 +373,41 @@
   border-bottom: 1px solid #e2e8f0;
   color: #706f7b;
   font-family: "Rubik", sans-serif;
+  font-size: 1.125rem;
+  vertical-align: middle;
 }
 
 .admin-main table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/* MUI Table overrides for admin */
+.admin-main .MuiTableContainer-root {
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.admin-main .MuiTableHead-root {
+  background-color: #f0f9ff;
+}
+
+.admin-main .MuiTableHead-root .MuiTableCell-root {
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: #010103;
+  font-family: "Poppins", sans-serif;
+  white-space: nowrap;
+}
+
+.admin-main .MuiTableBody-root .MuiTableCell-root {
+  font-size: 1.125rem;
+  color: #706f7b;
+  font-family: "Rubik", sans-serif;
+  vertical-align: middle;
+}
+
+.admin-main .MuiTableRow-root:hover {
   background-color: #f8fafc;
 }
 
@@ -385,6 +418,7 @@
   font-family: "Rubik", sans-serif;
   color: #010103;
   border-color: #e2e8f0;
+  font-size: 1.125rem;
 }
 
 .admin-main input:focus,
@@ -393,6 +427,40 @@
   border-color: #ff4d30;
   outline: none;
   box-shadow: 0 0 0 3px rgba(255, 77, 48, 0.1);
+}
+
+/* MUI TextField overrides */
+.admin-main .MuiTextField-root .MuiInputBase-input {
+  font-size: 1.125rem;
+  font-family: "Rubik", sans-serif;
+}
+
+.admin-main .MuiTextField-root .MuiInputLabel-root {
+  font-size: 1.125rem;
+  font-family: "Rubik", sans-serif;
+}
+
+.admin-main .MuiButton-root {
+  font-size: 1.125rem;
+  font-family: "Poppins", sans-serif;
+  padding: 0.625rem 1.5rem;
+}
+
+.admin-main .MuiTypography-body1,
+.admin-main .MuiTypography-body2 {
+  font-size: 1.125rem;
+}
+
+.admin-main .MuiTypography-h4 {
+  font-size: 2rem;
+}
+
+.admin-main .MuiTypography-h5 {
+  font-size: 1.75rem;
+}
+
+.admin-main .MuiTypography-h6 {
+  font-size: 1.5rem;
 }
 
 /* Accessibility */
@@ -431,6 +499,70 @@
   gap: 1rem;
 }
 
+/* Dialog improvements */
+.admin-main .MuiDialog-paper {
+  border-radius: 0.5rem;
+}
+
+.admin-main .MuiDialogTitle-root {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: "Poppins", sans-serif;
+  padding: 1.5rem;
+}
+
+.admin-main .MuiDialogContent-root {
+  padding: 1.5rem;
+  font-size: 1.125rem;
+}
+
+.admin-main .MuiDialogActions-root {
+  padding: 1.5rem;
+  gap: 1rem;
+}
+
+/* Card header improvements */
+.admin-main .MuiCardHeader-root {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-main .MuiCardHeader-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: "Poppins", sans-serif;
+}
+
+.admin-main .MuiCardContent-root {
+  padding: 1.5rem;
+  font-size: 1.125rem;
+}
+
+/* Grid improvements */
+.admin-main .MuiGrid-container {
+  margin: 0;
+  width: 100%;
+}
+
+.admin-main .MuiGrid-item {
+  padding: 0.5rem;
+}
+
+/* Alert improvements */
+.admin-main .MuiAlert-root {
+  font-size: 1.125rem;
+  font-family: "Rubik", sans-serif;
+}
+
+/* Icon button improvements */
+.admin-main .MuiIconButton-root {
+  padding: 0.5rem;
+}
+
+.admin-main .MuiIconButton-root svg {
+  font-size: 1.25rem;
+}
+
 @media (max-width: 640px) {
   .row-between {
     flex-direction: column;
@@ -450,7 +582,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.875rem;
+  font-size: 1.125rem;
   font-weight: 500;
   color: #010103;
   font-family: "Rubik", sans-serif;
@@ -483,7 +615,7 @@
   display: inline-block;
   padding: 0.5rem 1rem;
   border-radius: 9999px;
-  font-size: 0.875rem;
+  font-size: 1.125rem;
   font-weight: 600;
   font-family: "Rubik", sans-serif;
   width: fit-content;

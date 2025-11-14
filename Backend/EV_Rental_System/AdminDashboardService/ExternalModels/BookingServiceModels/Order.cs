@@ -12,7 +12,7 @@ namespace AdminDashboardService.ExternalModels.BookingServiceModels
         public DateTime ToDate { get; set; }
 
         public int OnlineContractId { get; set; }
-        public int PaymentId { get; set; }
+        // PaymentId removed - Order now has one-to-many relationship with Payments via OrderId foreign key
 
         public decimal HourlyRate { get; set; }
         public decimal TotalCost { get; set; }

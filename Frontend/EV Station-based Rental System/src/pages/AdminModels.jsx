@@ -1,12 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { getAllModels, createModel, updateModel, deleteModel } from '../api/vehicle'
 import { 
   Box, Container, Card, CardContent, CardHeader, Typography, Button, TextField, Dialog, 
   DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, Stack, Grid, Paper,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Chip
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Chip, Tooltip
 } from '@mui/material'
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material'
 import AdminLayout from '../components/admin/AdminLayout'
+import { TableSkeleton } from '../components/admin/SkeletonLoader'
+import { EmptyState } from '../components/admin/EmptyState'
+import { ConfirmDialog } from '../components/admin/ConfirmDialog'
+import { TablePagination } from '../components/admin/TablePagination'
+import { highlightText } from '../utils/searchHighlight.jsx'
 
 function ModelForm({ initial, onSubmit, onCancel }) {
   const [form, setForm] = useState(() => ({
@@ -88,14 +93,26 @@ export default function AdminModels() {
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState(null)
   const [openDialog, setOpenDialog] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth.token') : null
 
-  const filtered = models.filter(m => {
+  const filtered = useMemo(() => {
+    if (!search) return models
     const q = search.toLowerCase()
-    return (m.modelName||'').toLowerCase().includes(q) || (m.manufacturer||'').toLowerCase().includes(q)
-  })
+    return models.filter(m => 
+      (m.modelName||'').toLowerCase().includes(q) || 
+      (m.manufacturer||'').toLowerCase().includes(q)
+    )
+  }, [models, search])
 
-  async function load() {
+  const paginatedModels = useMemo(() => {
+    const start = page * rowsPerPage
+    return filtered.slice(start, start + rowsPerPage)
+  }, [filtered, page, rowsPerPage])
+
+  const load = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -106,16 +123,21 @@ export default function AdminModels() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [token])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
 
   async function handleDelete(m) {
-    if (!confirm('Delete this model?')) return
+    setDeleteConfirm(m)
+  }
+
+  async function confirmDelete() {
+    if (!deleteConfirm) return
     try {
       setLoading(true)
-      await deleteModel(m.modelId, token)
+      await deleteModel(deleteConfirm.modelId, token)
       await load()
+      setDeleteConfirm(null)
     } catch (e) {
       alert(e?.message || 'Delete failed')
     } finally {
@@ -187,20 +209,23 @@ export default function AdminModels() {
             </Card>
 
             {/* Models Table */}
-            {loading ? (
+            {loading && models.length === 0 ? (
               <Card className="admin-card">
                 <CardContent>
-                  <div className="skeleton skeleton-bar"></div>
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="skeleton skeleton-line"></div>
-                  ))}
+                  <TableSkeleton rows={6} cols={7} />
                 </CardContent>
               </Card>
             ) : (
-              <TableContainer component={Paper}>
-
-                <Table>
-                  <TableHead className="thead-muted">
+              <TableContainer 
+                component={Paper} 
+                className="admin-card" 
+                sx={{ 
+                  overflowX: 'auto',
+                  position: 'relative'
+                }}
+              >
+                <Table stickyHeader>
+                  <TableHead>
                     <TableRow>
                       <TableCell className="font-600">Model Name</TableCell>
                       <TableCell className="font-600">Brand</TableCell>
@@ -212,41 +237,75 @@ export default function AdminModels() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filtered.map(m => (
+                    {paginatedModels.map(m => (
                       <TableRow key={m.modelId} hover>
-                        <TableCell>{m.modelName}</TableCell>
-                        <TableCell>{m.manufacturer}</TableCell>
+                        <TableCell>{highlightText(m.modelName, search)}</TableCell>
+                        <TableCell>{highlightText(m.manufacturer, search)}</TableCell>
                         <TableCell align="right">{m.year}</TableCell>
                         <TableCell align="right">{m.maxSpeed}</TableCell>
                         <TableCell align="right">{m.batteryCapacity}</TableCell>
                         <TableCell align="right">{m.modelCost?.toLocaleString?.()}</TableCell>
                         <TableCell align="center">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => { setEditing(m); setOpenDialog(true) }}
-                            color="primary"
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleDelete(m)}
-                            color="error"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
+                          <Tooltip title="Edit model">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => { setEditing(m); setOpenDialog(true) }}
+                              color="primary"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete model">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleDelete(m)}
+                              color="error"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
-                    {filtered.length === 0 && (
+                    {paginatedModels.length === 0 && !loading && (
                       <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                          No models found
+                        <TableCell colSpan={7}>
+                          <EmptyState 
+                            icon={search ? "search" : "inbox"}
+                            title={search ? "No models found" : "No models available"}
+                            message={search 
+                              ? `No models match your search "${search}". Try a different search term.`
+                              : "Get started by adding your first vehicle model."
+                            }
+                            action={
+                              !search && (
+                                <Button 
+                                  variant="contained" 
+                                  startIcon={<AddIcon />}
+                                  onClick={() => { setEditing({}); setOpenDialog(true) }}
+                                >
+                                  Add Model
+                                </Button>
+                              )
+                            }
+                          />
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
+                {filtered.length > 0 && (
+                  <TablePagination
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={filtered.length}
+                    onPageChange={setPage}
+                    onRowsPerPageChange={(newRowsPerPage) => {
+                      setRowsPerPage(newRowsPerPage)
+                      setPage(0)
+                    }}
+                  />
+                )}
               </TableContainer>
             )}
 
@@ -263,6 +322,18 @@ export default function AdminModels() {
                 />
               </DialogContent>
             </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <ConfirmDialog
+              open={!!deleteConfirm}
+              onClose={() => setDeleteConfirm(null)}
+              onConfirm={confirmDelete}
+              title="Delete Model"
+              message={`Are you sure you want to delete "${deleteConfirm?.modelName}"? This action cannot be undone.`}
+              confirmText="Delete"
+              cancelText="Cancel"
+              severity="error"
+            />
           </Stack>
         </Container>
       </Box>

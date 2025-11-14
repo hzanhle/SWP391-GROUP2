@@ -40,6 +40,8 @@ namespace BookingService.Repositories
         public async Task<IEnumerable<Order>> GetAllAsync()
         {
             return await _context.Orders
+                .Include(o => o.Payments)
+                .Include(o => o.OnlineContract)
                 .AsNoTracking()
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();

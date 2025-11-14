@@ -212,6 +212,14 @@ export function submitFeedback(feedbackPayload, token) {
   })
 }
 
+// [Admin] Get all orders
+export function getAllOrders(token) {
+  return request('/api/orders/all', {
+    method: 'GET',
+    token,
+  })
+}
+
 export default {
   request,
   getOrderPreview,
@@ -221,6 +229,7 @@ export default {
   getPaymentStatus,
   getOrderById,
   getOrdersByUserId,
+  getAllOrders,
   confirmPayment,
   startRental,
   completeRental,

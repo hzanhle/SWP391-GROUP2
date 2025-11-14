@@ -117,16 +117,250 @@
 /* Mobile menu links */
 :root[data-theme='dark'] .mobile-navbar__links li a { color: var(--color-text); }
 
-/* Admin shell */
-:root[data-theme='dark'] .admin-shell { background-color: var(--color-background); }
-:root[data-theme='dark'] .admin-sidebar { background: var(--color-surface); border-right: 1px solid var(--color-border); }
+/* Admin shell - Complete Dark Mode */
+:root[data-theme='dark'] .admin-shell { 
+  background-color: var(--color-background); 
+}
+
+:root[data-theme='dark'] .admin-sidebar { 
+  background: var(--color-surface); 
+  border-right: 1px solid var(--color-border); 
+}
+
 :root[data-theme='dark'] .admin-brand-text,
-:root[data-theme='dark'] .admin-user-name { color: var(--color-text); }
+:root[data-theme='dark'] .admin-user-name { 
+  color: var(--color-text); 
+}
+
 :root[data-theme='dark'] .admin-user-role,
-:root[data-theme='dark'] .admin-nav-link { color: var(--color-muted); }
-:root[data-theme='dark'] .admin-nav-link:hover { color: var(--color-text); background-color: rgba(255,255,255,0.05); }
-:root[data-theme='dark'] .admin-main { background: var(--color-background); }
+:root[data-theme='dark'] .admin-nav-link { 
+  color: var(--color-muted); 
+}
+
+:root[data-theme='dark'] .admin-nav-link:hover { 
+  color: var(--color-text); 
+  background-color: rgba(255,255,255,0.05); 
+}
+
+:root[data-theme='dark'] .admin-nav-link.active {
+  color: #ff4d30;
+  background-color: rgba(255, 77, 48, 0.1);
+}
+
+:root[data-theme='dark'] .admin-main { 
+  background: var(--color-background); 
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .admin-main .section-title,
+:root[data-theme='dark'] .admin-main h1,
+:root[data-theme='dark'] .admin-main h2,
+:root[data-theme='dark'] .admin-main h3,
+:root[data-theme='dark'] .admin-main h4,
+:root[data-theme='dark'] .admin-main h5,
+:root[data-theme='dark'] .admin-main h6 {
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .admin-main .section-subtitle,
+:root[data-theme='dark'] .admin-main p {
+  color: var(--color-muted);
+}
+
+/* MUI Components Dark Mode */
 :root[data-theme='dark'] .MuiPaper-root,
 :root[data-theme='dark'] .MuiCard-root,
-:root[data-theme='dark'] .MuiTableContainer-root { background-color: var(--color-surface) !important; }
-:root[data-theme='dark'] .MuiTableHead-root th { background-color: rgba(255,255,255,0.04) !important; }
+:root[data-theme='dark'] .MuiTableContainer-root { 
+  background-color: var(--color-surface) !important; 
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+}
+
+:root[data-theme='dark'] .MuiTableHead-root th { 
+  background-color: rgba(255,255,255,0.04) !important; 
+  color: var(--color-text) !important;
+  border-bottom-color: var(--color-border) !important;
+}
+
+:root[data-theme='dark'] .MuiTableBody-root td {
+  color: var(--color-muted) !important;
+  border-bottom-color: var(--color-border) !important;
+}
+
+:root[data-theme='dark'] .MuiTableRow-root:hover {
+  background-color: rgba(255,255,255,0.03) !important;
+}
+
+:root[data-theme='dark'] .MuiTextField-root .MuiInputBase-root {
+  background-color: var(--color-background) !important;
+  color: var(--color-text) !important;
+}
+
+:root[data-theme='dark'] .MuiTextField-root .MuiInputBase-input {
+  color: var(--color-text) !important;
+}
+
+:root[data-theme='dark'] .MuiTextField-root .MuiInputLabel-root {
+  color: var(--color-muted) !important;
+}
+
+:root[data-theme='dark'] .MuiTextField-root .MuiOutlinedInput-notchedOutline {
+  border-color: var(--color-border) !important;
+}
+
+:root[data-theme='dark'] .MuiTextField-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: var(--color-text) !important;
+}
+
+:root[data-theme='dark'] .MuiTextField-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #ff4d30 !important;
+}
+
+:root[data-theme='dark'] .MuiDialog-paper {
+  background-color: var(--color-surface) !important;
+  color: var(--color-text) !important;
+}
+
+:root[data-theme='dark'] .MuiDialogTitle-root {
+  color: var(--color-text) !important;
+  border-bottom-color: var(--color-border) !important;
+}
+
+:root[data-theme='dark'] .MuiDialogContent-root {
+  color: var(--color-text) !important;
+}
+
+:root[data-theme='dark'] .MuiButton-outlined {
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+:root[data-theme='dark'] .MuiButton-outlined:hover {
+  border-color: var(--color-text) !important;
+  background-color: rgba(255,255,255,0.05) !important;
+}
+
+:root[data-theme='dark'] .MuiSelect-root {
+  color: var(--color-text) !important;
+}
+
+:root[data-theme='dark'] .MuiSelect-icon {
+  color: var(--color-muted) !important;
+}
+
+:root[data-theme='dark'] .MuiChip-root {
+  background-color: var(--color-background) !important;
+  color: var(--color-text) !important;
+}
+
+:root[data-theme='dark'] .MuiAlert-root {
+  background-color: var(--color-surface) !important;
+  color: var(--color-text) !important;
+}
+
+:root[data-theme='dark'] .MuiAlert-standardError {
+  background-color: rgba(211, 47, 47, 0.1) !important;
+  color: #ffcdd2 !important;
+}
+
+:root[data-theme='dark'] .MuiAlert-standardSuccess {
+  background-color: rgba(46, 125, 50, 0.1) !important;
+  color: #c8e6c9 !important;
+}
+
+:root[data-theme='dark'] .MuiAlert-standardWarning {
+  background-color: rgba(237, 108, 2, 0.1) !important;
+  color: #ffe0b2 !important;
+}
+
+:root[data-theme='dark'] .MuiAlert-standardInfo {
+  background-color: rgba(2, 136, 209, 0.1) !important;
+  color: #b3e5fc !important;
+}
+
+/* Admin Card Dark Mode */
+:root[data-theme='dark'] .admin-card {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+:root[data-theme='dark'] .stat-card {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+}
+
+:root[data-theme='dark'] .stat-card .stat-title {
+  color: var(--color-muted) !important;
+}
+
+:root[data-theme='dark'] .stat-card .stat-value {
+  color: var(--color-text) !important;
+}
+
+:root[data-theme='dark'] .stat-card .stat-caption {
+  color: var(--color-muted) !important;
+}
+
+/* Empty State Dark Mode */
+:root[data-theme='dark'] .empty-placeholder {
+  color: var(--color-muted) !important;
+}
+
+/* Skeleton Dark Mode */
+:root[data-theme='dark'] .MuiSkeleton-root {
+  background-color: rgba(255,255,255,0.05) !important;
+}
+
+:root[data-theme='dark'] .MuiSkeleton-root::after {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent) !important;
+}
+
+/* Badge Dark Mode */
+:root[data-theme='dark'] .badge.green {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+:root[data-theme='dark'] .badge.gray {
+  background-color: rgba(156, 163, 175, 0.2);
+  color: #d1d5db;
+}
+
+:root[data-theme='dark'] .badge.red {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+:root[data-theme='dark'] .badge.orange {
+  background-color: rgba(249, 115, 22, 0.2);
+  color: #fdba74;
+}
+
+/* Theme Toggle Dark Mode */
+:root[data-theme='dark'] .admin-theme-toggle {
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+  background-color: transparent !important;
+}
+
+:root[data-theme='dark'] .admin-theme-toggle:hover {
+  background-color: rgba(255,255,255,0.05) !important;
+  border-color: var(--color-text) !important;
+}
+
+/* Logout Button Dark Mode */
+:root[data-theme='dark'] .admin-logout {
+  color: var(--color-muted) !important;
+}
+
+:root[data-theme='dark'] .admin-logout:hover {
+  color: #ff4d30 !important;
+  background-color: rgba(255, 77, 48, 0.1) !important;
+}
+
+/* Search Highlight Dark Mode */
+:root[data-theme='dark'] mark {
+  background-color: rgba(255, 235, 59, 0.3) !important;
+  color: var(--color-text) !important;
+}

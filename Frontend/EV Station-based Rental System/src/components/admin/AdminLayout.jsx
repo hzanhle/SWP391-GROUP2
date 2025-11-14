@@ -8,6 +8,7 @@ function Icon({ name }) {
     case 'users': return <svg {...common}><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/></svg>;
     case 'models': return <svg {...common}><path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
     case 'schedule': return <svg {...common}><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
+    case 'warning': return <svg {...common}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
     case 'settings': return <svg {...common}><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/><path d="M12 1v6m0 6v6M23 12h-6m-6 0H5" stroke="currentColor" strokeWidth="2"/></svg>;
     case 'logout': return <svg {...common}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
     default: return null;
@@ -21,6 +22,8 @@ export default function AdminLayout({ children, active = 'overview' }) {
 
   const links = useMemo(() => ([
     { key: 'overview', label: 'Overview', href: '#admin', icon: 'home' },
+    { key: 'orders', label: 'Orders', href: '#admin-orders', icon: 'schedule' },
+    { key: 'risk-customers', label: 'Risk Customers', href: '#admin-risk-customers', icon: 'warning' },
     { key: 'users', label: 'Users', href: '#admin-users', icon: 'users' },
     { key: 'models', label: 'Vehicle Models', href: '#admin-models', icon: 'models' },
     { key: 'vehicles', label: 'Vehicles', href: '#admin-vehicles', icon: 'models' },

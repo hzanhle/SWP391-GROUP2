@@ -32,11 +32,16 @@ namespace AdminDashboardService.ExternalDbContexts
             // Configure Order
             modelBuilder.Entity<Order>(entity =>
             {
+                entity.ToTable("Orders");
+                
                 entity.Property(o => o.TotalCost)
                     .HasColumnType("decimal(18,2)");
 
                 entity.Property(o => o.DepositAmount)
                     .HasColumnType("decimal(18,2)");
+                
+                // PaymentId property removed - Order now uses one-to-many relationship with Payments via OrderId foreign key
+                // EF Core will only SELECT columns that exist in the model, so PaymentId column in DB will be ignored
             });
 
             // Configure InspectionDetail

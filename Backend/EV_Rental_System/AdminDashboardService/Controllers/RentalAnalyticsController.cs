@@ -20,7 +20,7 @@ namespace AdminDashboardService.Controllers
         }
 
         /// <summary>
-        /// Get rental statistics for a specific user
+        /// Get rental statistics for a specific user (Admin/Employee can view any user)
         /// </summary>
         /// <param name="userId">User ID to get stats for</param>
         /// <returns>User rental statistics</returns>
@@ -43,6 +43,38 @@ namespace AdminDashboardService.Controllers
             {
                 _logger.LogError(ex, "Error getting rental stats for user {UserId}", userId);
                 return StatusCode(500, new { message = "An error occurred while retrieving user rental statistics" });
+            }
+        }
+
+        /// <summary>
+        /// Get rental statistics for the current logged-in user (Member can view their own stats)
+        /// </summary>
+        /// <returns>Current user's rental statistics</returns>
+        [HttpGet("my-rental-stats")]
+        [Authorize(Roles = "Member,Admin,Employee")]
+        public async Task<IActionResult> GetMyRentalStats()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst("userId")?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+                {
+                    return Unauthorized(new { message = "User ID not found in token" });
+                }
+
+                var stats = await _analyticsService.GetUserRentalStatsAsync(userId);
+
+                if (stats == null)
+                {
+                    return NotFound(new { message = "No rental data found for your account" });
+                }
+
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting rental stats for current user");
+                return StatusCode(500, new { message = "An error occurred while retrieving your rental statistics" });
             }
         }
 

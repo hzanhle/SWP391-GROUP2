@@ -39,6 +39,8 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.WriteIndented = true;
         options.JsonSerializerOptions.DefaultIgnoreCondition =
             System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        // Include reference handling to serialize navigation properties
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -104,6 +106,7 @@ builder.Services.AddSingleton<IPdfConverterService, PuppeteerPdfService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<ISettlementService, SettlementService>();
 builder.Services.AddScoped<IImageStorageService, ImageStorageService>();
+builder.Services.AddScoped<IRiskCustomerService, RiskCustomerService>();
 
 // ====================== Hangfire Background Jobs ======================
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection");

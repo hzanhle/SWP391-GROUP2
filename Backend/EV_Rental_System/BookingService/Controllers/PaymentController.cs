@@ -796,6 +796,9 @@ namespace BookingService.Controllers
             };
         }
 
+        // REMOVED: Cash Payment feature - no longer supported
+        // Cash payment functionality has been removed. Only VNPay and PayOS are supported.
+
         private string GetFrontendBaseUrl()
         {
             var envValue = Environment.GetEnvironmentVariable("FRONTEND_URL");

@@ -85,4 +85,16 @@ export function getUserGrowth(token) {
   return request('/api/Dashboard/users/growth', { token })
 }
 
-export default { getDashboardSummary, getStationStats, getRevenueByMonth, getTopUsedVehicles, getUserGrowth }
+export function getPeakRentalHours(token) {
+  return request('/api/analytics/rentals/peak-hours', { token })
+}
+
+export function getSystemRentalAnalytics(token) {
+  return request('/api/analytics/rentals/system-wide', { token })
+}
+
+export function getMyRentalStats(token) {
+  return request('/api/analytics/my-rental-stats', { token })
+}
+
+export default { getDashboardSummary, getStationStats, getRevenueByMonth, getTopUsedVehicles, getUserGrowth, getPeakRentalHours, getSystemRentalAnalytics, getMyRentalStats }

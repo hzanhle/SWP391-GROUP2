@@ -1,15 +1,20 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import * as bookingApi from '../api/booking'
 import { getVehicleById, getAllModels } from '../api/vehicle'
+import { getMyRentalStats } from '../api/adminDashboard'
+import { Card, CardContent, CardHeader, Typography, Box, Grid } from '@mui/material'
+import { BarChart } from '@mui/x-charts'
 
 export default function History() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [vehicleModelMap, setVehicleModelMap] = useState({})
+  const [stats, setStats] = useState(null)
+  const [statsLoading, setStatsLoading] = useState(true)
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -31,41 +36,83 @@ export default function History() {
           return
         }
 
-        const { data } = await bookingApi.getOrdersByUserId(userId, authToken)
-        const ordersList = Array.isArray(data) ? data : []
-        setOrders(ordersList)
+        // Fetch orders and stats in parallel
+        const [ordersRes, statsRes] = await Promise.allSettled([
+          bookingApi.getOrdersByUserId(userId, authToken),
+          getMyRentalStats(authToken)
+        ])
 
-        // Build vehicle -> model name mapping
-        const vehicleIds = Array.from(new Set(ordersList.map(o => Number(o.vehicleId || o.VehicleId)).filter(id => Number.isFinite(id))))
-        let modelList = []
-        try {
-          const modelsRes = await getAllModels(authToken)
-          modelList = Array.isArray(modelsRes.data) ? modelsRes.data : (Array.isArray(modelsRes.data?.data) ? modelsRes.data.data : [])
-        } catch {}
-        const modelNameById = new Map(modelList.map(m => [Number(m.modelId || m.ModelId), `${m.manufacturer || m.Manufacturer || ''} ${m.modelName || m.ModelName || ''}`.trim()]))
-        const vehicleToModel = {}
-        await Promise.all(vehicleIds.map(async (vid) => {
+        if (ordersRes.status === 'fulfilled') {
+          const ordersList = Array.isArray(ordersRes.value.data) ? ordersRes.value.data : []
+          setOrders(ordersList)
+
+          // Build vehicle -> model name mapping
+          const vehicleIds = Array.from(new Set(ordersList.map(o => Number(o.vehicleId || o.VehicleId)).filter(id => Number.isFinite(id))))
+          let modelList = []
           try {
-            const res = await getVehicleById(vid, authToken)
-            const v = res?.data || res?.data?.data
-            const mid = Number(v?.modelId || v?.ModelId)
-            if (Number.isFinite(mid)) {
-              vehicleToModel[vid] = modelNameById.get(mid) || String(mid)
-            }
+            const modelsRes = await getAllModels(authToken)
+            modelList = Array.isArray(modelsRes.data) ? modelsRes.data : (Array.isArray(modelsRes.data?.data) ? modelsRes.data.data : [])
           } catch {}
-        }))
-        setVehicleModelMap(vehicleToModel)
+          const modelNameById = new Map(modelList.map(m => [Number(m.modelId || m.ModelId), `${m.manufacturer || m.Manufacturer || ''} ${m.modelName || m.ModelName || ''}`.trim()]))
+          const vehicleToModel = {}
+          await Promise.all(vehicleIds.map(async (vid) => {
+            try {
+              const res = await getVehicleById(vid, authToken)
+              const v = res?.data || res?.data?.data
+              const mid = Number(v?.modelId || v?.ModelId)
+              if (Number.isFinite(mid)) {
+                vehicleToModel[vid] = modelNameById.get(mid) || String(mid)
+              }
+            } catch {}
+          }))
+          setVehicleModelMap(vehicleToModel)
+        }
+
+        if (statsRes.status === 'fulfilled') {
+          setStats(statsRes.value.data)
+        } else {
+          console.warn('Failed to load rental stats:', statsRes.reason)
+        }
+
         setError(null)
       } catch (err) {
         console.error('Error fetching booking history:', err)
         setError(err.message || 'Unable to load rental history')
       } finally {
         setLoading(false)
+        setStatsLoading(false)
       }
     }
 
     fetchHistory()
   }, [])
+
+  // Process peak hours data for chart
+  const peakHoursChartData = useMemo(() => {
+    if (!stats?.peakRentalHours || !Array.isArray(stats.peakRentalHours)) {
+      return null
+    }
+
+    const hours = Array.from({ length: 24 }, (_, i) => i)
+    const hourLabels = hours.map(h => `${h}:00`)
+    const hourCounts = stats.peakRentalHours || []
+
+    // Find top 3 peak hours
+    const hourData = hours.map((hour, idx) => ({
+      hour,
+      count: hourCounts[idx] || 0
+    }))
+    const sorted = [...hourData].sort((a, b) => b.count - a.count)
+    const top3Peak = sorted.slice(0, 3).map(h => h.hour)
+    const top3Low = sorted.slice(-3).map(h => h.hour)
+
+    return {
+      hours: hourLabels,
+      data: hours.map(h => hourCounts[h] || 0),
+      top3Peak,
+      top3Low
+    }
+  }, [stats])
 
   const getStatusBadgeClass = (status) => {
     const statusMap = {
@@ -151,6 +198,26 @@ export default function History() {
     )
   }
 
+  function StatCard({ title, value, caption, color = '#1976d2' }) {
+    return (
+      <Card className="card" style={{ height: '100%' }}>
+        <CardContent>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            {title}
+          </Typography>
+          <Typography variant="h4" style={{ color, fontWeight: 'bold' }}>
+            {value}
+          </Typography>
+          {caption && (
+            <Typography variant="caption" color="text.secondary">
+              {caption}
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div data-figma-layer="History Page">
       <Navbar />
@@ -162,6 +229,117 @@ export default function History() {
               <p className="section-subtitle">Review your rentals and expenses.</p>
             </div>
 
+            {/* Personal Analytics Section */}
+            {!statsLoading && stats && (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h5" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
+                  Your Rental Statistics
+                </Typography>
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <StatCard
+                      title="Total Rentals"
+                      value={stats.totalRentals || stats.TotalRentals || 0}
+                      caption={`${stats.completedRentals || stats.CompletedRentals || 0} completed`}
+                      color="#1976d2"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <StatCard
+                      title="Total Spent"
+                      value={`${Number(stats.totalSpent || stats.TotalSpent || 0).toLocaleString('vi-VN')} ₫`}
+                      caption={`Avg: ${Number(stats.averageRentalCost || stats.AverageRentalCost || 0).toLocaleString('vi-VN')} ₫`}
+                      color="#2e7d32"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <StatCard
+                      title="Trust Score"
+                      value={stats.currentTrustScore || stats.CurrentTrustScore || 0}
+                      caption="Your reliability rating"
+                      color="#ed6c02"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <StatCard
+                      title="On-Time Return"
+                      value={`${Number(stats.onTimeReturnRate || stats.OnTimeReturnRate || 0).toFixed(1)}%`}
+                      caption={`${stats.lateReturns || stats.LateReturns || 0} late returns`}
+                      color={Number(stats.onTimeReturnRate || stats.OnTimeReturnRate || 0) >= 90 ? "#2e7d32" : "#d32f2f"}
+                    />
+                  </Grid>
+                </Grid>
+
+                {/* Peak Hours Chart */}
+                {peakHoursChartData && (
+                  <Card className="card" sx={{ mb: 3 }}>
+                    <CardHeader title="Your Peak Rental Hours" />
+                    <CardContent>
+                      <Box sx={{ width: '100%', height: 300 }}>
+                        <BarChart
+                          xAxis={[{ scaleType: 'band', data: peakHoursChartData.hours }]}
+                          series={[{
+                            data: peakHoursChartData.data,
+                            label: 'Number of Rentals',
+                            color: '#1976d2'
+                          }]}
+                          width={undefined}
+                          height={300}
+                        />
+                      </Box>
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Top 3 Peak Hours:</strong> {peakHoursChartData.top3Peak.map(h => `${h}:00`).join(', ')}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Top 3 Low Hours:</strong> {peakHoursChartData.top3Low.map(h => `${h}:00`).join(', ')}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Additional Stats */}
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Card className="card">
+                      <CardHeader title="Rental Behavior" />
+                      <CardContent>
+                        <Typography variant="body2" gutterBottom>
+                          <strong>Average Duration:</strong> {Number(stats.averageRentalDurationHours || stats.AverageRentalDurationHours || 0).toFixed(1)} hours
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                          <strong>Rentals with Damage:</strong> {stats.rentalsWithDamage || stats.RentalsWithDamage || 0}
+                        </Typography>
+                        {stats.mostRentedVehicleType && (
+                          <Typography variant="body2">
+                            <strong>Most Rented Vehicle:</strong> {stats.mostRentedVehicleType || stats.MostRentedVehicleType} ({stats.mostRentedVehicleCount || stats.MostRentedVehicleCount || 0} times)
+                          </Typography>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Card className="card">
+                      <CardHeader title="Summary" />
+                      <CardContent>
+                        <Typography variant="body2" gutterBottom>
+                          <strong>Completed:</strong> {stats.completedRentals || stats.CompletedRentals || 0} rentals
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                          <strong>Cancelled:</strong> {stats.cancelledRentals || stats.CancelledRentals || 0} rentals
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Average Cost per Rental:</strong> {Number(stats.averageRentalCost || stats.AverageRentalCost || 0).toLocaleString('vi-VN')} ₫
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+              </Box>
+            )}
+
+            {/* Orders List */}
             {loading && (
               <div className="card">
                 <div className="card-body text-center">
@@ -191,6 +369,7 @@ export default function History() {
 
             {!loading && !error && orders.length > 0 && (
               <div className="card">
+                <CardHeader title="Rental Orders" />
                 <div className="card-body">
                   <ul className="history-list" role="list">
                     {orders.map((order) => (
@@ -201,7 +380,7 @@ export default function History() {
                             <p className="card-subtext">
                               {new Date(order.fromDate || order.FromDate).toLocaleDateString('vi-VN')} •
                               {vehicleModelMap[Number(order.vehicleId || order.VehicleId)] || order.vehicle?.model || order.Vehicle?.Model || 'Unknown Model'} •
-                              ${Number(order.totalCost || order.TotalCost || 0).toFixed(2)}
+                              {Number(order.totalCost || order.TotalCost || 0).toLocaleString('vi-VN')} ₫
                             </p>
                           </div>
                           <div className="row">
