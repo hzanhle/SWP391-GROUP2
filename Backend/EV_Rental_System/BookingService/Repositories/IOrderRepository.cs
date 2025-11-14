@@ -11,6 +11,8 @@ namespace BookingService.Repositories
         Task<IEnumerable<Order>> GetAllAsync();
         Task<bool> UpdateAsync(Order order);
         Task<bool> DeleteAsync(int orderId);
+        Task<Dictionary<int, int>> GetOrderCountByHourAsync();
+        Task<List<int>> GetTopPeakHoursAsync(int topCount = 3);
 
         // === QUERIES ===
         Task<IEnumerable<Order>> GetByUserIdAsync(int userId);

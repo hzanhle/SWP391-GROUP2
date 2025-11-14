@@ -4,6 +4,7 @@ import Footer from '../components/Footer'
 import CTA from '../components/CTA'
 import * as bookingApi from '../api/booking'
 import * as signalR from '@microsoft/signalr'
+import * as client from '../api/client'
 import FeedbackForm from '../components/FeedbackForm'
 
 export default function Payment() {
@@ -271,29 +272,51 @@ export default function Payment() {
                 return
               }
 
-              const contractData = {
-                OrderId: Number(urlOrderId),
-                PaidAt: new Date().toISOString(),
-                CustomerName: user.fullName || user.fullname || user.name || 'Guest',
-                CustomerEmail: user.email || '',
-                CustomerPhone: user.phone || user.phoneNumber || '',
-                CustomerIdCard: user.idCard || user.id_card || user.identityNumber || '',
-                CustomerAddress: user.address || '',
-                CustomerDateOfBirth: user.dateOfBirth || user.dob || '',
-                VehicleModel: bookingToUse.vehicleInfo?.model || order.data?.Vehicle?.Model || 'N/A',
-                LicensePlate: bookingToUse.vehicleInfo?.licensePlate || order.data?.Vehicle?.LicensePlate || 'N/A',
-                VehicleColor: bookingToUse.vehicleInfo?.color || order.data?.Vehicle?.Color || 'N/A',
-                VehicleType: bookingToUse.vehicleInfo?.type || order.data?.Vehicle?.Type || 'N/A',
-                FromDate: bookingToUse.dates?.from ? new Date(bookingToUse.dates.from).toISOString() : new Date().toISOString(),
-                ToDate: bookingToUse.dates?.to ? new Date(bookingToUse.dates.to).toISOString() : new Date().toISOString(),
-                TotalRentalCost: rentalCost,
-                DepositAmount: depositCost,
-                ServiceFee: serviceFee,
-                TotalPaymentAmount: totalCost,
-                TransactionId: urlTransactionId || '',  // ✅ Use from VNPay URL callback
-                PaymentMethod: selectedMethod,
-                PaymentDate: new Date().toISOString(),
-              }
+            const response = await client.getCitizenInfo(token);
+            console.log('📌 Full Response:', response);
+            console.log('✅ isSuccess:', response.isSuccess);
+            console.log('📋 Message:', response.message);
+
+            const citizen = response.data;
+            console.log('👤 Citizen Data:', citizen);
+            console.log('📛 Full Name:', citizen?.fullName);
+            console.log('🆔 Citizen ID:', citizen?.citizenId);
+            console.log('📅 Date of Birth:', citizen?.dayOfBirth);
+            console.log('🏠 Address:', citizen?.address);
+            console.log('📞 Phone:', citizen?.phone); // Kiểm tra xem có field phone không
+            console.log('📧 Email:', citizen?.email); // Kiểm tra xem có field email không
+            console.log('👥 Sex:', citizen?.sex);
+            console.log('✔️ Status:', citizen?.status);
+
+            
+
+            const contractData = {
+              OrderId: Number(urlOrderId),
+              PaidAt: new Date().toISOString(),
+              
+              // ✅ Chỉ lấy 4 field cần thiết
+              CustomerName: citizen?.fullName || '',
+              CustomerIdCard: citizen?.citizenId || '',
+              CustomerDateOfBirth: citizen?.dayOfBirth || '',
+              CustomerAddress: citizen?.address || '',
+              
+              // Các field khác (giữ nguyên)
+              CustomerEmail: user?.email || '',
+              CustomerPhone: user?.phone || '',
+              VehicleModel: bookingToUse.vehicleInfo?.model || order.data?.Vehicle?.Model || 'N/A',
+              LicensePlate: bookingToUse.vehicleInfo?.licensePlate || order.data?.Vehicle?.LicensePlate || 'N/A',
+              VehicleColor: bookingToUse.vehicleInfo?.color || order.data?.Vehicle?.Color || 'N/A',
+              VehicleType: bookingToUse.vehicleInfo?.type || order.data?.Vehicle?.Type || 'N/A',
+              FromDate: bookingToUse.dates?.from ? new Date(bookingToUse.dates.from).toISOString() : new Date().toISOString(),
+              ToDate: bookingToUse.dates?.to ? new Date(bookingToUse.dates.to).toISOString() : new Date().toISOString(),
+              TotalRentalCost: rentalCost,
+              DepositAmount: depositCost,
+              ServiceFee: serviceFee,
+              TotalPaymentAmount: totalCost,
+              TransactionId: urlTransactionId || '',
+              PaymentMethod: selectedMethod,
+              PaymentDate: new Date().toISOString(),
+            }
 
               console.log('[Payment] Submitting contract creation with data:', contractData)
 

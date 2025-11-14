@@ -18,6 +18,11 @@ namespace BookingService.Services
         // (Cập nhật) Background job
         Task<int> CheckExpiredOrdersAsync();
 
+        Task<PeakHoursReportResponse> GetPeakHoursReportAsync();
+
+        Task UpdateOrderAsync(Order order);
+
+
         // (Giữ nguyên)
         Task<Order?> GetOrderByIdAsync(int orderId);
         Task<Order?> GetOrderByIdWithDetailsAsync(int orderId);
