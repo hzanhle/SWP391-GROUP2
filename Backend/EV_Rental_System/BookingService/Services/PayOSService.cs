@@ -236,7 +236,7 @@ namespace BookingService.Services
 
                     if (response.IsSuccessStatusCode)
                     {
-                        success = true;
+                        success = true; 
                     }
                     else if (response.StatusCode == HttpStatusCode.BadRequest && payload2 != null)
                     {
