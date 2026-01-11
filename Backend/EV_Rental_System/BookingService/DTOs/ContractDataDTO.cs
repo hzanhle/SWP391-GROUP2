@@ -15,6 +15,7 @@
         public string CustomerEmail { get; set; } = string.Empty;
         public string CustomerPhone { get; set; } = string.Empty;
         public string? CustomerIdCard { get; set; } // ✅ Optional
+        public string? Sex { get; set; } = string.Empty;
         public string CustomerAddress { get; set; } = string.Empty;
         public string CustomerDateOfBirth { get; set; } = string.Empty;
 

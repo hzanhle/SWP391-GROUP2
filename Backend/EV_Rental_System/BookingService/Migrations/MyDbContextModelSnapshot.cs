@@ -31,7 +31,8 @@ namespace BookingService.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FeedbackId"));
 
                     b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("datetime2");
@@ -39,16 +40,29 @@ namespace BookingService.Migrations
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
 
+                    b.Property<double>("Rating")
+                        .HasColumnType("float");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.Property<int>("VehicleId")
                         .HasColumnType("int");
 
-                    b.Property<double>("VehicleRating")
-                        .HasColumnType("float");
-
                     b.HasKey("FeedbackId");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Feedbacks_OrderId");
+
+                    b.HasIndex("Rating")
+                        .HasDatabaseName("IX_Feedbacks_Rating");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_Feedbacks_UserId");
+
+                    b.HasIndex("UserId", "Created")
+                        .HasDatabaseName("IX_Feedbacks_UserId_CreatedAt");
 
                     b.ToTable("Feedbacks");
                 });
@@ -174,9 +188,6 @@ namespace BookingService.Migrations
                     b.Property<int>("OnlineContractId")
                         .HasColumnType("int");
 
-                    b.Property<int>("PaymentId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -223,6 +234,9 @@ namespace BookingService.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
 
@@ -237,6 +251,9 @@ namespace BookingService.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("SettlementId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -246,13 +263,17 @@ namespace BookingService.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("PaymentId");
 
-                    b.HasIndex("OrderId")
-                        .IsUnique();
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("SettlementId");
 
                     b.HasIndex("Status");
 
@@ -272,8 +293,21 @@ namespace BookingService.Migrations
                     b.Property<DateTime>("ActualReturnTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("AdditionalPaymentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("AdditionalPaymentPaymentId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("AdditionalPaymentRequired")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("AdditionalPaymentStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AdditionalPaymentUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -304,11 +338,48 @@ namespace BookingService.Migrations
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("OriginalPaymentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OriginalPaymentPaymentId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("OvertimeFee")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("OvertimeHours")
                         .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("RefundGatewayResponse")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("RefundMethod")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RefundNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("RefundProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RefundProcessedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RefundProofDocumentUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("RefundProofUploadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RefundStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RefundTransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("ScheduledReturnTime")
                         .HasColumnType("datetime2");
@@ -318,12 +389,16 @@ namespace BookingService.Migrations
 
                     b.HasKey("SettlementId");
 
+                    b.HasIndex("AdditionalPaymentPaymentId");
+
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("IsFinalized");
 
                     b.HasIndex("OrderId")
                         .IsUnique();
+
+                    b.HasIndex("OriginalPaymentPaymentId");
 
                     b.ToTable("Settlements");
                 });
@@ -409,6 +484,113 @@ namespace BookingService.Migrations
                     b.ToTable("TrustScoreHistories");
                 });
 
+            modelBuilder.Entity("BookingService.Models.VehicleCheckIn", b =>
+                {
+                    b.Property<int>("CheckInId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CheckInId"));
+
+                    b.Property<DateTime>("CheckInTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ConfirmedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("FuelLevel")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImageUrls")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int?>("OdometerReading")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("CheckInId");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("VehicleCheckIns");
+                });
+
+            modelBuilder.Entity("BookingService.Models.VehicleReturn", b =>
+                {
+                    b.Property<int>("ReturnId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReturnId"));
+
+                    b.Property<string>("ConditionNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("ConfirmedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DamageCharge")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DamageDescription")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("FuelLevel")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("HasDamage")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ImageUrls")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("OdometerReading")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ReturnTime")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ReturnId");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("VehicleReturns");
+                });
+
+            modelBuilder.Entity("BookingService.Models.Feedback", b =>
+                {
+                    b.HasOne("BookingService.Models.Order", "Order")
+                        .WithOne("Feedback")
+                        .HasForeignKey("BookingService.Models.Feedback", "OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("BookingService.Models.OnlineContract", b =>
                 {
                     b.HasOne("BookingService.Models.Order", "Order")
@@ -423,20 +605,61 @@ namespace BookingService.Migrations
             modelBuilder.Entity("BookingService.Models.Payment", b =>
                 {
                     b.HasOne("BookingService.Models.Order", "Order")
-                        .WithOne("Payment")
-                        .HasForeignKey("BookingService.Models.Payment", "OrderId")
+                        .WithMany("Payments")
+                        .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BookingService.Models.Settlement", "Settlement")
+                        .WithMany()
+                        .HasForeignKey("SettlementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Settlement");
+                });
+
+            modelBuilder.Entity("BookingService.Models.Settlement", b =>
+                {
+                    b.HasOne("BookingService.Models.Payment", "AdditionalPayment")
+                        .WithMany()
+                        .HasForeignKey("AdditionalPaymentPaymentId");
+
+                    b.HasOne("BookingService.Models.Order", "Order")
+                        .WithOne()
+                        .HasForeignKey("BookingService.Models.Settlement", "OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BookingService.Models.Payment", "OriginalPayment")
+                        .WithMany()
+                        .HasForeignKey("OriginalPaymentPaymentId");
+
+                    b.Navigation("AdditionalPayment");
+
+                    b.Navigation("Order");
+
+                    b.Navigation("OriginalPayment");
+                });
+
+            modelBuilder.Entity("BookingService.Models.VehicleCheckIn", b =>
+                {
+                    b.HasOne("BookingService.Models.Order", "Order")
+                        .WithOne()
+                        .HasForeignKey("BookingService.Models.VehicleCheckIn", "OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Order");
                 });
 
-            modelBuilder.Entity("BookingService.Models.Settlement", b =>
+            modelBuilder.Entity("BookingService.Models.VehicleReturn", b =>
                 {
                     b.HasOne("BookingService.Models.Order", "Order")
                         .WithOne()
-                        .HasForeignKey("BookingService.Models.Settlement", "OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("BookingService.Models.VehicleReturn", "OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Order");
@@ -444,9 +667,11 @@ namespace BookingService.Migrations
 
             modelBuilder.Entity("BookingService.Models.Order", b =>
                 {
+                    b.Navigation("Feedback");
+
                     b.Navigation("OnlineContract");
 
-                    b.Navigation("Payment");
+                    b.Navigation("Payments");
                 });
 #pragma warning restore 612, 618
         }

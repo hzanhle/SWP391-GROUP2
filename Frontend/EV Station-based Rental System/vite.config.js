@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
   const allowed = (env.VITE_ALLOWED_HOSTS || '').split(',').map(s => s.trim()).filter(Boolean)
 
   return {
+    base: process.env.NODE_ENV === 'production' ? '/SWP391-GROUP2/' : '/',
     plugins: [react(), tailwindcss()],
     resolve: { alias: { '@': path.resolve(__dirname, './src') } },
     server: {
